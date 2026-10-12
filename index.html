@@ -247,8 +247,8 @@
                         <select id="loginVehicleType" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="">Select Vehicle Type</option><option value="Bike">Bike / Scooter</option><option value="Scooter">Scooter</option><option value="Cycle">Cycle</option><option value="Other">Other</option></select>
                     </div>
                     <input type="text" id="loginAadhaarNumber" placeholder="Aadhaar Number (12 digits)" maxlength="12" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    
-                    <p class="font-bold text-amber-400 pt-2"><i class="fa-solid fa-bank mr-1"></i> Bank Account for Payouts:</p>
+
+                     <p class="font-bold text-amber-400 pt-2"><i class="fa-solid fa-bank mr-1"></i> Bank Account for Payouts:</p>
                     <input type="text" id="loginBankName" placeholder="Account Holder Name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
                     <input type="text" id="loginBankAcc" placeholder="Bank Account Number" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
                     <input type="text" id="loginBankIfsc" placeholder="IFSC Code (e.g. SBIN000XXXX)" maxlength="11" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
@@ -499,8 +499,7 @@
             if (!product) { alert('Product abhi available nahi hai. Page refresh karke dobara try karein.'); return; }
             addToCartAction(Number(product.id), String(product.name || ''), Number(product.price || 0), String(product.img || ''));
         }
-
-        function proceedFromDetailById(id) {
+         function proceedFromDetailById(id) {
             const product = getProducts().find(p => Number(p.id) === Number(id));
             if (!product) { alert('Product abhi available nahi hai. Page refresh karke dobara try karein.'); return; }
             proceedFromDetail(Number(product.id), String(product.name || ''), Number(product.price || 0), String(product.img || ''));
@@ -756,7 +755,7 @@
             }
         }
 
-        function closeSuccessModal() { document.getElementById('successModal').classList.add('hidden'); renderProducts(); }
+         function closeSuccessModal() { document.getElementById('successModal').classList.add('hidden'); renderProducts(); }
 
         function addNewProduct() {
             let name = document.getElementById('newProdName').value.trim();
@@ -897,8 +896,10 @@ async function sendFast2SMSOTP() {
         alert('Fast2SMS API key set nahi hai. Script mein FAST2SMS_API_KEY set karein.');
         return;
     }
-    if (!FAST2SMS_OTP_ID || FAST2SMS_OTP_ID === 'PASTE_YOUR_FAST2SMS_OTP_ID_HERE') {
-        alert('Fast2SMS OTP ID set nahi hai. Dashboard se OTP ID lekar FAST2SMS_OTP_ID mein paste karein.');
+    // TEST MODE: placeholder OTP ID ko bhi Fast2SMS par bhejne ki koshish karein.
+    // Agar Fast2SMS valid OTP ID maangta hai, to response mein error milega.
+    if (!FAST2SMS_OTP_ID) {
+        alert('FAST2SMS_OTP_ID khaali hai. Placeholder ya valid OTP ID set karein.');
         return;
     }
 
@@ -938,7 +939,7 @@ async function sendFast2SMSOTP() {
         alert('OTP bhej diya gaya hai. SMS check karke OTP enter karein.');
     } catch (error) {
         console.error('Fast2SMS send OTP error:', error);
-        alert('OTP send nahi ho paya. API key, OTP ID, Fast2SMS balance/template aur network check karein. Browser CORS error aaye to backend proxy zaroori hai.');
+        alert('OTP send nahi ho paya. Fast2SMS response: ' + (error.message || 'Unknown error') + '. OTP ID placeholder hone par Fast2SMS reject kar sakta hai. Console mein bhi details check karein.');
     } finally {
         if (sendButton) { sendButton.disabled = false; sendButton.textContent = 'Send OTP'; }
     }
@@ -988,8 +989,7 @@ async function verifyFast2SMSOTP() {
             }
             saved = { name, account, ifsc };
             localStorage.setItem(getBankProfileKey(role, phone), JSON.stringify(saved));
-        }
-        localStorage.setItem('userBankName', saved.name);
+            ocalStorage.setItem('userBankName', saved.name);
         localStorage.setItem('userBankAcc', saved.account);
         localStorage.setItem('userBankIfsc', saved.ifsc);
         const kycDetails = {
@@ -1248,7 +1248,6 @@ function openWithdrawModal(type) {
         type === 'Seller'
             ? 'Company commission: 10%.'
             : 'Delivery Partner withdrawal details.';
-
     document.getElementById('withdrawBankName').innerText =
         profile?.name || 'Not saved';
 
@@ -1506,8 +1505,7 @@ function updateDeliveryWallet() {
     );
     updateSellerWallet();
 }
-
-        function renderDeliveryDashboard() {
+         function renderDeliveryDashboard() {
     let allOrders = JSON.parse(localStorage.getItem('myOrders')) || [];
     let currentBoy = localStorage.getItem('deliveryBoyName') || 'Delivery Boy';
     
