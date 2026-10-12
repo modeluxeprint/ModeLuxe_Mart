@@ -277,7 +277,7 @@
             <div class="mb-3 text-center">
                 <div class="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden border-2 border-amber-400 bg-[#133e31] flex items-center justify-center"><img id="profilePreviewImg" src="" class="w-full h-full object-cover hidden" alt="Profile"><i id="profileDefaultIcon" class="fa-solid fa-user text-2xl text-gray-300"></i></div>
                 <label class="block text-[11px] text-gray-300 mb-1">Upload Profile Photo:</label>
-                <input type="file" id="profileImgFile" accept="image/*" class="w-full bg-[#133e31] border border-[#1b4f40] text-gray-200 rounded p-1 text-xs">
+                <input type="file" id="profileImgFile" accept="image/*" onchange="previewProfilePhoto(event)" class="w-full bg-[#133e31] border border-[#1b4f40] text-gray-200 rounded p-1 text-xs">
             </div>
             <div class="mb-3"><label class="block text-xs font-medium text-gray-200 mb-1">Full Name</label><input type="text" id="profileName" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-400" placeholder="Pushpendra Kumar"></div>
             <div class="mb-3"><label class="block text-xs font-medium text-gray-200 mb-1">Contact Number</label><input type="tel" id="profilePhone" maxlength="10" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-400" placeholder="10-digit number"></div>
@@ -925,7 +925,7 @@ async function sendFast2SMSOTP() {
         generatedOtpCode = null;
         document.getElementById('loginOtpInput').value = '';
         document.getElementById('otpBoxSection').classList.remove('hidden');
-        alert('OTP request bhej di gayi hai. SMS check karke OTP enter karein.');
+        alert('OTP sent successfully! Please check your message box.');
     } catch (error) {
         console.error('StartMessaging send OTP error:', error);
         alert('OTP send nahi ho paya: ' + (error.message || 'Unknown error') + '. Cloudflare Worker logs aur StartMessaging API response check karein.');
@@ -1014,7 +1014,19 @@ async function verifyFast2SMSOTP() {
     }
 }
 
-        window.onload = function() { updateAuthUI(); renderProducts(); updateCartBadge(); };
+        window.onload = function() {
+            const savedPhoto = localStorage.getItem('userProfilePic') || '';
+            const preview = document.getElementById('profilePreviewImg');
+            const defaultIcon = document.getElementById('profileDefaultIcon');
+            if (savedPhoto && preview && defaultIcon) {
+                preview.src = savedPhoto;
+                preview.classList.remove('hidden');
+                defaultIcon.classList.add('hidden');
+            }
+            updateAuthUI();
+            renderProducts();
+            updateCartBadge();
+        };
 
         function updateAuthUI() {
             let role = localStorage.getItem('loggedInRole');
@@ -1025,7 +1037,11 @@ async function verifyFast2SMSOTP() {
             if (logoutMenuButton) logoutMenuButton.classList.toggle('hidden', !role);
 
             if (role) {
-                authSection.innerHTML = `<span class="text-xs bg-[#133e31] text-amber-400 border border-amber-400/30 px-3 py-1.5 rounded-xl font-bold shadow">${localStorage.getItem('userName') || role.toUpperCase()}</span>`;
+                const headerPhoto = localStorage.getItem('userProfilePic') || '';
+                const headerPhotoHtml = headerPhoto
+                    ? `<img src="${headerPhoto}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
+                    : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
+                authSection.innerHTML = `<span class="inline-flex items-center gap-2 text-xs bg-[#133e31] text-amber-400 border border-amber-400/30 px-2 py-1 rounded-xl font-bold shadow">${headerPhotoHtml}<span>${localStorage.getItem('userName') || role.toUpperCase()}</span></span>`;
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
@@ -1153,6 +1169,20 @@ async function verifyFast2SMSOTP() {
             document.getElementById('profileName').value = localStorage.getItem('userName') || "";
             document.getElementById('profilePhone').value = localStorage.getItem('userPhone') || "";
             document.getElementById('profileAddress').value = localStorage.getItem('userAddress') || "";
+            const savedPhoto = localStorage.getItem('userProfilePic') || '';
+            const preview = document.getElementById('profilePreviewImg');
+            const defaultIcon = document.getElementById('profileDefaultIcon');
+            if (savedPhoto) {
+                preview.src = savedPhoto;
+                preview.classList.remove('hidden');
+                defaultIcon.classList.add('hidden');
+            } else {
+                preview.removeAttribute('src');
+                preview.classList.add('hidden');
+                defaultIcon.classList.remove('hidden');
+            }
+            document.getElementById('profileImgFile').value = '';
+            pendingProfilePhotoData = null;
             document.getElementById('profileModal').classList.remove('hidden');
         }
 
@@ -1163,11 +1193,61 @@ async function verifyFast2SMSOTP() {
             });
         }
 
-        function saveProfile() {
-            localStorage.setItem('userName', document.getElementById('profileName').value.trim());
-            localStorage.setItem('userPhone', document.getElementById('profilePhone').value.trim());
-            localStorage.setItem('userAddress', document.getElementById('profileAddress').value.trim());
-            document.getElementById('profileModal').classList.add('hidden'); updateAuthUI(); alert("Profile saved!");
+        let pendingProfilePhotoData = null;
+
+        function previewProfilePhoto(event) {
+            const file = event && event.target && event.target.files ? event.target.files[0] : null;
+            if (!file) return;
+            if (!file.type || !file.type.startsWith('image/')) {
+                alert('Please choose a valid image file.');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const image = new Image();
+                image.onload = function () {
+                    const maxSide = 420;
+                    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(image.width * scale));
+                    canvas.height = Math.max(1, Math.round(image.height * scale));
+                    const context = canvas.getContext('2d');
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    pendingProfilePhotoData = canvas.toDataURL('image/jpeg', 0.78);
+
+                    const preview = document.getElementById('profilePreviewImg');
+                    const defaultIcon = document.getElementById('profileDefaultIcon');
+                    preview.src = pendingProfilePhotoData;
+                    preview.classList.remove('hidden');
+                    defaultIcon.classList.add('hidden');
+                };
+                image.onerror = function () {
+                    alert('Photo open nahi ho paayi. Dusri image try karein.');
+                };
+                image.src = reader.result;
+            };
+            reader.onerror = function () { alert('Photo read nahi ho paayi. Dobara try karein.'); };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveProfile() {
+            try {
+                if (pendingProfilePhotoData) {
+                    localStorage.setItem('userProfilePic', pendingProfilePhotoData);
+                }
+                localStorage.setItem('userName', document.getElementById('profileName').value.trim());
+                localStorage.setItem('userPhone', document.getElementById('profilePhone').value.trim());
+                localStorage.setItem('userAddress', document.getElementById('profileAddress').value.trim());
+                document.getElementById('profileModal').classList.add('hidden');
+                pendingProfilePhotoData = null;
+                updateAuthUI();
+                alert('Profile saved successfully!');
+            } catch (error) {
+                console.error('Profile save error:', error);
+                alert('Profile save nahi ho paaya. Browser storage full ho sakti hai; smaller photo try karein.');
+            }
         }
 
         async function openMyOrders() {
