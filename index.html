@@ -12,12 +12,12 @@
 </head>
 <body class="bg-[#081c15] text-gray-100 font-sans">
     <header class="bg-[#0b2920] text-white shadow-lg sticky top-0 z-50 border-b border-[#133e31]">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-amber-400 text-black flex items-center justify-center font-bold shadow"><i class="fa-solid fa-store text-base"></i></div>
-                <div class="flex flex-col"><span class="text-xl font-bold tracking-wider leading-none text-amber-400">ModeLuxe</span><span class="text-xs tracking-widest text-gray-300 font-medium pl-0.5">Mart</span></div>
+        <div class="max-w-7xl mx-auto px-3 py-2 flex justify-between items-center gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-amber-400 text-black flex items-center justify-center font-bold shadow shrink-0"><i class="fa-solid fa-store text-sm"></i></div>
+                <div class="flex flex-col min-w-0"><span class="text-lg font-bold tracking-wide leading-none text-amber-400">ModeLuxe</span><span class="text-[11px] tracking-widest text-gray-300 font-medium pl-0.5">Mart</span></div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0">
                 <div id="headerCartButton" class="relative">
                     <button type="button" onclick="openCartModal()" class="text-amber-400 text-lg p-1.5 rounded-full hover:bg-[#133e31] transition relative cursor-pointer"><i class="fa-solid fa-cart-shopping"></i><span id="cartBadgeCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden">0</span></button>
                 </div>
@@ -1659,7 +1659,7 @@ async function verifyFast2SMSOTP() {
                     ? `<img src="${headerPhoto.replace(/"/g, '&quot;')}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
                     : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
                 const displayName = (profile.name || role.toUpperCase()).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-                authSection.innerHTML = `<span class="inline-flex w-[88px] sm:w-[104px] max-w-[26vw] min-w-0 flex-col items-center justify-center gap-1 text-[11px] bg-[#133e31] text-amber-400 border border-amber-400/30 px-2 py-2 rounded-xl font-bold shadow text-center overflow-hidden">${headerPhoto.replace(/"/g, "&quot;") ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-10 h-10 rounded-full object-cover border-2 border-amber-400 shrink-0">` : `<span class="w-10 h-10 rounded-full bg-[#0b2920] border-2 border-amber-400/50 flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400 text-lg"></i></span>`}<span class="block w-full min-w-0 break-words whitespace-normal leading-tight text-center">${displayName}</span></span>`;
+                authSection.innerHTML = `<span class="inline-flex max-w-[76px] min-w-0 items-center gap-1.5 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
