@@ -117,6 +117,16 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 }
 </style>
 
+
+<style id="ml-recently-viewed-real-products">
+#mlRecentlyViewedItems{display:flex;gap:12px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:thin}
+#mlRecentlyViewedItems .ml-recent-card{flex:0 0 145px;cursor:pointer;min-width:0}
+#mlRecentlyViewedItems .ml-recent-card img{width:100%;height:100px;object-fit:contain;border-radius:8px;background:#fff}
+#mlRecentlyViewedItems .ml-recent-card .ml-recent-name{font-weight:700;margin:8px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f3f4f6}
+#mlRecentlyViewedItems .ml-recent-price{color:#fbbf24;font-weight:800;font-size:14px;margin-top:4px}
+#mlRecentlyViewedItems .ml-recent-empty{color:#9ca3af;font-size:13px;padding:10px 2px;margin:0}
+</style>
+
 </head>
 <body class="bg-[#081c15] text-gray-100 font-sans">
     <header class="bg-[#0b2920] text-white shadow-lg sticky top-0 z-50 border-b border-[#133e31]">
@@ -187,11 +197,10 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
       <button type="button" class="ml-cat" data-ml-category="Mall"><div class="ml-cat-icon">🛒</div><div class="ml-cat-label">Mall</div></button>
       <button type="button" class="ml-cat" data-ml-category="Bags"><div class="ml-cat-icon">👜</div><div class="ml-cat-label">Bags</div></button>
     </section>
-<section class="ml-recent">
+<section class="ml-recent" id="mlRecentlyViewedSection">
       <h2>Recently Viewed</h2>
-      <div class="ml-recent-items">
-        <div class="ml-recent-card"><div class="ml-product-emoji">🔌</div><div class="ml-discount">upto 60% OFF</div><p>USB Hubs</p></div>
-        <div class="ml-recent-card"><div class="ml-product-emoji">🧩</div><div class="ml-discount">upto 65% OFF</div><p>Semiconductor</p></div>
+      <div class="ml-recent-items" id="mlRecentlyViewedItems">
+        <p class="ml-recent-empty">Aap jo products dekhenge, wahi yahan dikhenge.</p>
       </div>
     </section>
 <main class="max-w-7xl mx-auto px-4 py-6">
@@ -962,6 +971,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         }
 
         function openProductDetail(id) {
+            if (typeof window.mlRecordProductView === 'function') window.mlRecordProductView(id);
             let products = getProducts();
             let p = products.find(prod => prod.id === id);
             if (!p) return;
@@ -2795,6 +2805,51 @@ window.addEventListener('storage', updateDeliveryLocation);
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) refreshDelivery();
     });
+})();
+</script>
+
+
+<script id="ml-recently-viewed-behavior">
+(function(){
+  const STORAGE_KEY = 'ml_recently_viewed_products_v1';
+  function safeRead(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch(_) { return []; }
+  }
+  function findProduct(id){
+    if (typeof getProducts !== 'function') return null;
+    return getProducts().find(p => String(p.id) === String(id)) || null;
+  }
+  function renderRecentlyViewed(){
+    const host = document.getElementById('mlRecentlyViewedItems');
+    if (!host) return;
+    const ids = safeRead();
+    const products = ids.map(findProduct).filter(Boolean).filter(p => p.active !== false);
+    if (!products.length){
+      host.innerHTML = '<p class="ml-recent-empty">Aap jo products dekhenge, wahi yahan dikhenge.</p>';
+      return;
+    }
+    host.innerHTML = products.map(p => {
+      const id = Number(p.id);
+      const img = p.img ? `<img src="${String(p.img).replace(/"/g,'&quot;')}" alt="">` : '<div class="ml-product-emoji">🛍️</div>';
+      const name = typeof escapeHTML === 'function' ? escapeHTML(p.name || 'Product') : String(p.name || 'Product');
+      return `<div class="ml-recent-card" role="button" tabindex="0" onclick="openProductDetail(${id})" onkeydown="if(event.key==='Enter'){openProductDetail(${id})}">${img}<p class="ml-recent-name">${name}</p><div class="ml-recent-price">₹${Number(p.price)||0}</div></div>`;
+    }).join('');
+  }
+  function recordProductView(id){
+    const products = typeof getProducts === 'function' ? getProducts() : [];
+    const p = products.find(x => String(x.id) === String(id));
+    if (!p) return;
+    let ids = safeRead().filter(x => String(x) !== String(id));
+    ids.unshift(p.id);
+    ids = ids.slice(0, 10);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ids)); } catch(_) {}
+    renderRecentlyViewed();
+  }
+  window.mlRecordProductView = recordProductView;
+  window.mlRenderRecentlyViewed = renderRecentlyViewed;
+  document.addEventListener('DOMContentLoaded', renderRecentlyViewed);
+  window.addEventListener('storage', renderRecentlyViewed);
 })();
 </script>
 
