@@ -112,10 +112,6 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                         <div id="categoryMenuSection">
                             <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
                             <button type="button" onclick="filterCategory('All')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs font-semibold text-amber-400">✨ All Products</button>
-                            <button type="button" onclick="filterCategory('Fast Food')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300">🍔 Fast Food</button>
-                            <button type="button" onclick="filterCategory('Grocery')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300">🛒 Grocery</button>
-                            <button type="button" onclick="filterCategory('Fruits')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300">🍎 Fruits</button>
-                            <button type="button" onclick="filterCategory('Vegetables')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300">🥦 Vegetables</button>
                         </div>
                         <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-amber-400 tracking-wider">PANEL SWITCHER</div>
                         <button type="button" onclick="switchDirectPanel('user')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user text-amber-400"></i> User Panel</button>
@@ -145,6 +141,10 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
     </section>
     <section class="ml-categories" aria-label="Shopping categories">
       <button type="button" class="ml-cat" data-ml-category="All"><div class="ml-cat-icon">🛍️</div><div class="ml-cat-label">All Categories</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Fruits"><div class="ml-cat-icon">🍎</div><div class="ml-cat-label">Fruits</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Vegetables"><div class="ml-cat-icon">🥦</div><div class="ml-cat-label">Vegetables</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Fast Food"><div class="ml-cat-icon">🍔</div><div class="ml-cat-label">Fast Food</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Grocery"><div class="ml-cat-icon">🛒</div><div class="ml-cat-label">Grocery</div></button>
       <button type="button" class="ml-cat" data-ml-category="Get Loans"><div class="ml-cat-icon">💳</div><div class="ml-cat-label">Get Loans</div></button>
       <button type="button" class="ml-cat" data-ml-category="Kurtis & Dresses"><div class="ml-cat-icon">👗</div><div class="ml-cat-label">Kurtis & Dresses</div></button>
       <button type="button" class="ml-cat" data-ml-category="Beauty"><div class="ml-cat-icon">💄</div><div class="ml-cat-label">Beauty</div></button>
@@ -190,7 +190,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                     <select id="newProdUnitSelect" class="w-1/2 bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs outline-none focus:border-amber-400"><option value="Kg">Kg</option><option value="Grams">Grams</option><option value="Pieces">Pieces</option><option value="Full Plate">Full Plate</option><option value="Half Plate">Half Plate</option><option value="1 Packet">Packet</option><option value="1 Bottle">Bottle</option></select>
                 </div>
                 <textarea id="newProdDesc" placeholder="Product Description" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400"></textarea>
-                <select id="newProdCategory" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400"><option value="Fast Food">Fast Food</option><option value="Grocery">Grocery</option><option value="Fruits">Fruits</option><option value="Vegetables">Vegetables</option></select>
+                <select id="newProdCategory" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400"><option value="Fast Food">Fast Food</option><option value="Grocery">Grocery</option><option value="Fruits">Fruits</option><option value="Vegetables">Vegetables</option><option value="Kurtis & Dresses">Kurtis & Dresses</option><option value="Beauty">Beauty</option><option value="Kids">Kids Wear</option><option value="Men">Men's Wear</option><option value="Kitchen">Kitchen</option><option value="Western Wear">Western Wear</option><option value="Sarees">Sarees</option><option value="Home Decor">Home Decor</option><option value="Bags">Bags</option></select>
                 <label class="block text-[11px] text-gray-300 mb-1">Upload Image from Gallery:</label>
                 <input type="file" id="newProdImgFile" accept="image/*" class="w-full bg-[#133e31] border border-[#1b4f40] text-gray-200 rounded-xl p-2 text-xs mb-4">
                 <button type="button" onclick="addNewProduct()" class="w-full bg-amber-400 text-black py-2.5 rounded-xl text-xs font-bold hover:bg-amber-300 cursor-pointer shadow">List Product to Cloud</button>
@@ -476,7 +476,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                     <div class="w-1/2"><label class="block font-medium text-gray-200 mb-1">Unit</label><select id="editProdUnitSelect" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="Kg">Kg</option><option value="Grams">Grams</option><option value="Pieces">Pieces</option><option value="Full Plate">Full Plate</option><option value="Half Plate">Half Plate</option><option value="1 Packet">Packet</option><option value="1 Bottle">Bottle</option></select></div>
                 </div>
                 <div><label class="block font-medium text-gray-200 mb-1">Description</label><textarea id="editProdDesc" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></textarea></div>
-                <div><label class="block font-medium text-gray-200 mb-1">Category</label><select id="editProdCategory" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="Fast Food">Fast Food</option><option value="Grocery">Grocery</option><option value="Fruits">Fruits</option><option value="Vegetables">Vegetables</option></select></div>
+                <div><label class="block font-medium text-gray-200 mb-1">Category</label><select id="editProdCategory" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="Fast Food">Fast Food</option><option value="Grocery">Grocery</option><option value="Fruits">Fruits</option><option value="Vegetables">Vegetables</option><option value="Kurtis & Dresses">Kurtis & Dresses</option><option value="Beauty">Beauty</option><option value="Kids">Kids Wear</option><option value="Men">Men's Wear</option><option value="Kitchen">Kitchen</option><option value="Western Wear">Western Wear</option><option value="Sarees">Sarees</option><option value="Home Decor">Home Decor</option><option value="Bags">Bags</option></select></div>
             </div>
             <button type="button" onclick="saveEditedProduct()" class="w-full bg-amber-400 text-black py-3 rounded-xl text-sm font-bold hover:bg-amber-300 transition cursor-pointer shadow">Update Cloud Product</button>
         </div>
@@ -2605,41 +2605,23 @@ document.addEventListener('DOMContentLoaded', function () {
       const category = tile.getAttribute('data-ml-category') || 'All';
 
       if (category === 'Get Loans') {
-        if (typeof window.alert === 'function') {
-          window.alert('Get Loans feature abhi website par available nahi hai.');
-        }
+        alert('Get Loans feature abhi website par available nahi hai.');
         return;
       }
 
       if (category === 'Mall') {
-        document.querySelector('.ml-promo-strip')?.scrollIntoView({behavior:'smooth', block:'center'});
+        document.querySelector('.ml-recent')?.scrollIntoView({behavior:'smooth', block:'center'});
         return;
       }
 
       if (searchInput) searchInput.value = '';
       if (visibleSearch) visibleSearch.value = '';
 
-      if (category === 'All') {
-        if (typeof filterCategory === 'function') filterCategory('All');
-        else if (typeof renderProducts === 'function') renderProducts();
-      } else if (['Fast Food','Grocery','Fruits','Vegetables'].includes(category)) {
-        if (typeof filterCategory === 'function') filterCategory(category);
-      } else {
-        if (typeof selectedCategoryFilter !== 'undefined') selectedCategoryFilter = 'All';
-        const terms = {
-          'Kurtis & Dresses':'kurti dress kurtis',
-          'Beauty':'beauty makeup cosmetic skincare',
-          'Kids':'kids children',
-          'Men':'men mens',
-          'Kitchen':'kitchen cookware',
-          'Western Wear':'western wear',
-          'Sarees':'saree sarees',
-          'Home Decor':'home decor',
-          'Bags':'bag bags handbag'
-        };
-        if (searchInput) searchInput.value = terms[category] || category;
-        if (visibleSearch) visibleSearch.value = terms[category] || category;
-        if (typeof renderProducts === 'function') renderProducts();
+      if (typeof filterCategory === 'function') {
+        filterCategory(category === 'All' ? 'All' : category);
+      } else if (typeof renderProducts === 'function') {
+        if (typeof selectedCategoryFilter !== 'undefined') selectedCategoryFilter = category;
+        renderProducts();
       }
 
       document.getElementById('productGrid')?.scrollIntoView({behavior:'smooth', block:'start'});
