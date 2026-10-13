@@ -1619,6 +1619,21 @@ async function verifyFast2SMSOTP() {
             applyMarketplaceSettings();
         };
 
+        function getPanelProfileKey(field) {
+    const role = localStorage.getItem('loggedInRole') || 'user';
+    const phone = (localStorage.getItem('userPhone') || '').trim();
+
+    return 'panelProfile_' + role + '_' + phone + '_' + field;
+}
+
+function getPanelProfile(field) {
+    return localStorage.getItem(getPanelProfileKey(field)) || '';
+}
+
+function savePanelProfile(field, value) {
+    localStorage.setItem(getPanelProfileKey(field), value);
+}
+
         function updateAuthUI() {
             let role = localStorage.getItem('loggedInRole');
             let authSection = document.getElementById('authSection');
@@ -1763,26 +1778,44 @@ async function verifyFast2SMSOTP() {
         }
 
         function openEditProfile() {
-            toggleMenu();
-            document.getElementById('profileName').value = localStorage.getItem('userName') || "";
-            document.getElementById('profilePhone').value = localStorage.getItem('userPhone') || "";
-            document.getElementById('profileAddress').value = localStorage.getItem('userAddress') || "";
-            const savedPhoto = localStorage.getItem('userProfilePic') || '';
-            const preview = document.getElementById('profilePreviewImg');
-            const defaultIcon = document.getElementById('profileDefaultIcon');
-            if (savedPhoto) {
-                preview.src = savedPhoto;
-                preview.classList.remove('hidden');
-                defaultIcon.classList.add('hidden');
-            } else {
-                preview.removeAttribute('src');
-                preview.classList.add('hidden');
-                defaultIcon.classList.remove('hidden');
-            }
-            document.getElementById('profileImgFile').value = '';
-            pendingProfilePhotoData = null;
-            document.getElementById('profileModal').classList.remove('hidden');
-        }
+    toggleMenu();
+
+    document.getElementById('profileName').value =
+        getPanelProfile('name');
+
+    document.getElementById('profilePhone').value =
+        localStorage.getItem('userPhone') || '';
+
+    document.getElementById('profileAddress').value =
+        getPanelProfile('address');
+
+    const savedPic = getPanelProfile('photo');
+    const prevImg = document.getElementById('profilePreviewImg');
+    const defIcon = document.getElementById('profileDefaultIcon');
+
+    if (savedPic) {
+        prevImg.src = savedPic;
+        prevImg.classList.remove('hidden');
+        defIcon.classList.add('hidden');
+    } else {
+        prevImg.removeAttribute('src');
+        prevImg.classList.add('hidden');
+        defIcon.classList.remove('hidden');
+    }
+
+    currentLat = getPanelProfile('lat') || null;
+    currentLng = getPanelProfile('lng') || null;
+
+    const gpsStatus = document.getElementById('gpsStatus');
+    if (gpsStatus) {
+        gpsStatus.innerText = currentLat && currentLng
+            ? 'GPS Captured successfully!'
+            : 'GPS location not captured';
+    }
+
+    document.getElementById('profileImgFile').value = '';
+    document.getElementById('profileModal').classList.remove('hidden');
+}
 
         function fetchCurrentGPS() {
             navigator.geolocation.getCurrentPosition(pos => {
@@ -1832,12 +1865,30 @@ async function verifyFast2SMSOTP() {
 
         async function saveProfile() {
             try {
-                if (pendingProfilePhotoData) {
-                    localStorage.setItem('userProfilePic', pendingProfilePhotoData);
-                }
-                localStorage.setItem('userName', document.getElementById('profileName').value.trim());
-                localStorage.setItem('userPhone', document.getElementById('profilePhone').value.trim());
-                localStorage.setItem('userAddress', document.getElementById('profileAddress').value.trim());
+                const role = localStorage.getItem('loggedInRole') || 'user';
+const phone = (localStorage.getItem('userPhone') || '').trim();
+
+if (!phone) {
+    alert('Pehle mobile number se login karein.');
+    return;
+}
+
+const name = document.getElementById('profileName').value.trim();
+const address = document.getElementById('profileAddress').value.trim();
+
+if (!name) {
+    alert('Apna naam bharein.');
+    return;
+}
+
+savePanelProfile('name', name);
+savePanelProfile('address', address);
+
+if (pendingProfilePhotoData) {
+    savePanelProfile('photo', pendingProfilePhotoData);
+}
+
+localStorage.setItem('panelProfile_' + role + '_' + phone + '_phone', phone);
                 document.getElementById('profileModal').classList.add('hidden');
                 pendingProfilePhotoData = null;
                 updateAuthUI();
