@@ -42,6 +42,7 @@
                         <button type="button" onclick="switchDirectPanel('user')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user text-amber-400"></i> User Panel</button>
                         <button type="button" onclick="switchDirectPanel('seller')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-store text-amber-400"></i> Seller Panel (Manage)</button>
                         <button type="button" onclick="switchDirectPanel('delivery')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-motorcycle text-amber-400"></i> Delivery Partner Panel</button>
+                        <button type="button" onclick="switchDirectPanel('admin')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-amber-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</button>
                         <hr class="my-1 border-[#133e31]">
                         <button type="button" id="logoutMenuButton" onclick="logoutApp()" class="hidden w-full text-left px-4 py-2.5 hover:bg-red-950 text-red-400 flex items-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
                     </div>
@@ -68,7 +69,9 @@
             <div class="bg-[#0b2920] p-5 rounded-2xl shadow-xl border border-[#133e31]">
                 <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-plus-circle mr-1"></i> Add New Product (Cloud Database)</h3><span id="sellerNotificationBadge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hidden animate-pulse">🔔 New Order!</span></div>
                 <input type="text" id="newProdName" placeholder="Product Name (e.g. Momos)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
-                <input type="number" id="newProdPrice" placeholder="Price (₹)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
+                <input type="number" id="newProdPrice" placeholder="Price (₹)" min="0" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
+                <input type="number" id="newProdStock" placeholder="Available Stock (quantity)" min="0" value="10" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
+                <input type="text" id="newProdSellerName" placeholder="Shop / Seller Name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
                 <div class="flex gap-2 mb-2.5">
                     <input type="text" id="newProdWeightVal" placeholder="Qty (e.g. 1, 5, 10)" class="w-1/2 bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs outline-none focus:border-amber-400">
                     <select id="newProdUnitSelect" class="w-1/2 bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs outline-none focus:border-amber-400"><option value="Kg">Kg</option><option value="Grams">Grams</option><option value="Pieces">Pieces</option><option value="Full Plate">Full Plate</option><option value="Half Plate">Half Plate</option><option value="1 Packet">Packet</option><option value="1 Bottle">Bottle</option></select>
@@ -100,6 +103,43 @@
             </div>
             <div id="deliveryOrdersContainer" class="space-y-4"></div>
         </div>
+        <section id="shopControls" class="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="productSearchInput" type="search" oninput="renderProducts()" placeholder="Search products, brands, sellers..." class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-amber-400">
+            <select id="productSortSelect" onchange="renderProducts()" class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white"><option value="featured">Sort: Featured</option><option value="priceLow">Price: Low to High</option><option value="priceHigh">Price: High to Low</option><option value="name">Name: A to Z</option></select>
+            <button type="button" onclick="openWishlist()" class="bg-[#0b2920] border border-amber-400/40 text-amber-300 rounded-xl px-4 py-3 text-sm font-bold"><i class="fa-solid fa-heart mr-2"></i>Wishlist <span id="wishlistCount">0</span></button>
+        </section>
+        <div id="adminDashboard" class="hidden max-w-5xl mx-auto space-y-4 mb-6">
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-amber-400/30">
+                <h3 class="text-lg font-bold text-amber-400 mb-3"><i class="fa-solid fa-shield-halved mr-2"></i>Marketplace Admin Control Center</h3>
+                <p class="text-xs text-gray-300 mb-3">Manage seller applications, products, orders, refunds/returns, payouts and marketplace settings.</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+                    <div class="bg-[#133e31] p-3 rounded-xl"><p class="text-xs">Products</p><b id="adminProductCount" class="text-amber-300 text-xl">0</b></div>
+                    <div class="bg-[#133e31] p-3 rounded-xl"><p class="text-xs">Orders</p><b id="adminOrderCount" class="text-amber-300 text-xl">0</b></div>
+                    <div class="bg-[#133e31] p-3 rounded-xl"><p class="text-xs">Seller Applications</p><b id="adminSellerCount" class="text-amber-300 text-xl">0</b></div>
+                    <div class="bg-[#133e31] p-3 rounded-xl"><p class="text-xs">Payout Requests</p><b id="adminPayoutCount" class="text-amber-300 text-xl">0</b></div>
+                </div>
+            </div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">Seller Applications & Status</h4><div id="adminSellersList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">Customers / Customer Order History</h4><div id="adminCustomersList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">Product Moderation / Stock</h4><div id="adminProductsList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">All Orders, Returns & Refund Requests</h4><div id="adminOrdersList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">Customer Support / Complaints</h4><div id="adminTicketsList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><h4 class="font-bold text-amber-400 mb-3">Withdrawal / Payout Requests</h4><div id="adminPayoutsList" class="space-y-2 text-xs"></div></div>
+            <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]">
+                <h4 class="font-bold text-amber-400 mb-3">Marketplace Settings</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <label class="text-xs">Commission (%)<input id="adminCommissionInput" type="number" min="0" max="100" value="10" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                    <label class="text-xs">Delivery Fee (₹)<input id="adminDeliveryFeeInput" type="number" min="0" value="30" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                    <label class="text-xs">Free Delivery Above (₹)<input id="adminFreeDeliveryInput" type="number" min="0" value="199" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                    <label class="text-xs">Home Heading<input id="adminBannerHeading" type="text" value="Welcome to Vaishu ModeLuxe" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                    <label class="text-xs">Home Subtitle / Offer<input id="adminBannerSubtitle" type="text" value="Quality Products at Your Doorstep" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                    <label class="text-xs">Categories (comma separated)<input id="adminCategoriesInput" type="text" value="Fast Food, Grocery, Fruits, Vegetables" class="mt-1 w-full bg-[#133e31] border border-[#1b4f40] rounded-lg p-2 text-white"></label>
+                </div>
+                <button type="button" onclick="saveMarketplaceSettings()" class="mt-3 bg-amber-400 text-black px-4 py-2 rounded-lg font-bold text-xs">Save Settings</button>
+                <p class="text-[10px] text-gray-400 mt-2">These settings are saved in Firebase; checkout code/payment backend may need further wiring before they affect every calculation.</p>
+            </div>
+        </div>
+        <div id="gridMessage" class="hidden text-xs text-gray-300 mb-3"></div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="productGrid"></div>
     </main>
 
@@ -165,7 +205,7 @@
         <strong id="withdrawGrossPreview" class="shrink-0 text-right whitespace-nowrap">₹0.00</strong>
     </div>
     <div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-amber-300">
-        <span class="flex-1 min-w-[135px]">Company Commission (10%)</span>
+        <span id="withdrawCommissionLabel" class="flex-1 min-w-[135px]">Company Commission (10%)</span>
         <strong id="withdrawCommissionPreview" class="shrink-0 text-right whitespace-nowrap">−₹0.00</strong>
     </div>
     <div class="border-t border-[#1b4f40] pt-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1 font-bold">
@@ -244,12 +284,13 @@
             <h3 class="text-xl font-bold text-amber-400 mb-2">Mobile OTP Login</h3>
             <p class="text-xs text-gray-300 mb-4">StartMessaging SMS OTP verification is required to sign in.</p>
             <div class="space-y-3 text-left text-xs mb-3">
-                <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option></select></div>
+                <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option><option value="admin">Admin (Owner)</option></select></div>
                 <div><label class="block font-medium text-gray-200 mb-1">Mobile Number</label><input type="tel" id="loginPhoneInput" maxlength="10" placeholder="10-digit number" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400 mb-2"></div>
                 <div id="loginBankSection" class="pt-2 border-t border-[#1b4f40] space-y-2">
                     <p class="font-bold text-amber-400"><i class="fa-solid fa-shield-halved mr-1"></i> Seller / Delivery Verification</p>
                     
                     <input type="text" id="loginKycFullName" placeholder="Full Name (as on PAN/Aadhaar)" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
+                    <input type="text" id="loginShopName" placeholder="Shop / Business Name (Seller)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
                     <input type="text" id="loginPanNumber" placeholder="PAN Number (e.g. ABCDE1234F)" maxlength="10" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
                     <div id="deliveryVehicleSection" class="hidden space-y-2">
                         <input type="text" id="loginVehicleNumber" placeholder="Vehicle Number (e.g. UP 81 AB 1234)" maxlength="15" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
@@ -320,7 +361,8 @@
             <input type="hidden" id="editProdId">
             <div class="space-y-3 text-xs mb-4">
                 <div><label class="block font-medium text-gray-200 mb-1">Product Name</label><input type="text" id="editProdName" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
-                <div><label class="block font-medium text-gray-200 mb-1">Price (₹)</label><input type="number" id="editProdPrice" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
+                <div><label class="block font-medium text-gray-200 mb-1">Price (₹)</label><input type="number" id="editProdPrice" min="0" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
+                <div><label class="block font-medium text-gray-200 mb-1">Available Stock</label><input type="number" id="editProdStock" min="0" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
                 <div class="flex gap-2">
                     <div class="w-1/2"><label class="block font-medium text-gray-200 mb-1">Quantity / Weight</label><input type="text" id="editProdWeightVal" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
                     <div class="w-1/2"><label class="block font-medium text-gray-200 mb-1">Unit</label><select id="editProdUnitSelect" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="Kg">Kg</option><option value="Grams">Grams</option><option value="Pieces">Pieces</option><option value="Full Plate">Full Plate</option><option value="Half Plate">Half Plate</option><option value="1 Packet">Packet</option><option value="1 Bottle">Bottle</option></select></div>
@@ -332,6 +374,28 @@
         </div>
     </div>
 
+
+    <div id="wishlistModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4">
+        <div class="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl border border-[#133e31] bg-[#0b2920] p-5 relative">
+            <button type="button" onclick="document.getElementById('wishlistModal').classList.add('hidden')" class="absolute right-4 top-3 text-gray-300 text-xl">×</button>
+            <h3 class="text-xl font-bold text-amber-400 mb-4"><i class="fa-solid fa-heart mr-2"></i>My Wishlist</h3>
+            <div id="wishlistItems" class="space-y-2"></div>
+        </div>
+    </div>
+    <!-- Device-local Admin lock (extra UI lock; not a replacement for server/Firebase authorization) -->
+    <div id="adminDeviceLockModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-[120] p-4" role="dialog" aria-modal="true" aria-labelledby="adminDeviceLockTitle">
+      <div class="w-full max-w-sm rounded-2xl border border-amber-400/40 bg-[#0b2920] p-5 shadow-2xl">
+        <div class="text-center mb-4"><div class="mx-auto mb-3 w-14 h-14 rounded-2xl bg-amber-400 text-black flex items-center justify-center text-2xl"><i class="fa-solid fa-shield-halved"></i></div><h3 id="adminDeviceLockTitle" class="text-xl font-bold text-amber-400">Admin Device Lock</h3><p id="adminDeviceLockIntro" class="text-xs text-gray-300 mt-2">Set a password and register this phone's screen-lock/passkey.</p></div>
+        <label class="block text-xs text-gray-200 mb-1" for="adminDevicePassword">Admin password</label>
+        <input id="adminDevicePassword" type="password" autocomplete="current-password" minlength="10" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 mb-3" placeholder="At least 10 characters">
+        <label id="adminDevicePasswordConfirmLabel" class="block text-xs text-gray-200 mb-1" for="adminDevicePasswordConfirm">Confirm password</label>
+        <input id="adminDevicePasswordConfirm" type="password" autocomplete="new-password" minlength="10" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 mb-3" placeholder="Enter password again">
+        <button id="adminDevicePrimaryBtn" type="button" class="w-full bg-amber-400 text-black py-3 rounded-xl font-bold">Set Password & Register Passkey</button>
+        <button id="adminDeviceCancelBtn" type="button" class="w-full mt-2 border border-[#1b4f40] text-gray-300 py-2.5 rounded-xl">Cancel</button>
+        <p id="adminDeviceLockStatus" class="text-xs text-gray-300 mt-3" aria-live="polite"></p>
+        <p class="text-[10px] text-amber-200/80 mt-3">Device-local lock only. Secure database protection still requires Firebase Rules/server-side authorization.</p>
+      </div>
+    </div>
 
     <!-- Branded popup used instead of plain browser alert dialogs -->
     <div id="appAlertModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-[100] p-4" role="dialog" aria-modal="true" aria-labelledby="appAlertTitle">
@@ -375,12 +439,256 @@
         };
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.database();
-
         // Online payment is intentionally disabled until a trusted server endpoint is configured.
         // Never put Razorpay secret keys in this file. Only a public Key ID belongs in the browser.
         const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
         const RAZORPAY_CREATE_ORDER_URL = ""; // Set to your HTTPS backend endpoint
         const RAZORPAY_VERIFY_PAYMENT_URL = ""; // Set to your HTTPS backend endpoint
+
+        // IMPORTANT: Admin UI access is not a security boundary. Enforce roles in Firebase Rules/server too.
+        // Add the owner's verified phone here before using the Admin role (digits only).
+        const ADMIN_PHONE_ALLOWLIST = []; 
+        let liveSellerApplications = {};
+        let livePayoutRequests = {};
+        let marketplaceSettings = { commissionPercent: 10, deliveryFee: 30, freeDeliveryAbove: 199 };
+        db.ref('marketplaceSettings').on('value', snapshot => {
+            marketplaceSettings = {...marketplaceSettings, ...(snapshot.val() || {})};
+            if (document.readyState !== 'loading') applyMarketplaceSettings();
+        });
+
+        function currentPhone() { return String(localStorage.getItem('userPhone') || ''); }
+        function getWishlist() { try { return JSON.parse(localStorage.getItem('modeluxeWishlist') || '[]'); } catch (_) { return []; } }
+        function saveWishlist(items) { localStorage.setItem('modeluxeWishlist', JSON.stringify(items)); updateWishlistCount(); }
+        function updateWishlistCount() { const el = document.getElementById('wishlistCount'); if (el) el.textContent = getWishlist().length; }
+        function toggleWishlist(productId) {
+            const list = getWishlist(); const id = Number(productId);
+            const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id];
+            saveWishlist(next); renderProducts();
+            alert(list.includes(id) ? 'Wishlist se remove kar diya.' : 'Wishlist mein add kar diya.');
+        }
+        function openWishlist() {
+            const ids = getWishlist(); const products = getProducts().filter(p => ids.includes(Number(p.id)));
+            const el = document.getElementById('wishlistItems');
+            el.innerHTML = products.length ? products.map(p => `<div class="bg-[#133e31] rounded-xl p-3 flex items-center gap-3"><img src="${escapeHTML(p.img || '')}" class="w-14 h-14 object-cover rounded-lg"><div class="flex-1 min-w-0"><b>${escapeHTML(p.name)}</b><p class="text-amber-300">₹${Number(p.price || 0)}</p></div><button onclick="openProductDetail(${Number(p.id)});document.getElementById('wishlistModal').classList.add('hidden')" class="bg-amber-400 text-black px-3 py-2 rounded-lg">View</button><button onclick="toggleWishlist(${Number(p.id)})" class="text-red-300">Remove</button></div>`).join('') : '<p class="text-sm text-gray-300">Wishlist abhi khaali hai.</p>';
+            document.getElementById('wishlistModal').classList.remove('hidden');
+        }
+        function isAdmin() { return localStorage.getItem('loggedInRole') === 'admin' && ADMIN_PHONE_ALLOWLIST.includes(currentPhone()); }
+
+        // Extra device-local lock for casual access on this phone. It is NOT server authentication.
+        const ADMIN_DEVICE_LOCK_KEY = 'modeluxeAdminDeviceLockV1';
+        const ADMIN_DEVICE_CRED_KEY = 'modeluxeAdminPasskeyCredentialIdV1';
+        let adminLockPendingAction = null;
+        function adminLockB64(bytes) {
+            let binary = ''; new Uint8Array(bytes).forEach(b => binary += String.fromCharCode(b));
+            return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        }
+        function adminLockUnb64(value) {
+            const b64 = String(value).replace(/-/g,'+').replace(/_/g,'/');
+            const raw = atob(b64 + '='.repeat((4 - b64.length % 4) % 4));
+            return Uint8Array.from(raw, c => c.charCodeAt(0));
+        }
+        async function adminPasswordDigest(password, saltB64) {
+            const salt = saltB64 ? adminLockUnb64(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+            const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+            const bits = await crypto.subtle.deriveBits({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, material, 256);
+            return {salt:adminLockB64(salt), hash:adminLockB64(bits)};
+        }
+        function adminLockModal(show, setup=false, status='') {
+            const modal = document.getElementById('adminDeviceLockModal');
+            const confirm = document.getElementById('adminDevicePasswordConfirm');
+            document.getElementById('adminDeviceLockIntro').textContent = setup ? 'Create a strong password and register this phone’s Android screen-lock/passkey.' : 'Enter your Admin password, then confirm with this phone’s passkey/biometric.';
+            document.getElementById('adminDevicePasswordConfirmLabel').classList.toggle('hidden', !setup);
+            confirm.classList.toggle('hidden', !setup);
+            document.getElementById('adminDevicePrimaryBtn').textContent = setup ? 'Set Password & Register Passkey' : 'Verify Password & Passkey';
+            document.getElementById('adminDeviceLockStatus').textContent = status;
+            modal.classList.toggle('hidden', !show); modal.classList.toggle('flex', show);
+            if (show) setTimeout(() => document.getElementById('adminDevicePassword').focus(), 50);
+        }
+        function adminDeviceLockReady() {
+            return !!localStorage.getItem(ADMIN_DEVICE_LOCK_KEY) && !!localStorage.getItem(ADMIN_DEVICE_CRED_KEY) && !!window.PublicKeyCredential && !!navigator.credentials;
+        }
+        async function registerAdminDevicePasskey() {
+            if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) throw new Error('Passkey ke liye website HTTPS par aur supported browser mein kholni hogi.');
+            const challenge = crypto.getRandomValues(new Uint8Array(32));
+            const userId = crypto.getRandomValues(new Uint8Array(16));
+            const credential = await navigator.credentials.create({publicKey:{
+                challenge, rp:{name:'ModeLuxe Mart', id:location.hostname},
+                user:{id:userId, name:'modeluxe-admin-device', displayName:'ModeLuxe Mart Admin'},
+                pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+                authenticatorSelection:{authenticatorAttachment:'platform', residentKey:'preferred', userVerification:'required'},
+                timeout:60000, attestation:'none'
+            }});
+            if (!credential) throw new Error('Passkey registration cancel ho gaya.');
+            localStorage.setItem(ADMIN_DEVICE_CRED_KEY, adminLockB64(credential.rawId));
+            return true;
+        }
+        async function verifyAdminDevicePasskey() {
+            if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) throw new Error('Is browser mein secure passkey available nahi hai.');
+            const id = localStorage.getItem(ADMIN_DEVICE_CRED_KEY);
+            if (!id) throw new Error('Is phone ka passkey registered nahi hai.');
+            const challenge = crypto.getRandomValues(new Uint8Array(32));
+            const assertion = await navigator.credentials.get({publicKey:{challenge, rpId:location.hostname, allowCredentials:[{type:'public-key', id:adminLockUnb64(id)}], userVerification:'required', timeout:60000}});
+            if (!assertion) throw new Error('Passkey verification cancel ho gaya.');
+            // Browser requires the authenticator to answer. Client-only check is an extra lock, not server-grade authentication.
+            return true;
+        }
+        async function openAdminWithDeviceLock() {
+            if (!isAdmin()) { alert('Pehle apne verified owner mobile se Admin OTP login karein. ADMIN_PHONE_ALLOWLIST mein owner mobile configure hona zaroori hai.'); openLoginModalForRole('admin'); return; }
+            if (!adminDeviceLockReady()) {
+                adminLockPendingAction = 'setup'; adminLockModal(true, true, 'Pehli baar isi phone par password aur passkey set karein.'); return;
+            }
+            adminLockPendingAction = 'unlock'; adminLockModal(true, false, '');
+        }
+        async function submitAdminDeviceLock() {
+            const status = document.getElementById('adminDeviceLockStatus');
+            const password = document.getElementById('adminDevicePassword').value;
+            const confirm = document.getElementById('adminDevicePasswordConfirm').value;
+            try {
+                if (password.length < 10) throw new Error('Password kam se kam 10 characters ka rakhein.');
+                if (adminLockPendingAction === 'setup') {
+                    if (password !== confirm) throw new Error('Dono password match nahi karte.');
+                    if (!window.isSecureContext || !window.PublicKeyCredential) throw new Error('Passkey ke liye HTTPS aur supported Android browser zaroori hai.');
+                    status.textContent = 'Passkey register ho raha hai. Phone ka screen lock/biometric confirm karein…';
+                    const dig = await adminPasswordDigest(password);
+                    await registerAdminDevicePasskey();
+                    localStorage.setItem(ADMIN_DEVICE_LOCK_KEY, JSON.stringify(dig));
+                    sessionStorage.setItem('modeluxeAdminDeviceUnlocked','yes');
+                    adminLockModal(false); document.getElementById('adminDevicePassword').value=''; document.getElementById('adminDevicePasswordConfirm').value='';
+                    loadAdminPanel();
+                    return;
+                }
+                const stored = JSON.parse(localStorage.getItem(ADMIN_DEVICE_LOCK_KEY) || 'null');
+                if (!stored) throw new Error('Admin device lock set nahi hai.');
+                const entered = await adminPasswordDigest(password, stored.salt);
+                if (entered.hash !== stored.hash) throw new Error('Password galat hai.');
+                status.textContent = 'Password sahi hai. Ab phone ka passkey/biometric confirm karein…';
+                await verifyAdminDevicePasskey();
+                sessionStorage.setItem('modeluxeAdminDeviceUnlocked','yes');
+                adminLockModal(false); document.getElementById('adminDevicePassword').value='';
+                loadAdminPanel();
+            } catch (e) { status.textContent = e?.message || 'Verification fail ho gayi.'; }
+        }
+        document.getElementById('adminDevicePrimaryBtn').addEventListener('click', submitAdminDeviceLock);
+        document.getElementById('adminDeviceCancelBtn').addEventListener('click', () => { adminLockModal(false); adminLockPendingAction=null; });
+        function loadAdminPanel() {
+            if (!isAdmin()) { alert('Admin access configured nahi hai. Code mein ADMIN_PHONE_ALLOWLIST mein owner ka verified phone add karein aur Firebase Rules secure karein.'); return; }
+            if (sessionStorage.getItem('modeluxeAdminDeviceUnlocked') !== 'yes') { openAdminWithDeviceLock(); return; }
+            document.getElementById('adminDashboard').classList.remove('hidden');
+            document.getElementById('sellerDashboard').classList.add('hidden');
+            document.getElementById('deliveryDashboard').classList.add('hidden');
+            document.getElementById('productGrid').classList.add('hidden');
+            document.getElementById('shopControls').classList.add('hidden');
+            Promise.all([
+                db.ref('sellerApplications').once('value'),
+                db.ref('withdrawalRequests').once('value'),
+                db.ref('orders').once('value'),
+                db.ref('products').once('value'),
+                db.ref('marketplaceSettings').once('value'),
+                db.ref('supportTickets').once('value')
+            ]).then(([sellersSnap,payoutsSnap,ordersSnap,productsSnap,settingsSnap,ticketsSnap]) => {
+                liveSellerApplications = sellersSnap.val() || {};
+                livePayoutRequests = payoutsSnap.val() || {};
+                const orders = ordersSnap.val() || {};
+                const products = productsSnap.val() || {};
+                const settings = settingsSnap.val() || {};
+                const tickets = ticketsSnap.val() || {};
+                marketplaceSettings = {...marketplaceSettings, ...settings};
+                document.getElementById('adminProductCount').textContent = Object.keys(products).length;
+                document.getElementById('adminOrderCount').textContent = Object.keys(orders).length;
+                document.getElementById('adminSellerCount').textContent = Object.keys(liveSellerApplications).length;
+                document.getElementById('adminPayoutCount').textContent = Object.keys(livePayoutRequests).length;
+                const customers = {};
+                Object.values(orders).forEach(o => { if (o.customerPhone) { if (!customers[o.customerPhone]) customers[o.customerPhone] = {name:o.customerName || 'Customer', phone:o.customerPhone, count:0, total:0}; customers[o.customerPhone].count++; customers[o.customerPhone].total += Number(o.totalAmount || 0); } });
+                document.getElementById('adminCustomersList').innerHTML = Object.keys(customers).length ? Object.values(customers).map(c => `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(c.name)}</b><p>Phone: ${escapeHTML(c.phone)} · Orders: ${c.count} · Order value: ₹${c.total}</p></div>`).join('') : '<p>No customer orders found.</p>';
+                document.getElementById('adminTicketsList').innerHTML = Object.keys(tickets).length ? Object.entries(tickets).reverse().map(([id,t]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>Ticket #${escapeHTML(id)} · Order #${Number(t.orderId || 0)}</b><p>Customer: ${escapeHTML(t.customerPhone || '')}</p><p>${escapeHTML(t.message || '')}</p><p>Status: ${escapeHTML(t.status || 'open')}</p><div class="flex gap-2 mt-2"><button onclick="setTicketStatus('${id}','in progress')" class="bg-amber-700 px-2 py-1 rounded">In Progress</button><button onclick="setTicketStatus('${id}','resolved')" class="bg-green-700 px-2 py-1 rounded">Resolve</button></div></div>`).join('') : '<p>No support tickets.</p>';
+                document.getElementById('adminBannerHeading').value = settings.bannerHeading || 'Welcome to Vaishu ModeLuxe';
+                document.getElementById('adminBannerSubtitle').value = settings.bannerSubtitle || 'Quality Products at Your Doorstep';
+                document.getElementById('adminCategoriesInput').value = (settings.categories || ['Fast Food','Grocery','Fruits','Vegetables']).join(', ');
+                document.getElementById('adminCommissionInput').value = marketplaceSettings.commissionPercent;
+                document.getElementById('adminDeliveryFeeInput').value = marketplaceSettings.deliveryFee;
+                document.getElementById('adminFreeDeliveryInput').value = marketplaceSettings.freeDeliveryAbove;
+                document.getElementById('adminSellersList').innerHTML = Object.keys(liveSellerApplications).length ? Object.entries(liveSellerApplications).map(([phone,a]) => `<div class="bg-[#133e31] p-3 rounded-lg flex flex-wrap justify-between gap-2"><div><b>${escapeHTML(a.name || 'Seller')}</b><p>${escapeHTML(phone)} · Status: ${escapeHTML(a.status || 'pending')}</p><p>PAN/KYC: ${escapeHTML(a.pan || 'Not provided')} · Shop: ${escapeHTML(a.shopName || 'Not provided')}</p></div><div class="flex gap-2"><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','approved')" class="bg-green-700 px-3 py-2 rounded">Approve</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','rejected')" class="bg-red-700 px-3 py-2 rounded">Reject</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','suspended')" class="bg-gray-700 px-3 py-2 rounded">Suspend</button></div></div>`).join('') : '<p>No seller applications yet.</p>';
+                document.getElementById('adminProductsList').innerHTML = Object.keys(products).length ? Object.entries(products).map(([id,p]) => `<div class="bg-[#133e31] p-3 rounded-lg flex gap-3 items-center"><img src="${escapeHTML(p.img || '')}" class="w-12 h-12 object-cover rounded" onerror="this.style.display='none'"><div class="flex-1"><b>${escapeHTML(p.name || 'Product')}</b><p>₹${Number(p.price||0)} · Stock ${Number(p.stock ?? 0)} · ${escapeHTML(p.sellerName || p.sellerPhone || 'Seller')}</p><p>Status: ${escapeHTML(p.moderationStatus || 'active')}</p></div><div class="flex flex-col gap-1"><button onclick="moderateProduct('${id}','active')" class="bg-green-700 px-2 py-1 rounded">Approve/Show</button><button onclick="moderateProduct('${id}','hidden')" class="bg-yellow-700 px-2 py-1 rounded">Hide</button><button onclick="moderateProduct('${id}','rejected')" class="bg-red-700 px-2 py-1 rounded">Reject</button></div></div>`).join('') : '<p>No products.</p>';
+                document.getElementById('adminOrdersList').innerHTML = Object.keys(orders).length ? Object.entries(orders).reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button onclick="adminSetOrderStatus('${id}','Cancelled')" class="bg-red-800 px-2 py-1 rounded">Cancel</button><button onclick="adminSetOrderStatus('${id}','Return Approved')" class="bg-amber-700 px-2 py-1 rounded">Approve Return</button><button onclick="adminSetOrderStatus('${id}','Refund Pending')" class="bg-blue-700 px-2 py-1 rounded">Mark Refund Pending</button></div></div>`).join('') : '<p>No orders.</p>';
+                document.getElementById('adminPayoutsList').innerHTML = Object.keys(livePayoutRequests).length ? Object.entries(livePayoutRequests).map(([id,r]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(r.role || 'Payout')} · ₹${Number(r.requestedAmount || r.amount || r.grossAmount || 0)}</b><p>${escapeHTML(r.phone || r.userPhone || '')} · ${escapeHTML(r.status || 'pending')}</p><div class="flex gap-2 mt-2"><button onclick="setPayoutStatus('${id}','approved')" class="bg-green-700 px-3 py-1 rounded">Approve</button><button onclick="setPayoutStatus('${id}','paid')" class="bg-blue-700 px-3 py-1 rounded">Mark Paid</button><button onclick="setPayoutStatus('${id}','rejected')" class="bg-red-700 px-3 py-1 rounded">Reject</button></div></div>`).join('') : '<p>No payout requests found (or existing requests use another database path).</p>';
+            }).catch(err => alert('Admin data load nahi hua: ' + err.message + '. Firebase Rules check karein.'));
+        }
+        function setSellerApplicationStatus(phoneEncoded, status) {
+            if (!isAdmin()) return alert('Admin access required.');
+            const phone = decodeURIComponent(phoneEncoded);
+            db.ref('sellerApplications/' + phone).update({status, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+              .then(loadAdminPanel).catch(e => alert('Seller status update nahi hua: ' + e.message));
+        }
+        function moderateProduct(id, status) {
+            if (!isAdmin()) return alert('Admin access required.');
+            db.ref('products/' + id).update({moderationStatus: status, active: status === 'active', reviewedAt: new Date().toISOString()})
+              .then(loadAdminPanel).catch(e => alert('Product update nahi hua: ' + e.message));
+        }
+        function adminSetOrderStatus(id, status) {
+            if (!isAdmin()) return alert('Admin access required.');
+            db.ref('orders/' + id).update({status, adminUpdatedAt: new Date().toISOString()})
+              .then(loadAdminPanel).catch(e => alert('Order update nahi hua: ' + e.message));
+        }
+        function setPayoutStatus(id, status) {
+            if (!isAdmin()) return alert('Admin access required.');
+            db.ref('withdrawalRequests/' + id).update({status, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+              .then(loadAdminPanel).catch(e => alert('Payout update nahi hua: ' + e.message));
+        }
+        function setTicketStatus(id, status) {
+            if (!isAdmin()) return alert('Admin access required.');
+            db.ref('supportTickets/' + id).update({status, updatedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+              .then(loadAdminPanel).catch(e => alert('Ticket status update nahi hua: ' + e.message));
+        }
+        function applyMarketplaceSettings() {
+            const heading = document.getElementById('mainHeading');
+            const subtitle = document.getElementById('subHeading');
+            if (heading && marketplaceSettings.bannerHeading) heading.textContent = marketplaceSettings.bannerHeading;
+            if (subtitle && marketplaceSettings.bannerSubtitle) subtitle.textContent = marketplaceSettings.bannerSubtitle;
+            const categoryContainer = document.getElementById('categoryMenuSection');
+            if (categoryContainer && Array.isArray(marketplaceSettings.categories) && marketplaceSettings.categories.length) {
+                const cats = [...new Set(marketplaceSettings.categories.map(x => String(x).trim()).filter(Boolean))];
+                categoryContainer.innerHTML = `<div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
+                    <button type="button" onclick="filterCategory('All')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs font-semibold text-amber-400">✨ All Products</button>` +
+                    cats.map(cat => `<button type="button" onclick="filterCategory('${escapeHTML(cat)}')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300">${escapeHTML(cat)}</button>`).join('');
+            }
+        }
+        function saveMarketplaceSettings() {
+            if (!isAdmin()) return alert('Admin access required.');
+            const next = {
+                commissionPercent: Math.max(0, Math.min(100, Number(document.getElementById('adminCommissionInput').value || 0))),
+                deliveryFee: Math.max(0, Number(document.getElementById('adminDeliveryFeeInput').value || 0)),
+                freeDeliveryAbove: Math.max(0, Number(document.getElementById('adminFreeDeliveryInput').value || 0)),
+                bannerHeading: document.getElementById('adminBannerHeading').value.trim(),
+                bannerSubtitle: document.getElementById('adminBannerSubtitle').value.trim(),
+                categories: document.getElementById('adminCategoriesInput').value.split(',').map(x => x.trim()).filter(Boolean),
+                updatedAt: new Date().toISOString()
+            };
+            db.ref('marketplaceSettings').update(next).then(() => { marketplaceSettings = {...marketplaceSettings,...next}; applyMarketplaceSettings(); alert('Marketplace settings save ho gayi.'); })
+              .catch(e => alert('Settings save nahi hui: ' + e.message));
+        }
+        function requestOrderCancellation(orderId) {
+            const phone = currentPhone();
+            if (!phone) return alert('Pehle login karein.');
+            db.ref('orders/' + orderId).update({cancellationRequest: 'Requested by customer', cancellationRequestedAt: new Date().toISOString()})
+              .then(() => alert('Cancellation request bhej di gayi.')).catch(e => alert('Request nahi bhej paye: ' + e.message));
+        }
+        function requestOrderReturn(orderId) {
+            const phone = currentPhone();
+            if (!phone) return alert('Pehle login karein.');
+            const reason = prompt('Return/refund ka reason likhein:');
+            if (!reason) return;
+            db.ref('orders/' + orderId).update({returnRequest: reason, returnRequestedAt: new Date().toISOString()})
+              .then(() => alert('Return/refund request bhej di gayi.')).catch(e => alert('Request nahi bhej paye: ' + e.message));
+        }
+        function requestSupportTicket(orderId) {
+            const phone = currentPhone();
+            if (!phone) return alert('Complaint ke liye customer login karein.');
+            const message = prompt('Order issue / complaint detail likhein:');
+            if (!message || !message.trim()) return;
+            const ticket = {orderId: Number(orderId), customerPhone: phone, message: message.trim(), status: 'open', createdAt: new Date().toISOString()};
+            db.ref('supportTickets').push(ticket).then(() => alert('Complaint submit ho gayi. Admin panel se review hogi.'))
+              .catch(e => alert('Complaint submit nahi hui: ' + e.message));
+        }
 
         function escapeHTML(value) {
             return String(value ?? "").replace(/[&<>\"']/g, ch => ({
@@ -394,6 +702,11 @@
         let pendingOtpRequestId = null;
         let pendingLoginRole = null, pendingLoginPhone = null, activeWithdrawRole = null;
         let liveCloudProducts = [];
+        let liveProductRatings = {};
+        db.ref('productRatings').on('value', snapshot => {
+            liveProductRatings = snapshot.val() || {};
+            renderProducts();
+        });
 
         db.ref('products').on('value', (snapshot) => {
             let data = snapshot.val();
@@ -435,30 +748,49 @@
 
         function renderProducts() {
             let role = localStorage.getItem('loggedInRole');
-            if (role === 'delivery' || role === 'seller') { document.getElementById('productGrid').innerHTML = ''; return; }
+            if (role === 'delivery' || role === 'seller' || role === 'admin') {
+                document.getElementById('productGrid').innerHTML = '';
+                return;
+            }
             let products = getProducts();
+            const query = (document.getElementById('productSearchInput')?.value || '').trim().toLowerCase();
+            const sort = document.getElementById('productSortSelect')?.value || 'featured';
+            let filtered = products.filter(p => {
+                const active = p.active !== false && (!p.moderationStatus || p.moderationStatus === 'active');
+                const categoryMatch = selectedCategoryFilter === 'All' || p.category === selectedCategoryFilter;
+                const queryMatch = !query || [p.name, p.desc, p.category, p.sellerName, p.brand].some(v => String(v || '').toLowerCase().includes(query));
+                const inStock = p.stock === undefined || Number(p.stock) > 0;
+                return active && categoryMatch && queryMatch && inStock;
+            });
+            if (sort === 'priceLow') filtered.sort((a,b) => Number(a.price||0)-Number(b.price||0));
+            if (sort === 'priceHigh') filtered.sort((a,b) => Number(b.price||0)-Number(a.price||0));
+            if (sort === 'name') filtered.sort((a,b) => String(a.name||'').localeCompare(String(b.name||'')));
             let html = '';
-            let filtered = selectedCategoryFilter === 'All' ? products : products.filter(p => p.category === selectedCategoryFilter);
-
             if (filtered.length === 0) {
-                html = `<p class="col-span-full text-center text-gray-300 text-sm py-8">No products found in this category.</p>`;
+                html = `<p class="col-span-full text-center text-gray-300 text-sm py-8">Is search/category mein product nahi mila.</p>`;
             } else {
                 filtered.forEach(p => {
+                    const wished = getWishlist().includes(Number(p.id));
+                    const ratings = Object.values(liveProductRatings[p.id] || {}).map(r => Number(r.rating)).filter(r => r >= 1 && r <= 5);
+                    const avgRating = ratings.length ? (ratings.reduce((a,b) => a+b,0) / ratings.length) : Number(p.rating || 4.8);
                     html += `
                     <div class="bg-[#0b2920] p-3.5 rounded-2xl shadow-md border border-[#133e31] flex flex-col justify-between hover:border-amber-400/50 transition">
                         <div>
                             <div class="relative">
-                                <img src="${escapeHTML(p.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30')}" alt="Product" class="w-full h-36 object-cover rounded-xl mb-2.5 cursor-pointer hover:opacity-90 transition" onclick="openProductDetail(${p.id})">
-                                <span class="absolute bottom-2 left-2 bg-black bg-opacity-70 text-amber-400 text-[10px] px-2 py-0.5 rounded-lg font-bold backdrop-blur-sm"><i class="fa-solid fa-star text-[9px] mr-0.5"></i> 4.8</span>
+                                <img src="${escapeHTML(p.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30')}" alt="Product" class="w-full h-36 object-cover rounded-xl mb-2.5 cursor-pointer hover:opacity-90 transition" onclick="openProductDetail(${Number(p.id)})">
+                                <button type="button" onclick="toggleWishlist(${Number(p.id)})" aria-label="Wishlist" class="absolute top-2 right-2 bg-black/70 rounded-full w-8 h-8 text-sm ${wished ? 'text-red-400' : 'text-white'}"><i class="fa-solid fa-heart"></i></button>
+                                <span class="absolute bottom-2 left-2 bg-black bg-opacity-70 text-amber-400 text-[10px] px-2 py-0.5 rounded-lg font-bold backdrop-blur-sm"><i class="fa-solid fa-star text-[9px] mr-0.5"></i> ${avgRating.toFixed(1)} (${ratings.length || 0})</span>
                             </div>
                             <div class="flex justify-between items-center mb-1">
                                 <span class="text-[10px] bg-[#133e31] text-amber-400 px-2.5 py-0.5 rounded-lg font-bold">${escapeHTML(p.category || 'General')}</span>
                                 <span class="text-[11px] text-gray-300 font-medium">${escapeHTML(p.weight || '1kg')}</span>
                             </div>
-                            <h3 class="font-semibold text-gray-100 text-sm mt-1 cursor-pointer hover:text-amber-400 truncate" onclick="openProductDetail(${p.id})">${escapeHTML(p.name)}</h3>
+                            <h3 class="font-semibold text-gray-100 text-sm mt-1 cursor-pointer hover:text-amber-400 truncate" onclick="openProductDetail(${Number(p.id)})">${escapeHTML(p.name)}</h3>
+                            <p class="text-[10px] text-gray-400 mt-1">Sold by: ${escapeHTML(p.sellerName || 'ModeLuxe Mart')}</p>
+                            <p class="text-[10px] ${Number(p.stock ?? 10) <= 3 ? 'text-yellow-300' : 'text-green-300'}">${Number(p.stock ?? 10)} in stock</p>
                             <p class="text-amber-400 font-bold text-sm mt-1">₹${Number(p.price || 0)} <span class="text-[10px] text-gray-300 font-normal">per ${escapeHTML(p.weight || 'unit')}</span></p>
                         </div>
-                        <button type="button" onclick="openProductDetail(${p.id})" class="mt-3 w-full bg-amber-400 text-black text-xs py-2.5 rounded-xl font-bold hover:bg-amber-300 transition cursor-pointer shadow">View / Buy</button>
+                        <button type="button" onclick="openProductDetail(${Number(p.id)})" class="mt-3 w-full bg-amber-400 text-black text-xs py-2.5 rounded-xl font-bold hover:bg-amber-300 transition cursor-pointer shadow">View / Buy</button>
                     </div>`;
                 });
             }
@@ -489,6 +821,8 @@
                 <img src="${escapeHTML(p.img || '')}" alt="${escapeHTML(p.name)}" class="w-full h-48 object-cover rounded-2xl mb-3 shadow-md border border-[#133e31]">
                 <div class="flex justify-between items-center"><span class="text-xs bg-[#133e31] text-amber-400 px-3 py-1 rounded-xl font-bold">${escapeHTML(p.category || 'General')}</span><span class="text-xs font-semibold text-gray-300">Base Rate: ₹${basePrice} / ${p.weight || 'unit'}</span></div>
                 <h2 class="text-xl font-bold text-white mt-2">${escapeHTML(p.name)}</h2>
+                <p class="text-xs text-gray-300">Sold by: <strong class="text-amber-300">${escapeHTML(p.sellerName || 'ModeLuxe Mart')}</strong> · Stock: ${Number(p.stock ?? 10)}</p>
+                <button type="button" onclick="submitProductRating(${Number(p.id)})" class="text-xs text-amber-300 underline">Rate this product</button>
                 <p class="text-2xl font-extrabold text-amber-400 mt-1" id="displayDynamicPrice">₹${basePrice}</p>
                 <div class="bg-amber-400/10 border border-amber-400/30 p-2.5 rounded-xl text-amber-300 text-xs font-semibold flex items-center gap-2"><i class="fa-solid fa-truck-fast text-amber-400 text-sm"></i><span>Free Delivery on orders ≥ ₹199 (Below ₹199 delivery charge is ₹30)</span></div>
                 <p class="text-xs text-gray-200 leading-relaxed bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]">${escapeHTML(p.desc || 'No description available.')}</p>
@@ -504,12 +838,14 @@
         function addToCartById(id) {
             const product = getProducts().find(p => Number(p.id) === Number(id));
             if (!product) { alert('Product abhi available nahi hai. Page refresh karke dobara try karein.'); return; }
+            if (Number(product.stock ?? 10) <= 0) { alert('Ye product out of stock hai.'); return; }
             addToCartAction(Number(product.id), String(product.name || ''), Number(product.price || 0), String(product.img || ''));
         }
 
         function proceedFromDetailById(id) {
             const product = getProducts().find(p => Number(p.id) === Number(id));
             if (!product) { alert('Product abhi available nahi hai. Page refresh karke dobara try karein.'); return; }
+            if (Number(product.stock ?? 10) <= 0) { alert('Ye product out of stock hai.'); return; }
             proceedFromDetail(Number(product.id), String(product.name || ''), Number(product.price || 0), String(product.img || ''));
         }
 
@@ -519,6 +855,15 @@
             document.getElementById('displayDynamicPrice').innerText = "₹" + Math.round(basePrice * multiplier);
         }
 
+        function submitProductRating(productId) {
+            if (!currentPhone()) { alert('Rating dene ke liye login karein.'); openLoginModal(); return; }
+            const rating = Number(prompt('1 se 5 tak rating dein:'));
+            if (!Number.isInteger(rating) || rating < 1 || rating > 5) return alert('Rating 1 se 5 ke beech honi chahiye.');
+            const ref = db.ref('productRatings/' + productId + '/' + currentPhone());
+            ref.set({rating, phone: currentPhone(), updatedAt: new Date().toISOString()})
+              .then(() => alert('Rating submit ho gayi. Average rating display abhi basic placeholder hai.'))
+              .catch(e => alert('Rating save nahi hui: ' + e.message));
+        }
         function closeProductDetail() { document.getElementById('productDetailModal').classList.add('hidden'); }
         function checkUserLoginBeforeAction() {
             let role = localStorage.getItem('loggedInRole');
@@ -561,7 +906,7 @@
                     </div>`;
                 });
                 container.innerHTML = html;
-                let deliveryFee = subtotal < 199 ? 30 : 0;
+                let deliveryFee = subtotal < Number(marketplaceSettings.freeDeliveryAbove ?? 199) ? Number(marketplaceSettings.deliveryFee ?? 30) : 0;
                 document.getElementById('cartSubtotalText').innerText = "₹" + subtotal;
                 document.getElementById('cartDeliveryText').innerText = deliveryFee > 0 ? "₹30" : "Free (Order >= ₹199)";
                 document.getElementById('cartTotalText').innerText = "₹" + (subtotal + deliveryFee);
@@ -579,8 +924,8 @@
             closeCartModal();
             let combinedName = cart.map(i => `${i.name} (${i.variant}) x${i.qty}`).join(', ');
             let subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
-            let deliveryFee = subtotal < 199 ? 30 : 0;
-            const orderItems = cart.map(i => ({ id: i.id, name: i.name, variant: i.variant, unitPrice: Number(i.price), quantity: Number(i.qty), lineTotal: Number(i.price) * Number(i.qty) }));
+            let deliveryFee = subtotal < Number(marketplaceSettings.freeDeliveryAbove ?? 199) ? Number(marketplaceSettings.deliveryFee ?? 30) : 0;
+            const orderItems = cart.map(i => { const p = getProducts().find(prod => Number(prod.id) === Number(i.id)) || {}; return { id: i.id, name: i.name, variant: i.variant, unitPrice: Number(i.price), quantity: Number(i.qty), lineTotal: Number(i.price) * Number(i.qty), sellerPhone: p.sellerPhone || 'admin', sellerName: p.sellerName || 'ModeLuxe Mart' }; });
             openAddressModal(combinedName, subtotal, deliveryFee, subtotal + deliveryFee, orderItems);
         }
 
@@ -591,8 +936,10 @@
             let multiplier = parseFloat(select.value) || 1;
             let finalPrice = Math.round(basePrice * multiplier);
             closeProductDetail();
-            const item = { id, name, variant: selectedLabel, unitPrice: finalPrice, quantity: 1, lineTotal: finalPrice };
-            openAddressModal(`${name} (${selectedLabel})`, finalPrice, finalPrice < 199 ? 30 : 0, finalPrice + (finalPrice < 199 ? 30 : 0), [item]);
+            const p = getProducts().find(prod => Number(prod.id) === Number(id)) || {};
+            const item = { id, name, variant: selectedLabel, unitPrice: finalPrice, quantity: 1, lineTotal: finalPrice, sellerPhone: p.sellerPhone || 'admin', sellerName: p.sellerName || 'ModeLuxe Mart' };
+            const deliveryFee = finalPrice < Number(marketplaceSettings.freeDeliveryAbove ?? 199) ? Number(marketplaceSettings.deliveryFee ?? 30) : 0;
+            openAddressModal(`${name} (${selectedLabel})`, finalPrice, deliveryFee, finalPrice + deliveryFee, [item]);
         }
 
         function getAddressStorageKey() {
@@ -711,7 +1058,7 @@
         function openAddressModal(name, price, deliveryFee = null, totalAmount = null, items = []) {
             if (!checkUserLoginBeforeAction()) return;
             let itemAmount = price;
-            let delFee = deliveryFee !== null ? deliveryFee : (itemAmount < 199 ? 30 : 0);
+            let delFee = deliveryFee !== null ? deliveryFee : (itemAmount < Number(marketplaceSettings.freeDeliveryAbove ?? 199) ? Number(marketplaceSettings.deliveryFee ?? 30) : 0);
             currentLat = null;
             currentLng = null;
             activeCheckoutProduct = { name, price: itemAmount, deliveryFee: delFee, totalAmount: totalAmount !== null ? totalAmount : (itemAmount + delFee), items: Array.isArray(items) ? items : [] };
@@ -957,38 +1304,57 @@
 
         function closeSuccessModal() { document.getElementById('successModal').classList.add('hidden'); renderProducts(); }
 
-        function addNewProduct() {
+        async function addNewProduct() {
+            if (localStorage.getItem('loggedInRole') !== 'seller') { alert('Product add karne ke liye seller account se login karein.'); return; }
+            try {
+                const applicationSnap = await db.ref('sellerApplications/' + currentPhone()).once('value');
+                const application = applicationSnap.val();
+                if (!application || application.status !== 'approved') {
+                    alert('Aapka seller account abhi approve nahi hua hai. Admin approval ke baad product list kar sakenge.');
+                    return;
+                }
+            } catch (e) {
+                alert('Seller approval check nahi ho paya. Internet/Firebase Rules check karein.');
+                return;
+            }
             let name = document.getElementById('newProdName').value.trim();
             let price = document.getElementById('newProdPrice').value.trim();
             let weightVal = document.getElementById('newProdWeightVal').value.trim() || "1";
             let unitVal = document.getElementById('newProdUnitSelect').value;
             let fileInput = document.getElementById('newProdImgFile');
+            let stock = Math.max(0, Number(document.getElementById('newProdStock')?.value ?? 10));
+            let sellerName = (document.getElementById('newProdSellerName')?.value || localStorage.getItem('userShopName') || localStorage.getItem('userName') || 'ModeLuxe Mart').trim();
             if (!name || price === '' || !Number.isFinite(Number(price)) || Number(price) < 0) { alert('Please enter a product name and a valid non-negative price.'); return; }
             if (fileInput.files && fileInput.files[0]) {
                 let reader = new FileReader();
-                reader.onload = function(e) { saveProductToCloud(name, price, weightVal + " " + unitVal, document.getElementById('newProdDesc').value.trim(), document.getElementById('newProdCategory').value, e.target.result); };
+                reader.onload = function(e) { saveProductToCloud(name, price, weightVal + " " + unitVal, document.getElementById('newProdDesc').value.trim(), document.getElementById('newProdCategory').value, e.target.result, stock, sellerName); };
                 reader.readAsDataURL(fileInput.files[0]);
-            } else { saveProductToCloud(name, price, weightVal + " " + unitVal, document.getElementById('newProdDesc').value.trim(), document.getElementById('newProdCategory').value, "https://images.unsplash.com/photo-1592924357228-91a4daadcfea"); }
+            } else { saveProductToCloud(name, price, weightVal + " " + unitVal, document.getElementById('newProdDesc').value.trim(), document.getElementById('newProdCategory').value, "https://images.unsplash.com/photo-1592924357228-91a4daadcfea", stock, sellerName); }
         }
 
-        function saveProductToCloud(name, price, weight, desc, category, imgSrc) {
+        function saveProductToCloud(name, price, weight, desc, category, imgSrc, stock = 10, sellerName = 'ModeLuxe Mart') {
             let productId = Date.now();
-            db.ref('products/' + productId).set({ id: productId, name, price: Number(price), weight, desc, category, img: imgSrc, sellerPhone: localStorage.getItem('userPhone') || 'admin' }).then(() => {
-                ['newProdName','newProdPrice','newProdWeightVal','newProdDesc','newProdImgFile'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            db.ref('products/' + productId).set({ id: productId, name, price: Number(price), weight, desc, category, img: imgSrc, stock: Number(stock), sellerName, sellerPhone: localStorage.getItem('userPhone') || 'admin', active: true, moderationStatus: 'pending', createdAt: new Date().toISOString() }).then(() => {
+                ['newProdName','newProdPrice','newProdWeightVal','newProdDesc','newProdImgFile','newProdStock','newProdSellerName'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
                 alert('Product listed successfully!');
             }).catch(err => alert('Product could not be saved: ' + err.message));
         }
 
         function deleteProduct(productId) {
+            const target = getProducts().find(p => Number(p.id) === Number(productId));
+            const role = localStorage.getItem('loggedInRole');
+            if (role === 'seller' && target && String(target.sellerPhone || '') !== currentPhone()) return alert('Aap sirf apne products delete kar sakte hain.');
             if (!confirm('Delete this product?')) return;
             db.ref('products/' + productId).remove().then(() => alert('Product deleted.')).catch(err => alert('Could not delete product: ' + err.message));
         }
         function openEditProductModal(productId) {
-            let p = getProducts().find(prod => prod.id === productId);
+            let p = getProducts().find(prod => Number(prod.id) === Number(productId));
             if (!p) return;
+            if (localStorage.getItem('loggedInRole') === 'seller' && String(p.sellerPhone || '') !== currentPhone()) return alert('Aap sirf apne products edit kar sakte hain.');
             document.getElementById('editProdId').value = p.id;
             document.getElementById('editProdName').value = p.name || '';
             document.getElementById('editProdPrice').value = p.price ?? '';
+            if (document.getElementById('editProdStock')) document.getElementById('editProdStock').value = p.stock ?? 10;
             const weightParts = String(p.weight || '1 Kg').match(/^\s*(.*?)\s+(Kg|Grams|Pieces|Full Plate|Half Plate|1 Packet|1 Bottle|Packet|Bottle)\s*$/i);
             document.getElementById('editProdWeightVal').value = weightParts ? weightParts[1] : (p.weight || '1');
             const unitValue = weightParts ? weightParts[2] : 'Kg';
@@ -1012,6 +1378,7 @@
             db.ref('products/' + id).update({
                 name,
                 price: Number(priceText),
+                stock: Math.max(0, Number(document.getElementById('editProdStock')?.value ?? 10)),
                 weight,
                 desc: document.getElementById('editProdDesc').value.trim(),
                 category: document.getElementById('editProdCategory').value
@@ -1021,6 +1388,10 @@
 
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
         function switchDirectPanel(role) {
+            if (role === 'admin') {
+                if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) { document.getElementById('dropdownMenu').classList.add('hidden'); openAdminWithDeviceLock(); return; }
+                openLoginModalForRole('admin'); return;
+            }
             if (localStorage.getItem('is_' + role + '_verified')) {
                 localStorage.setItem('loggedInRole', role);
                 document.getElementById('dropdownMenu').classList.add('hidden');
@@ -1168,6 +1539,21 @@ async function verifyFast2SMSOTP() {
             return;
         }
 
+    if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) {
+        alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.');
+        return;
+    }
+    if (role === 'seller') {
+        const app = {
+            phone,
+            name: document.getElementById('loginKycFullName').value.trim() || localStorage.getItem('userName') || 'Seller',
+            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
+            shopName: document.getElementById('loginShopName')?.value.trim() || '',
+            status: 'pending',
+            appliedAt: new Date().toISOString()
+        };
+        db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
+    }
     if (role === 'seller' || role === 'delivery') {
         let saved = getSavedBankProfile(role, phone);
         if (!saved) {
@@ -1199,6 +1585,8 @@ async function verifyFast2SMSOTP() {
 
     localStorage.setItem('loggedInRole', role);
     localStorage.setItem('userPhone', phone);
+    if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
+    if (role === 'seller' && document.getElementById('loginShopName')?.value.trim()) localStorage.setItem('userShopName', document.getElementById('loginShopName').value.trim());
     localStorage.setItem('is_' + role + '_verified', 'true');
     pendingLoginRole = null;
     pendingLoginPhone = null;
@@ -1227,6 +1615,8 @@ async function verifyFast2SMSOTP() {
             updateAuthUI();
             renderProducts();
             updateCartBadge();
+            updateWishlistCount();
+            applyMarketplaceSettings();
         };
 
         function updateAuthUI() {
@@ -1250,15 +1640,20 @@ async function verifyFast2SMSOTP() {
                 }
                 document.getElementById('sellerDashboard').classList.toggle('hidden', role !== 'seller');
                 document.getElementById('deliveryDashboard').classList.toggle('hidden', role !== 'delivery');
-                document.getElementById('categoryMenuSection').classList.toggle('hidden', role === 'seller' || role === 'delivery');
-                document.getElementById('productGrid').classList.toggle('hidden', role === 'seller' || role === 'delivery');
+                document.getElementById('adminDashboard').classList.toggle('hidden', role !== 'admin');
+                document.getElementById('shopControls').classList.toggle('hidden', role === 'seller' || role === 'delivery' || role === 'admin');
+                document.getElementById('categoryMenuSection').classList.toggle('hidden', role === 'seller' || role === 'delivery' || role === 'admin');
+                document.getElementById('productGrid').classList.toggle('hidden', role === 'seller' || role === 'delivery' || role === 'admin');
                 if (role === 'seller') renderSellerDashboard();
                 if (role === 'delivery') renderDeliveryDashboard();
+                if (role === 'admin') loadAdminPanel();
             } else {
                 cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.add('hidden'); updateCartBadge();
                 authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
                 document.getElementById('sellerDashboard').classList.add('hidden');
                 document.getElementById('deliveryDashboard').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.add('hidden');
+                document.getElementById('shopControls').classList.remove('hidden');
             }
         }
 
@@ -1362,7 +1757,9 @@ async function verifyFast2SMSOTP() {
         }
 
         function logoutApp() {
-            localStorage.clear(); updateAuthUI(); renderProducts(); toggleMenu(); alert("Logged out.");
+            sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');
+            localStorage.removeItem('loggedInRole'); localStorage.removeItem('userPhone');
+            updateAuthUI(); renderProducts(); toggleMenu(); alert("Logged out.");
         }
 
         function openEditProfile() {
@@ -1478,6 +1875,11 @@ async function verifyFast2SMSOTP() {
                     <div class="flex justify-between items-start gap-3 font-bold text-amber-400"><span class="min-w-0 break-words">${escapeHTML(o.product || 'Order')}</span><span class="shrink-0">₹${Number(o.totalAmount || 0)}</span></div>
                     <p class="text-xs text-gray-300">Status: <span class="text-green-400 font-bold">${escapeHTML(o.status || 'Order Placed')}</span></p>
                     <button type="button" onclick="openSingleOrderDetail(${Number(o.id)})" class="w-full bg-amber-400 text-black rounded-lg py-2 font-bold text-xs"><i class="fa-solid fa-receipt mr-1"></i> Order Details</button>
+                    ${!['Delivered','Cancelled','Return Approved','Refunded'].includes(o.status) ? `<button type="button" onclick="requestOrderCancellation(${Number(o.id)})" class="w-full mt-1 bg-red-900 text-red-100 rounded-lg py-2 font-bold text-xs">Request Cancellation</button>` : ''}
+                    ${o.status === 'Delivered' ? `<button type="button" onclick="requestOrderReturn(${Number(o.id)})" class="w-full mt-1 bg-[#133e31] border border-amber-400/30 text-amber-300 rounded-lg py-2 font-bold text-xs">Request Return / Refund</button>` : ''}
+                    <button type="button" onclick="requestSupportTicket(${Number(o.id)})" class="w-full mt-1 bg-[#133e31] border border-[#1b4f40] text-gray-200 rounded-lg py-2 font-bold text-xs">Report Issue / Complaint</button>
+                    ${o.cancellationRequest ? `<p class="text-[10px] text-yellow-300">Cancellation: ${escapeHTML(o.cancellationRequest)}</p>` : ''}
+                    ${o.returnRequest ? `<p class="text-[10px] text-yellow-300">Return: ${escapeHTML(o.returnRequest)}</p>` : ''}
                 </div>`;
             });
             document.getElementById('ordersList').innerHTML = html;
@@ -1604,10 +2006,12 @@ function updateWithdrawalPreview() {
         Number(document.getElementById('bankAmount').value || 0)
     );
 
-    const commissionRate = activeWithdrawRole === 'Seller' ? 0.10 : 0;
+    const commissionRate = activeWithdrawRole === 'Seller' ? (Number(marketplaceSettings.commissionPercent ?? 10) / 100) : 0;
     const commission = Math.round(amount * commissionRate * 100) / 100;
     const netAmount = Math.round((amount - commission) * 100) / 100;
 
+    const commissionLabel = document.getElementById('withdrawCommissionLabel');
+    if (commissionLabel) commissionLabel.textContent = 'Company Commission (' + (activeWithdrawRole === 'Seller' ? Number(marketplaceSettings.commissionPercent ?? 10) : 0) + '%)';
     document.getElementById('withdrawGrossPreview').innerText =
         '₹' + amount.toFixed(2);
 
@@ -1645,7 +2049,7 @@ function submitWithdrawRequest() {
         return;
     }
 
-    const commissionRate = activeWithdrawRole === 'Seller' ? 0.10 : 0;
+    const commissionRate = activeWithdrawRole === 'Seller' ? (Number(marketplaceSettings.commissionPercent ?? 10) / 100) : 0;
     const commission = Math.round(amount * commissionRate * 100) / 100;
     const netAmount = Math.round((amount - commission) * 100) / 100;
 
@@ -1707,8 +2111,7 @@ function updateDeliveryWallet() {
 
     // Product management: existing features preserved
     const myProducts = getProducts().filter(p =>
-        String(p.sellerPhone || 'admin') === String(currentPhone) ||
-        p.sellerPhone === 'admin'
+        String(p.sellerPhone || 'admin') === String(currentPhone)
     );
 
     productsContainer.innerHTML = myProducts.length
@@ -1723,6 +2126,7 @@ function updateDeliveryWallet() {
                     <p class="font-bold text-white">${escapeHTML(p.name)}</p>
                     <p class="text-amber-300">₹${Number(p.price || 0)} · ${escapeHTML(p.weight || 'unit')}</p>
                     <p class="text-gray-300">${escapeHTML(p.category || 'General')}</p>
+                    <p class="text-[10px] ${p.moderationStatus === 'active' || !p.moderationStatus ? 'text-green-300' : 'text-yellow-300'}">Listing: ${escapeHTML(p.moderationStatus || 'active')}</p>
                 </div>
 
                 <div class="flex flex-col gap-2">
@@ -1743,7 +2147,10 @@ function updateDeliveryWallet() {
         : "<p class='text-xs text-gray-300'>No products found.</p>";
 
     // FIX: Delivered orders will not appear in the active list
-    const activeOrders = allOrders.filter(o => o.status !== 'Delivered');
+    const myProductIds = new Set(getProducts().filter(p => String(p.sellerPhone || '') === String(currentPhone)).map(p => Number(p.id)));
+    const activeOrders = allOrders.filter(o => o.status !== 'Delivered' && (
+        Array.isArray(o.items) && o.items.some(item => String(item.sellerPhone || '') === String(currentPhone) || myProductIds.has(Number(item.id)))
+    ));
 
     let html = '';
 
@@ -1751,7 +2158,7 @@ function updateDeliveryWallet() {
         html += `
             <div class="bg-[#133e31] p-3.5 rounded-xl border border-[#1b4f40] text-xs space-y-2">
                 <p class="font-bold text-amber-400">
-                    ${escapeHTML(o.product || 'Order')} - Product Cost: ₹${Number(o.price ?? (Number(o.totalAmount || 0) - Number(o.deliveryFee || 0)))}
+                    ${escapeHTML((Array.isArray(o.items) ? o.items.filter(item => String(item.sellerPhone || '') === String(currentPhone) || myProductIds.has(Number(item.id))).map(item => item.name + ' ×' + Number(item.quantity || 1)).join(', ') : '') || o.product || 'Order')} - Product Cost: ₹${Number(o.price ?? (Number(o.totalAmount || 0) - Number(o.deliveryFee || 0)))}
                 </p>
 
                 <p>Customer: ${escapeHTML(o.customerName || 'Unknown')}
