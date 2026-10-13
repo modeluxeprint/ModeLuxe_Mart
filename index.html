@@ -47,7 +47,7 @@ main{max-width:none!important;margin:0!important;padding:0 0 16px!important}
 .ml-search-wrap i{font-size:22px}
 .ml-search-wrap input{border:0;outline:0;min-width:0;flex:1;font-size:15px;color:#f3f4f6;background:transparent}
 .ml-search-wrap button{border:0;background:transparent;color:#a5a5b5;font-size:20px;padding:4px}
-.ml-delivery{margin:17px 4px 0;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:700}
+.ml-delivery{margin:17px 4px 0;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:700;cursor:pointer}.ml-delivery:focus-visible{outline:2px solid #fbbf24;outline-offset:4px;border-radius:8px}
 .ml-categories{display:flex;gap:12px;overflow-x:auto;padding:12px 10px 7px;background:#081c15;scrollbar-width:none}
 .ml-categories::-webkit-scrollbar{display:none}
 .ml-cat{flex:0 0 96px;text-align:center;font-size:12px;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -141,7 +141,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             <select id="productSortSelect" onchange="renderProducts()" class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white"><option value="featured">Sort: Featured</option><option value="priceLow">Price: Low to High</option><option value="priceHigh">Price: High to Low</option><option value="name">Name: A to Z</option></select>
             <button type="button" onclick="openWishlist()" class="bg-[#0b2920] border border-amber-400/40 text-amber-300 rounded-xl px-4 py-3 text-sm font-bold"><i class="fa-solid fa-heart mr-2"></i>Wishlist <span id="wishlistCount">0</span></button>
         </section>
-      <div class="ml-delivery"><i class="fa-solid fa-location-dot"></i><span>Delivering to Aligarh - 202126</span><i class="fa-solid fa-chevron-right"></i></div>
+      <div class="ml-delivery" role="button" tabindex="0" onclick="openDeliveryAddressEditor()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDeliveryAddressEditor();}"><i class="fa-solid fa-location-dot"></i><span id="mlDeliveryText">Add delivery address</span><i class="fa-solid fa-chevron-right"></i></div>
     </section>
     <section class="ml-categories" aria-label="Shopping categories">
       <button type="button" class="ml-cat" data-ml-category="All"><div class="ml-cat-icon">🛍️</div><div class="ml-cat-label">All Categories</div></button>
@@ -1316,6 +1316,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             localStorage.setItem('userName', name);
             localStorage.setItem('userPhone', phone);
             localStorage.setItem('userAddress', address);
+            if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
             saveUserAndProceed(name, phone, address, houseNo, streetNo);
         }
 
@@ -2002,6 +2003,7 @@ async function verifyFast2SMSOTP() {
                 pendingProfilePhotoData = null;
                 updateAuthUI();
                 syncHeaderProfileMenuPhoto();
+                if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
                 alert('Profile saved successfully for this login account!');
             } catch (error) {
                 console.error('Profile save error:', error);
@@ -2605,6 +2607,76 @@ function navigateBottomTab(label) {
         if (typeof openMyOrders === 'function') openMyOrders();
     }
 }
+</script>
+
+
+<script id="ml-live-delivery-address">
+function mlExtractDeliveryCityPin(address) {
+    const text = String(address || '').replace(/\s+/g, ' ').trim();
+    if (!text) return { city: '', pin: '' };
+
+    const pinMatch = text.match(/\b\d{6}\b/);
+    const pin = pinMatch ? pinMatch[0] : '';
+    let city = '';
+
+    if (pinMatch) {
+        const beforePin = text.slice(0, pinMatch.index).replace(/[,;|#\-–]+$/g, '').trim();
+        const parts = beforePin.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+        if (parts.length) {
+            city = parts[parts.length - 1].replace(/^(city|district)\s*:\s*/i, '').trim();
+            if (/^(house|h\.?\s*no|flat|street|gali|road|near|landmark)\b/i.test(city) && parts.length > 1) {
+                city = parts[parts.length - 2];
+            }
+        }
+    }
+
+    if (!city) {
+        const parts = text.split(/[,;|]/).map(x => x.trim()).filter(Boolean);
+        const meaningful = parts.filter(x => !/^(house\s*no|h\.?\s*no|gali|street|road|near|landmark)\b/i.test(x));
+        city = meaningful.length ? meaningful[meaningful.length - 1] : '';
+        city = city.replace(/^(city|district)\s*:\s*/i, '').trim();
+    }
+
+    if (city.length > 36) city = city.split(/\s+/).slice(-3).join(' ');
+    return { city, pin };
+}
+
+function updateDeliveryLocation() {
+    const target = document.getElementById('mlDeliveryText');
+    if (!target) return;
+    let address = '';
+    try {
+        if (typeof getSavedShippingAddresses === 'function') {
+            const saved = getSavedShippingAddresses();
+            if (Array.isArray(saved) && saved.length) {
+                const selectedId = typeof selectedShippingAddressId !== 'undefined' ? selectedShippingAddressId : null;
+                const selected = saved.find(a => a && a.id === selectedId) || saved[0];
+                address = (selected && (selected.areaAddress || selected.address)) || '';
+            }
+        }
+        if (!address && typeof getActiveProfile === 'function') {
+            const profile = getActiveProfile();
+            address = profile && profile.address ? profile.address : '';
+        }
+        if (!address) address = localStorage.getItem('userAddress') || '';
+    } catch (_) {}
+
+    const parsed = mlExtractDeliveryCityPin(address);
+    if (parsed.city && parsed.pin) target.textContent = 'Delivering to ' + parsed.city + ' - ' + parsed.pin;
+    else if (parsed.city) target.textContent = 'Delivering to ' + parsed.city;
+    else target.textContent = 'Add delivery address';
+}
+
+function openDeliveryAddressEditor() {
+    if (typeof openEditProfile === 'function') {
+        openEditProfile();
+    } else {
+        alert('Apni delivery city aur PIN code Profile mein add karein.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', updateDeliveryLocation);
+window.addEventListener('storage', updateDeliveryLocation);
 </script>
 
 </body>
