@@ -1989,25 +1989,95 @@ async function verifyFast2SMSOTP() {
             reader.readAsDataURL(file);
         }
 
-        async function saveProfile() {
-            try {
-                const previous = getActiveProfile();
-                const profile = {
-                    name: document.getElementById('profileName').value.trim(),
-                    contactPhone: document.getElementById('profilePhone').value.trim(),
-                    address: document.getElementById('profileAddress').value.trim(),
-                    photo: pendingProfilePhotoData || previous.photo || ''
+        function mlCompressProfilePhoto(dataUrl, maxSide = 180, quality = 0.45) {
+            return new Promise((resolve) => {
+                if (!dataUrl || !String(dataUrl).startsWith('data:image/')) return resolve('');
+                const img = new Image();
+                img.onload = function () {
+                    try {
+                        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, Math.round(img.width * scale));
+                        canvas.height = Math.max(1, Math.round(img.height * scale));
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    } catch (_) { resolve(''); }
                 };
+                img.onerror = () => resolve('');
+                img.src = dataUrl;
+            });
+        }
+
+        function mlSaveProfileWithStorageRecovery(profile) {
+            const key = getActiveProfileKey();
+            try {
                 saveActiveProfile(profile);
-                document.getElementById('profileModal').classList.add('hidden');
-                pendingProfilePhotoData = null;
-                updateAuthUI();
-                syncHeaderProfileMenuPhoto();
-                if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
-                alert('Profile saved successfully for this login account!');
-            } catch (error) {
-                console.error('Profile save error:', error);
-                alert('Profile save nahi ho paaya. Browser storage full ho sakti hai; smaller photo try karein.');
+                return { saved: true, photoSaved: !!profile.photo };
+            } catch (firstError) {
+                // Free space only by removing cached profile photos; keep names, phone numbers and addresses.
+                try {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const storageKey = localStorage.key(i);
+                        if (!storageKey || !storageKey.startsWith('modeluxeProfile_') || storageKey === key) continue;
+                        try {
+                            const oldProfile = JSON.parse(localStorage.getItem(storageKey) || 'null');
+                            if (oldProfile && oldProfile.photo) {
+                                oldProfile.photo = '';
+                                localStorage.setItem(storageKey, JSON.stringify(oldProfile));
+                            }
+                        } catch (_) {}
+                    }
+                } catch (_) {}
+
+                try {
+                    saveActiveProfile(profile);
+                    return { saved: true, photoSaved: !!profile.photo };
+                } catch (secondError) {
+                    // Last resort: preserve profile text even if browser storage cannot fit a photo.
+                    try {
+                        const textOnlyProfile = { ...profile, photo: '' };
+                        localStorage.setItem(key, JSON.stringify(textOnlyProfile));
+                        return { saved: true, photoSaved: false };
+                    } catch (thirdError) {
+                        console.error('Profile storage remains unavailable:', thirdError);
+                        return { saved: false, photoSaved: false };
+                    }
+                }
+            }
+        }
+
+        async function saveProfile() {
+            const previous = getActiveProfile();
+            const profile = {
+                name: document.getElementById('profileName').value.trim(),
+                contactPhone: document.getElementById('profilePhone').value.trim(),
+                address: document.getElementById('profileAddress').value.trim(),
+                photo: pendingProfilePhotoData || previous.photo || ''
+            };
+
+            // Shrink newly selected profile photos before they reach browser storage.
+            if (pendingProfilePhotoData) {
+                const compressed = await mlCompressProfilePhoto(pendingProfilePhotoData, 180, 0.45);
+                if (compressed) profile.photo = compressed;
+            }
+
+            const result = mlSaveProfileWithStorageRecovery(profile);
+            if (!result.saved) {
+                // Avoid exposing a technical quota error to customers; keep the form open for retry.
+                console.error('Profile could not be saved: browser storage is unavailable.');
+                alert('Profile abhi save nahi ho paayi. Kripya dobara try karein.');
+                return;
+            }
+
+            document.getElementById('profileModal').classList.add('hidden');
+            pendingProfilePhotoData = null;
+            updateAuthUI();
+            syncHeaderProfileMenuPhoto();
+            if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
+
+            if (profile.photo && !result.photoSaved) {
+                alert('Profile save ho gayi hai. Storage bachane ke liye photo save nahi ho paayi; aap baad mein photo dobara laga sakte hain.');
             }
         }
 
