@@ -456,6 +456,32 @@
             if (document.readyState !== 'loading') applyMarketplaceSettings();
         });
 
+        // Profile data is isolated by authenticated role + login phone.
+        function getActiveProfileKey() {
+            const role = localStorage.getItem('loggedInRole') || 'guest';
+            const phone = String(localStorage.getItem('userPhone') || 'guest').replace(/\D/g, '') || 'guest';
+            return 'modeluxeProfile_' + role + '_' + phone;
+        }
+        function getActiveProfile() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(getActiveProfileKey()) || 'null');
+                if (saved && typeof saved === 'object') return saved;
+            } catch (_) {}
+            return {
+                name: localStorage.getItem('userName') || '',
+                contactPhone: localStorage.getItem('userPhone') || '',
+                address: localStorage.getItem('userAddress') || '',
+                photo: localStorage.getItem('userProfilePic') || ''
+            };
+        }
+        function saveActiveProfile(profile) {
+            localStorage.setItem(getActiveProfileKey(), JSON.stringify({
+                name: String(profile.name || ''),
+                contactPhone: String(profile.contactPhone || ''),
+                address: String(profile.address || ''),
+                photo: String(profile.photo || '')
+            }));
+        }
         function currentPhone() { return String(localStorage.getItem('userPhone') || ''); }
         function getWishlist() { try { return JSON.parse(localStorage.getItem('modeluxeWishlist') || '[]'); } catch (_) { return []; } }
         function saveWishlist(items) { localStorage.setItem('modeluxeWishlist', JSON.stringify(items)); updateWishlistCount(); }
@@ -1619,21 +1645,6 @@ async function verifyFast2SMSOTP() {
             applyMarketplaceSettings();
         };
 
-        function getPanelProfileKey(field) {
-    const role = localStorage.getItem('loggedInRole') || 'user';
-    const phone = (localStorage.getItem('userPhone') || '').trim();
-
-    return 'panelProfile_' + role + '_' + phone + '_' + field;
-}
-
-function getPanelProfile(field) {
-    return localStorage.getItem(getPanelProfileKey(field)) || '';
-}
-
-function savePanelProfile(field, value) {
-    localStorage.setItem(getPanelProfileKey(field), value);
-}
-
         function updateAuthUI() {
             let role = localStorage.getItem('loggedInRole');
             let authSection = document.getElementById('authSection');
@@ -1641,13 +1652,14 @@ function savePanelProfile(field, value) {
             let bellIconContainer = document.getElementById('headerNotificationBell');
             let logoutMenuButton = document.getElementById('logoutMenuButton');
             if (logoutMenuButton) logoutMenuButton.classList.toggle('hidden', !role);
-
             if (role) {
-                const headerPhoto = localStorage.getItem('userProfilePic') || '';
+                const profile = getActiveProfile();
+                const headerPhoto = profile.photo || '';
                 const headerPhotoHtml = headerPhoto
-                    ? `<img src="${headerPhoto}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
+                    ? `<img src="${headerPhoto.replace(/"/g, '&quot;')}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
                     : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
-                authSection.innerHTML = `<span class="inline-flex items-center gap-2 text-xs bg-[#133e31] text-amber-400 border border-amber-400/30 px-2 py-1 rounded-xl font-bold shadow">${headerPhotoHtml}<span>${localStorage.getItem('userName') || role.toUpperCase()}</span></span>`;
+                const displayName = (profile.name || role.toUpperCase()).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+                authSection.innerHTML = `<span class="inline-flex max-w-[min(48vw,220px)] min-w-0 items-center gap-2 text-xs bg-[#133e31] text-amber-400 border border-amber-400/30 px-2 py-1 rounded-xl font-bold shadow">${headerPhotoHtml}<span class="min-w-0 break-words whitespace-normal leading-tight">${displayName}</span></span>`;
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
@@ -1778,44 +1790,27 @@ function savePanelProfile(field, value) {
         }
 
         function openEditProfile() {
-    toggleMenu();
-
-    document.getElementById('profileName').value =
-        getPanelProfile('name');
-
-    document.getElementById('profilePhone').value =
-        localStorage.getItem('userPhone') || '';
-
-    document.getElementById('profileAddress').value =
-        getPanelProfile('address');
-
-    const savedPic = getPanelProfile('photo');
-    const prevImg = document.getElementById('profilePreviewImg');
-    const defIcon = document.getElementById('profileDefaultIcon');
-
-    if (savedPic) {
-        prevImg.src = savedPic;
-        prevImg.classList.remove('hidden');
-        defIcon.classList.add('hidden');
-    } else {
-        prevImg.removeAttribute('src');
-        prevImg.classList.add('hidden');
-        defIcon.classList.remove('hidden');
-    }
-
-    currentLat = getPanelProfile('lat') || null;
-    currentLng = getPanelProfile('lng') || null;
-
-    const gpsStatus = document.getElementById('gpsStatus');
-    if (gpsStatus) {
-        gpsStatus.innerText = currentLat && currentLng
-            ? 'GPS Captured successfully!'
-            : 'GPS location not captured';
-    }
-
-    document.getElementById('profileImgFile').value = '';
-    document.getElementById('profileModal').classList.remove('hidden');
-}
+            toggleMenu();
+            const profile = getActiveProfile();
+            document.getElementById('profileName').value = profile.name || '';
+            document.getElementById('profilePhone').value = profile.contactPhone || localStorage.getItem('userPhone') || '';
+            document.getElementById('profileAddress').value = profile.address || '';
+            const savedPhoto = profile.photo || '';
+            const preview = document.getElementById('profilePreviewImg');
+            const defaultIcon = document.getElementById('profileDefaultIcon');
+            if (savedPhoto) {
+                preview.src = savedPhoto;
+                preview.classList.remove('hidden');
+                defaultIcon.classList.add('hidden');
+            } else {
+                preview.removeAttribute('src');
+                preview.classList.add('hidden');
+                defaultIcon.classList.remove('hidden');
+            }
+            document.getElementById('profileImgFile').value = '';
+            pendingProfilePhotoData = null;
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
 
         function fetchCurrentGPS() {
             navigator.geolocation.getCurrentPosition(pos => {
@@ -1865,34 +1860,18 @@ function savePanelProfile(field, value) {
 
         async function saveProfile() {
             try {
-                const role = localStorage.getItem('loggedInRole') || 'user';
-const phone = (localStorage.getItem('userPhone') || '').trim();
-
-if (!phone) {
-    alert('Pehle mobile number se login karein.');
-    return;
-}
-
-const name = document.getElementById('profileName').value.trim();
-const address = document.getElementById('profileAddress').value.trim();
-
-if (!name) {
-    alert('Apna naam bharein.');
-    return;
-}
-
-savePanelProfile('name', name);
-savePanelProfile('address', address);
-
-if (pendingProfilePhotoData) {
-    savePanelProfile('photo', pendingProfilePhotoData);
-}
-
-localStorage.setItem('panelProfile_' + role + '_' + phone + '_phone', phone);
+                const previous = getActiveProfile();
+                const profile = {
+                    name: document.getElementById('profileName').value.trim(),
+                    contactPhone: document.getElementById('profilePhone').value.trim(),
+                    address: document.getElementById('profileAddress').value.trim(),
+                    photo: pendingProfilePhotoData || previous.photo || ''
+                };
+                saveActiveProfile(profile);
                 document.getElementById('profileModal').classList.add('hidden');
                 pendingProfilePhotoData = null;
                 updateAuthUI();
-                alert('Profile saved successfully!');
+                alert('Profile saved successfully for this login account!');
             } catch (error) {
                 console.error('Profile save error:', error);
                 alert('Profile save nahi ho paaya. Browser storage full ho sakti hai; smaller photo try karein.');
