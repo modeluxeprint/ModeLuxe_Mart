@@ -73,6 +73,12 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
 @media(min-width:700px){.ml-sale-banner{height:150px}.ml-sale-right{font-size:28px}.ml-sale-right strong{font-size:46px}.ml-categories{justify-content:center}.ml-recent{padding-left:24px}}
 </style>
 
+
+<style id="ml-category-button-style">
+button.ml-cat{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit}
+button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3px}
+</style>
+
 </head>
 <body class="bg-[#081c15] text-gray-100 font-sans">
     <header class="bg-[#0b2920] text-white shadow-lg sticky top-0 z-50 border-b border-[#133e31]">
@@ -126,18 +132,18 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
       <div class="ml-delivery"><i class="fa-solid fa-location-dot"></i><span>Delivering to Aligarh - 202126</span><i class="fa-solid fa-chevron-right"></i></div>
     </section>
     <section class="ml-categories" aria-label="Shopping categories">
-      <div class="ml-cat"><div class="ml-cat-icon">🛍️</div><div class="ml-cat-label">All Categories</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">💳</div><div class="ml-cat-label">Get Loans</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">👗</div><div class="ml-cat-label">Kurtis & Dresses</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">💄</div><div class="ml-cat-label">Beauty</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">🧒</div><div class="ml-cat-label">Kids</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">👕</div><div class="ml-cat-label">Men</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">🍳</div><div class="ml-cat-label">Kitchen</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">👚</div><div class="ml-cat-label">Western Wear</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">🥻</div><div class="ml-cat-label">Sarees</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">🛋️</div><div class="ml-cat-label">Home Decor</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">🛒</div><div class="ml-cat-label">Mall</div></div>
-      <div class="ml-cat"><div class="ml-cat-icon">👜</div><div class="ml-cat-label">Bags</div></div>
+      <button type="button" class="ml-cat" data-ml-category="All"><div class="ml-cat-icon">🛍️</div><div class="ml-cat-label">All Categories</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Get Loans"><div class="ml-cat-icon">💳</div><div class="ml-cat-label">Get Loans</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Kurtis & Dresses"><div class="ml-cat-icon">👗</div><div class="ml-cat-label">Kurtis & Dresses</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Beauty"><div class="ml-cat-icon">💄</div><div class="ml-cat-label">Beauty</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Kids"><div class="ml-cat-icon">🧒</div><div class="ml-cat-label">Kids</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Men"><div class="ml-cat-icon">👕</div><div class="ml-cat-label">Men</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Kitchen"><div class="ml-cat-icon">🍳</div><div class="ml-cat-label">Kitchen</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Western Wear"><div class="ml-cat-icon">👚</div><div class="ml-cat-label">Western Wear</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Sarees"><div class="ml-cat-icon">🥻</div><div class="ml-cat-label">Sarees</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Home Decor"><div class="ml-cat-icon">🛋️</div><div class="ml-cat-label">Home Decor</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Mall"><div class="ml-cat-icon">🛒</div><div class="ml-cat-label">Mall</div></button>
+      <button type="button" class="ml-cat" data-ml-category="Bags"><div class="ml-cat-icon">👜</div><div class="ml-cat-label">Bags</div></button>
     </section>
     <section class="ml-countdown"><span class="ml-off">UPTO<br><b style="background:transparent;padding:0">80%</b><br>OFF</span><span>Sale Ends in</span><b>05</b><span>d :</span><b>02</b><span>h :</span><b>38</b><span>m :</span><b>48</b><span>s</span></section>
     <section class="ml-recent">
@@ -203,7 +209,7 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
             <div id="deliveryOrdersContainer" class="space-y-4"></div>
         </div>
         <section id="shopControls" class="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input id="productSearchInput" type="search" oninput="renderProducts()" placeholder="Search products, brands, sellers..." class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-amber-400">
+            <input id="productSearchInput" type="search" oninput="renderProducts()" aria-hidden="true" tabindex="-1" class="hidden">
             <select id="productSortSelect" onchange="renderProducts()" class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white"><option value="featured">Sort: Featured</option><option value="priceLow">Price: Low to High</option><option value="priceHigh">Price: High to Low</option><option value="name">Name: A to Z</option></select>
             <button type="button" onclick="openWishlist()" class="bg-[#0b2920] border border-amber-400/40 text-amber-300 rounded-xl px-4 py-3 text-sm font-bold"><i class="fa-solid fa-heart mr-2"></i>Wishlist <span id="wishlistCount">0</span></button>
         </section>
@@ -2489,6 +2495,61 @@ document.addEventListener('DOMContentLoaded',function(){
 <script id="header-profile-menu-init">
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof syncHeaderProfileMenuPhoto === 'function') syncHeaderProfileMenuPhoto();
+});
+</script>
+
+
+<script id="ml-category-actions">
+document.addEventListener('DOMContentLoaded', function () {
+  const tiles = document.querySelectorAll('.ml-categories [data-ml-category]');
+  const searchInput = document.getElementById('productSearchInput');
+  const visibleSearch = document.getElementById('mlVisualSearch');
+
+  tiles.forEach(function(tile) {
+    tile.addEventListener('click', function() {
+      const category = tile.getAttribute('data-ml-category') || 'All';
+
+      if (category === 'Get Loans') {
+        if (typeof window.alert === 'function') {
+          window.alert('Get Loans feature abhi website par available nahi hai.');
+        }
+        return;
+      }
+
+      if (category === 'Mall') {
+        document.querySelector('.ml-promo-strip')?.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      }
+
+      if (searchInput) searchInput.value = '';
+      if (visibleSearch) visibleSearch.value = '';
+
+      if (category === 'All') {
+        if (typeof filterCategory === 'function') filterCategory('All');
+        else if (typeof renderProducts === 'function') renderProducts();
+      } else if (['Fast Food','Grocery','Fruits','Vegetables'].includes(category)) {
+        if (typeof filterCategory === 'function') filterCategory(category);
+      } else {
+        if (typeof selectedCategoryFilter !== 'undefined') selectedCategoryFilter = 'All';
+        const terms = {
+          'Kurtis & Dresses':'kurti dress kurtis',
+          'Beauty':'beauty makeup cosmetic skincare',
+          'Kids':'kids children',
+          'Men':'men mens',
+          'Kitchen':'kitchen cookware',
+          'Western Wear':'western wear',
+          'Sarees':'saree sarees',
+          'Home Decor':'home decor',
+          'Bags':'bag bags handbag'
+        };
+        if (searchInput) searchInput.value = terms[category] || category;
+        if (visibleSearch) visibleSearch.value = terms[category] || category;
+        if (typeof renderProducts === 'function') renderProducts();
+      }
+
+      document.getElementById('productGrid')?.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
 });
 </script>
 
