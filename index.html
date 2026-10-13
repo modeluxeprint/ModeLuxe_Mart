@@ -190,18 +190,27 @@
         <div class="bg-[#0b2920] text-gray-100 border border-[#133e31] w-full max-w-md p-6 rounded-2xl shadow-xl relative">
             <button type="button" onclick="closeAddressModal()" class="absolute top-4 right-4 text-gray-300 cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
             <h3 class="text-xl font-bold text-amber-400 mb-4"><i class="fa-solid fa-truck-fast mr-2"></i> Shipping & Contact Details</h3>
-            <div class="space-y-3 mb-4 text-xs">
+            <div id="savedAddressSection" class="hidden mb-4 rounded-xl border border-[#1b4f40] bg-[#133e31] p-3">
+                <p class="text-amber-400 font-bold mb-2"><i class="fa-solid fa-house mr-1"></i> Delivering to</p>
+                <div id="savedAddressCard" class="text-sm break-words"></div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button type="button" onclick="showAddressForm('change')" class="flex-1 min-w-[110px] border border-amber-400 text-amber-300 rounded-lg py-2 font-bold">Change Address</button>
+                    <button type="button" onclick="showAddressForm('new')" class="flex-1 min-w-[110px] bg-amber-400 text-black rounded-lg py-2 font-bold">+ Add New Address</button>
+                </div>
+                <div id="savedAddressChoices" class="hidden mt-3 space-y-2"></div>
+            </div>
+            <div id="shippingAddressForm" class="space-y-3 mb-4 text-xs">
                 <div><label class="block font-medium text-gray-200 mb-1">Full Name</label><input type="text" id="shipName" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2.5 outline-none focus:border-amber-400" placeholder="Enter your full name"></div>
                 <div><label class="block font-medium text-gray-200 mb-1">Contact Number</label><input type="tel" id="shipPhone" maxlength="10" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2.5 outline-none focus:border-amber-400" placeholder="10-digit mobile number"></div>
                 <div><label class="block font-medium text-gray-200 mb-1">House Number (optional)</label><input type="text" id="shipHouseNo" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2.5 outline-none focus:border-amber-400" placeholder="e.g. House no. 12"></div>
                 <div><label class="block font-medium text-gray-200 mb-1">Gali / Street Number (optional)</label><input type="text" id="shipStreetNo" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2.5 outline-none focus:border-amber-400" placeholder="e.g. Gali no. 3"></div>
                 <div><label class="block font-medium text-gray-200 mb-1">Area, Landmark, City</label><textarea id="shipAddress" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2.5 outline-none focus:border-amber-400" placeholder="Mohalla, landmark, city"></textarea></div>
-                <div class="rounded-xl border border-[#1b4f40] bg-[#133e31] p-3">
-                    <button type="button" onclick="captureShippingLocation()" class="w-full bg-amber-400 text-black py-2.5 rounded-xl font-bold"><i class="fa-solid fa-location-crosshairs mr-2"></i>Pin Current Location</button>
-                    <p id="shippingLocationStatus" class="text-gray-300 mt-2">Delivery boy ko exact location dikhane ke liye pin karein.</p>
-                </div>
             </div>
-            <button type="button" onclick="proceedToPayment()" class="w-full bg-amber-400 text-black py-3 rounded-xl text-sm font-bold hover:bg-amber-300 transition cursor-pointer shadow">Continue to Payment</button>
+            <div class="rounded-xl border border-[#1b4f40] bg-[#133e31] p-3 mb-4">
+                <button type="button" onclick="captureShippingLocation()" class="w-full bg-amber-400 text-black py-2.5 rounded-xl font-bold"><i class="fa-solid fa-location-crosshairs mr-2"></i>Pin Current Location</button>
+                <p id="shippingLocationStatus" class="text-gray-300 mt-2 text-center">Delivery boy ko exact location dikhane ke liye pin karein.</p>
+            </div>
+            <button type="button" id="saveAddressContinueBtn" onclick="proceedToPayment()" class="w-full bg-amber-400 text-black py-3 rounded-xl text-sm font-bold hover:bg-amber-300 transition cursor-pointer shadow">Save Address & Continue</button>
         </div>
     </div>
 
@@ -586,66 +595,258 @@
             openAddressModal(`${name} (${selectedLabel})`, finalPrice, finalPrice < 199 ? 30 : 0, finalPrice + (finalPrice < 199 ? 30 : 0), [item]);
         }
 
+        function getAddressStorageKey() {
+            const phone = (localStorage.getItem('userPhone') || '').trim();
+            return 'savedShippingAddresses_' + (phone || 'guest');
+        }
+
+        function getSavedShippingAddresses() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(getAddressStorageKey()) || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) { return []; }
+        }
+
+        function storeShippingAddress(addressObj) {
+            const addresses = getSavedShippingAddresses();
+            const normalized = {
+                id: addressObj.id || ('addr_' + Date.now()),
+                name: String(addressObj.name || '').trim(),
+                phone: String(addressObj.phone || '').trim(),
+                houseNo: String(addressObj.houseNo || '').trim(),
+                streetNo: String(addressObj.streetNo || '').trim(),
+                areaAddress: String(addressObj.areaAddress || '').trim(),
+                address: String(addressObj.address || '').trim(),
+                lat: addressObj.lat || '',
+                lng: addressObj.lng || ''
+            };
+            const existingIndex = addresses.findIndex(a => a.id === normalized.id);
+            if (existingIndex >= 0) addresses[existingIndex] = normalized;
+            else addresses.unshift(normalized);
+            localStorage.setItem(getAddressStorageKey(), JSON.stringify(addresses));
+            return normalized;
+        }
+
+        let selectedShippingAddressId = null;
+        let shippingAddressFormMode = 'new';
+
+        function renderSavedAddressChoices() {
+            const addresses = getSavedShippingAddresses();
+            const section = document.getElementById('savedAddressSection');
+            const card = document.getElementById('savedAddressCard');
+            const choices = document.getElementById('savedAddressChoices');
+            const form = document.getElementById('shippingAddressForm');
+            const continueBtn = document.getElementById('saveAddressContinueBtn');
+            if (!section || !card || !choices || !form || !continueBtn) return;
+
+            const selected = addresses.find(a => a.id === selectedShippingAddressId) || addresses[0];
+            selectedShippingAddressId = selected ? selected.id : null;
+            if (!selected) {
+                section.classList.add('hidden');
+                form.classList.remove('hidden');
+                continueBtn.textContent = 'Save Address & Continue';
+                return;
+            }
+
+            section.classList.remove('hidden');
+            card.innerHTML = `<p class="font-bold text-white">${escapeHTML(selected.name || 'Customer')}</p>
+                <p class="text-gray-200 mt-1">${escapeHTML(selected.address || '')}</p>
+                <p class="text-gray-300 mt-1"><i class="fa-solid fa-phone mr-1"></i>${escapeHTML(selected.phone || '')}</p>`;
+            choices.innerHTML = addresses.map(a => `<button type="button" onclick="selectSavedAddress('${String(a.id).replace(/'/g, "\\'")}')" class="w-full text-left p-2 rounded-lg border ${a.id === selectedShippingAddressId ? 'border-amber-400' : 'border-[#1b4f40]'}">
+                <span class="font-bold">${escapeHTML(a.name || 'Customer')}</span><br><span>${escapeHTML(a.address || '')}</span><br><span class="text-gray-300">${escapeHTML(a.phone || '')}</span></button>`).join('');
+            if (shippingAddressFormMode === 'change') {
+                choices.classList.remove('hidden');
+                form.classList.add('hidden');
+                continueBtn.textContent = 'Deliver to Selected Address';
+            } else if (shippingAddressFormMode === 'new') {
+                choices.classList.add('hidden');
+                form.classList.remove('hidden');
+                continueBtn.textContent = 'Save New Address & Continue';
+            } else {
+                choices.classList.add('hidden');
+                form.classList.add('hidden');
+                continueBtn.textContent = 'Continue to Payment';
+            }
+        }
+
+        function selectSavedAddress(id) {
+            const selected = getSavedShippingAddresses().find(a => a.id === id);
+            if (!selected) return;
+            selectedShippingAddressId = selected.id;
+            shippingAddressFormMode = 'selected';
+            renderSavedAddressChoices();
+        }
+
+        function showAddressForm(mode) {
+            shippingAddressFormMode = mode;
+            const addresses = getSavedShippingAddresses();
+            if (mode === 'change') {
+                renderSavedAddressChoices();
+                return;
+            }
+            document.getElementById('shipName').value = localStorage.getItem('userName') || '';
+            document.getElementById('shipPhone').value = localStorage.getItem('userPhone') || '';
+            document.getElementById('shipHouseNo').value = '';
+            document.getElementById('shipStreetNo').value = '';
+            document.getElementById('shipAddress').value = '';
+            renderSavedAddressChoices();
+        }
+
+        function useSavedAddressForCheckout(addressObj) {
+            if (!activeCheckoutProduct || !addressObj) return;
+            activeCheckoutProduct.shippingName = addressObj.name;
+            activeCheckoutProduct.shippingPhone = addressObj.phone;
+            activeCheckoutProduct.shippingAddress = addressObj.address;
+            activeCheckoutProduct.shippingHouseNo = addressObj.houseNo || '';
+            activeCheckoutProduct.shippingStreetNo = addressObj.streetNo || '';
+            activeCheckoutProduct.shippingLat = currentLat || addressObj.lat || '';
+            activeCheckoutProduct.shippingLng = currentLng || addressObj.lng || '';
+            document.getElementById('addressModal').classList.add('hidden');
+            document.getElementById('payItemAmount').innerText = "₹" + activeCheckoutProduct.price;
+            document.getElementById('payDeliveryFee').innerText = activeCheckoutProduct.deliveryFee > 0 ? "₹30" : "Free (Order >= ₹199)";
+            document.getElementById('payTotalAmount').innerText = "₹" + activeCheckoutProduct.totalAmount;
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
         function openAddressModal(name, price, deliveryFee = null, totalAmount = null, items = []) {
             if (!checkUserLoginBeforeAction()) return;
             let itemAmount = price;
             let delFee = deliveryFee !== null ? deliveryFee : (itemAmount < 199 ? 30 : 0);
+            currentLat = null;
+            currentLng = null;
             activeCheckoutProduct = { name, price: itemAmount, deliveryFee: delFee, totalAmount: totalAmount !== null ? totalAmount : (itemAmount + delFee), items: Array.isArray(items) ? items : [] };
-            document.getElementById('shipName').value = localStorage.getItem('userName') || "";
-            document.getElementById('shipPhone').value = localStorage.getItem('userPhone') || "";
-            document.getElementById('shipHouseNo').value = '';
-            document.getElementById('shipStreetNo').value = '';
-            document.getElementById('shipAddress').value = localStorage.getItem('userAddress') || "";
+            const addresses = getSavedShippingAddresses();
+            selectedShippingAddressId = addresses.length ? addresses[0].id : null;
+            shippingAddressFormMode = addresses.length ? 'selected' : 'new';
+            const selected = addresses[0];
+            if (selected && selected.lat && selected.lng) {
+                activeCheckoutProduct.shippingLat = selected.lat;
+                activeCheckoutProduct.shippingLng = selected.lng;
+            }
             const locationStatus = document.getElementById('shippingLocationStatus');
-            if (locationStatus) locationStatus.textContent = activeCheckoutProduct.shippingLat && activeCheckoutProduct.shippingLng ? 'Location pinned ✓' : 'Delivery boy ko exact location dikhane ke liye pin karein.';
+            if (locationStatus) locationStatus.textContent = selected?.lat && selected?.lng ? '✓ Saved location pinned. Delivery panel par bheji jayegi.' : 'Delivery boy ko exact location dikhane ke liye pin karein.';
+            const pinButton = document.querySelector('#addressModal button[onclick="captureShippingLocation()"]');
+            if (pinButton) {
+                pinButton.disabled = false;
+                pinButton.innerHTML = selected?.lat && selected?.lng ? '<i class="fa-solid fa-location-dot mr-2"></i>Location Pinned ✓' : '<i class="fa-solid fa-location-crosshairs mr-2"></i>Pin Current Location';
+            }
+            document.getElementById('shipName').value = selected?.name || localStorage.getItem('userName') || '';
+            document.getElementById('shipPhone').value = selected?.phone || localStorage.getItem('userPhone') || '';
+            document.getElementById('shipHouseNo').value = selected?.houseNo || '';
+            document.getElementById('shipStreetNo').value = selected?.streetNo || '';
+            document.getElementById('shipAddress').value = selected?.areaAddress || localStorage.getItem('userAddress') || '';
+            renderSavedAddressChoices();
             document.getElementById('addressModal').classList.remove('hidden');
         }
 
         function captureShippingLocation() {
             const status = document.getElementById('shippingLocationStatus');
+            const pinButton = document.querySelector('#addressModal button[onclick="captureShippingLocation()"]');
             if (!navigator.geolocation) {
-                if (status) status.textContent = 'Is device par location support nahi hai. Address manually bharein.';
+                if (status) status.textContent = 'Is device par GPS support nahi hai. Address manually bharein.';
+                alert('Location pin nahi ho paayi. Is browser/device mein location support nahi hai.');
                 return;
             }
-            if (status) status.textContent = 'Current location li ja rahi hai… GPS permission allow karein.';
+            if (!window.isSecureContext && location.hostname !== 'localhost') {
+                if (status) status.textContent = 'Location ke liye HTTPS website kholna zaroori hai.';
+                alert('Location pin karne ke liye website HTTPS par kholien aur location permission allow karein.');
+                return;
+            }
+            if (status) status.textContent = 'GPS location li ja rahi hai… Permission allow karein.';
+            if (pinButton) {
+                pinButton.disabled = true;
+                pinButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Getting Location…';
+            }
+
             navigator.geolocation.getCurrentPosition((pos) => {
-                currentLat = pos.coords.latitude;
-                currentLng = pos.coords.longitude;
+                currentLat = Number(pos.coords.latitude);
+                currentLng = Number(pos.coords.longitude);
+
                 if (activeCheckoutProduct) {
                     activeCheckoutProduct.shippingLat = currentLat;
                     activeCheckoutProduct.shippingLng = currentLng;
                 }
-                if (status) status.textContent = 'Location pinned ✓ Delivery boy ko map link milega.';
+
+                // Update the currently selected saved address so its pin is available next time too.
+                try {
+                    const addresses = getSavedShippingAddresses();
+                    const selected = addresses.find(a => a.id === selectedShippingAddressId);
+                    if (selected) {
+                        selected.lat = currentLat;
+                        selected.lng = currentLng;
+                        localStorage.setItem(getAddressStorageKey(), JSON.stringify(addresses));
+                    }
+                } catch (e) {
+                    console.warn('Could not save GPS coordinates to address:', e);
+                }
+
+                if (status) status.textContent = '✓ Location pin successfully. Order ke saath delivery panel par bheji jayegi.';
+                if (pinButton) {
+                    pinButton.disabled = false;
+                    pinButton.innerHTML = '<i class="fa-solid fa-location-dot mr-2"></i>Location Pinned ✓';
+                }
+                alert('Location pin successfully! Order place hote hi delivery panel par location update ho jayegi.');
             }, (err) => {
-                if (status) status.textContent = err.code === 1 ? 'Location permission denied. Phone settings mein location permission allow karein.' : 'Location nahi mil saki. GPS on karke dobara try karein.';
-            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                let message = 'Location nahi mil saki. GPS on karke dobara try karein.';
+                if (err.code === 1) message = 'Location permission denied. Browser/site settings mein location permission allow karein.';
+                else if (err.code === 2) message = 'Phone ki location nahi mil rahi. GPS on karke open area mein dobara try karein.';
+                else if (err.code === 3) message = 'GPS ko location milne mein time laga. Dobara Pin Current Location dabayein.';
+                if (status) status.textContent = message;
+                if (pinButton) {
+                    pinButton.disabled = false;
+                    pinButton.innerHTML = '<i class="fa-solid fa-location-crosshairs mr-2"></i>Pin Current Location';
+                }
+                alert(message);
+            }, { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 });
         }
 
         function closeAddressModal() { document.getElementById('addressModal').classList.add('hidden'); }
 
         function proceedToPayment() {
-            let name = document.getElementById('shipName').value.trim();
-            let phone = document.getElementById('shipPhone').value.trim();
-            let houseNo = document.getElementById('shipHouseNo').value.trim();
-            let streetNo = document.getElementById('shipStreetNo').value.trim();
-            let areaAddress = document.getElementById('shipAddress').value.trim();
-            if (!name || !/^[6-9]\d{9}$/.test(phone) || !areaAddress) { alert("Kripya naam, valid 10-digit Indian mobile number aur area/landmark/city ka address bharein."); return; }
+            if (!activeCheckoutProduct) return;
+            const addresses = getSavedShippingAddresses();
+            if (shippingAddressFormMode === 'selected' && selectedShippingAddressId) {
+                const selected = addresses.find(a => a.id === selectedShippingAddressId);
+                if (selected) { useSavedAddressForCheckout(selected); return; }
+            }
+
+            const name = document.getElementById('shipName').value.trim();
+            const phone = document.getElementById('shipPhone').value.trim();
+            const houseNo = document.getElementById('shipHouseNo').value.trim();
+            const streetNo = document.getElementById('shipStreetNo').value.trim();
+            const areaAddress = document.getElementById('shipAddress').value.trim();
+            if (!name || !/^[6-9]\d{9}$/.test(phone) || !areaAddress) {
+                alert("Kripya naam, valid 10-digit Indian mobile number aur area/landmark/city ka address bharein.");
+                return;
+            }
             const addressParts = [];
             if (houseNo) addressParts.push('House No: ' + houseNo);
             if (streetNo) addressParts.push('Gali/Street No: ' + streetNo);
             addressParts.push(areaAddress);
             const address = addressParts.join(', ');
+            const oldSelected = addresses.find(a => a.id === selectedShippingAddressId);
+            const saved = storeShippingAddress({
+                id: shippingAddressFormMode === 'change' && oldSelected ? oldSelected.id : undefined,
+                name, phone, houseNo, streetNo, areaAddress, address,
+                lat: currentLat || (oldSelected && oldSelected.lat) || '',
+                lng: currentLng || (oldSelected && oldSelected.lng) || ''
+            });
+            selectedShippingAddressId = saved.id;
+            localStorage.setItem('userName', name);
+            localStorage.setItem('userPhone', phone);
+            localStorage.setItem('userAddress', address);
             saveUserAndProceed(name, phone, address, houseNo, streetNo);
         }
 
         function saveUserAndProceed(name, phone, address, houseNo = '', streetNo = '') {
-            // Keep shipping details on this order only; do not overwrite the logged-in profile.
             if (activeCheckoutProduct) {
                 activeCheckoutProduct.shippingName = name;
                 activeCheckoutProduct.shippingPhone = phone;
                 activeCheckoutProduct.shippingAddress = address;
                 activeCheckoutProduct.shippingHouseNo = houseNo;
                 activeCheckoutProduct.shippingStreetNo = streetNo;
+                activeCheckoutProduct.shippingLat = currentLat || activeCheckoutProduct.shippingLat || '';
+                activeCheckoutProduct.shippingLng = currentLng || activeCheckoutProduct.shippingLng || '';
             }
             document.getElementById('addressModal').classList.add('hidden');
             document.getElementById('payItemAmount').innerText = "₹" + activeCheckoutProduct.price;
@@ -1273,7 +1474,11 @@ async function verifyFast2SMSOTP() {
                 : allOrders.filter(o => String(o.customerPhone || '') === String(phone));
             let html = orders.length === 0 ? "<p class='text-gray-300 text-sm text-center py-4'>No orders found for this account.</p>" : "";
             orders.slice().reverse().forEach(o => {
-                html += `<div onclick="openSingleOrderDetail(${Number(o.id)})" class='border border-[#133e31] p-3.5 rounded-xl text-sm bg-[#133e31] cursor-pointer space-y-1'><div class="flex justify-between font-bold text-amber-400"><span>${escapeHTML(o.product || 'Order')}</span><span>₹${Number(o.totalAmount || 0)}</span></div><p class='text-xs text-gray-300'>Status: <span class='text-green-400 font-bold'>${escapeHTML(o.status || 'Order Placed')}</span></p></div>`;
+                html += `<div class="border border-[#133e31] p-3.5 rounded-xl text-sm bg-[#133e31] space-y-2">
+                    <div class="flex justify-between items-start gap-3 font-bold text-amber-400"><span class="min-w-0 break-words">${escapeHTML(o.product || 'Order')}</span><span class="shrink-0">₹${Number(o.totalAmount || 0)}</span></div>
+                    <p class="text-xs text-gray-300">Status: <span class="text-green-400 font-bold">${escapeHTML(o.status || 'Order Placed')}</span></p>
+                    <button type="button" onclick="openSingleOrderDetail(${Number(o.id)})" class="w-full bg-amber-400 text-black rounded-lg py-2 font-bold text-xs"><i class="fa-solid fa-receipt mr-1"></i> Order Details</button>
+                </div>`;
             });
             document.getElementById('ordersList').innerHTML = html;
             document.getElementById('ordersModal').classList.remove('hidden');
@@ -1285,7 +1490,16 @@ async function verifyFast2SMSOTP() {
             const itemsHtml = Array.isArray(o.items) && o.items.length
                 ? `<div class="mt-2 border-t border-[#1b4f40] pt-2"><strong>Items:</strong>${o.items.map(item => `<p>${escapeHTML(item.name || 'Product')} (${escapeHTML(item.variant || '')}) × ${Number(item.quantity || 1)} — ₹${Number(item.lineTotal || 0)}</p>`).join('')}</div>`
                 : '';
-            document.getElementById('singleOrderDetailContent').innerHTML = `<div class="bg-[#133e31] p-3 rounded-xl space-y-1"><p><strong>Product:</strong> ${escapeHTML(o.product || '')}</p><p><strong>Total:</strong> ₹${Number(o.totalAmount || 0)}</p><p><strong>Payment:</strong> ${escapeHTML(o.paymentMethod || 'Not specified')} (${escapeHTML(o.paymentStatus || 'Not specified')})</p><p><strong>Status:</strong> ${escapeHTML(o.status || '')}</p><p><strong>Address:</strong> ${escapeHTML(o.shippingAddress || '')}</p>${itemsHtml}</div>`;
+            document.getElementById('singleOrderDetailContent').innerHTML = `<div class="bg-[#133e31] p-3 rounded-xl space-y-2 break-words">
+                <p><strong>Customer Name:</strong> ${escapeHTML(o.customerName || 'Not provided')}</p>
+                <p><strong>Contact Number:</strong> ${escapeHTML(o.customerPhone || 'Not provided')}</p>
+                <p><strong>Product:</strong> ${escapeHTML(o.product || '')}</p>
+                <p><strong>Total Amount:</strong> ₹${Number(o.totalAmount || 0)}</p>
+                <p><strong>Payment:</strong> ${escapeHTML(o.paymentMethod || 'Not specified')} (${escapeHTML(o.paymentStatus || 'Not specified')})</p>
+                <p><strong>Order Status:</strong> <span class="text-green-400 font-bold">${escapeHTML(o.status || '')}</span></p>
+                <p><strong>Delivery Address:</strong> ${escapeHTML(o.shippingAddress || 'Not provided')}</p>
+                ${o.lat && o.lng ? `<a class="inline-flex text-amber-300 underline font-bold" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${encodeURIComponent(o.lat + ',' + o.lng)}">Open Pinned Location</a>` : ''}
+                ${itemsHtml}</div>`;
             document.getElementById('singleOrderDetailModal').classList.remove('hidden');
         }
         function closeSingleOrderDetail() { document.getElementById('singleOrderDetailModal').classList.add('hidden'); }
