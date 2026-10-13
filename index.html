@@ -68,7 +68,7 @@ main{max-width:none!important;margin:0!important;padding:0 0 16px!important}
 .ml-bottom-nav button{border:0;background:transparent;color:#d1d5db;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;min-width:52px}
 .ml-bottom-nav button i{font-size:24px;color:#d1d5db}
 .ml-bottom-nav button.active{color:#fbbf24;font-weight:700}
-.ml-bottom-nav button.active i{color:#fbbf24}
+.ml-bottom-nav button.active i{color:#fbbf24}.ml-bottom-nav button.active span{color:#fbbf24}
 body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(#addressModal):not(#paymentModal):not(#successModal):not(#loginModal):not(#notificationsModal):not(#profileModal):not(#ordersModal):not(#singleOrderDetailModal):not(#editProductModal):not(#wishlistModal):not(#adminDeviceLockModal):not(#appAlertModal){z-index:90}
 @media(min-width:700px){.ml-sale-banner{height:150px}.ml-sale-right{font-size:28px}.ml-sale-right strong{font-size:46px}.ml-categories{justify-content:center}.ml-recent{padding-left:24px}}
 </style>
@@ -80,10 +80,10 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 </style>
 
 
-<style id="ml-recent-dynamic-style">
-.ml-recent-card{flex:0 0 130px;border:1px solid #1b4f40;border-radius:14px;padding:8px;background:#0b2920;text-align:center;color:#f3f4f6;cursor:pointer}
-.ml-recent-card img{width:100%;height:90px;object-fit:contain;border-radius:10px;background:#fff;margin-bottom:8px}
-.ml-recent-card p{font-weight:700;margin:4px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+<style id="ml-controls-under-search">
+#shopControls{margin:12px 0 0!important;padding:0!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}
+#shopControls #productSortSelect{min-width:0;width:100%;background:#0b2920!important;color:#f3f4f6!important;border:1px solid #1b4f40!important;border-radius:12px!important;padding:10px 12px!important;font-size:13px!important}
+#shopControls button{white-space:nowrap;background:#0b2920!important;color:#fbbf24!important;border:1px solid #1b4f40!important;border-radius:12px!important;padding:10px 12px!important;font-size:13px!important}
 </style>
 
 </head>
@@ -108,7 +108,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                     </button>
                     <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-[#0b2920] text-gray-200 border border-[#133e31] rounded-xl shadow-2xl py-2 z-50 text-sm">
                         <button type="button" onclick="openEditProfile()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-user-pen text-amber-400"></i> Edit Profile & GPS</button>
-                        <button type="button" onclick="setBottomNavActive(this);openMyOrders()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-box-open text-amber-400"></i> My Orders</button>
+                        <button type="button" onclick="openMyOrders()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-box-open text-amber-400"></i> My Orders</button>
                         <div id="categoryMenuSection">
                             <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
                             <button type="button" onclick="filterCategory('All')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs font-semibold text-amber-400">✨ All Products</button>
@@ -136,6 +136,11 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         <button type="button" aria-label="Voice search"><i class="fa-solid fa-microphone"></i></button>
         <button type="button" aria-label="Camera search"><i class="fa-solid fa-camera"></i></button>
       </div>
+      <section id="shopControls" class="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="productSearchInput" type="search" oninput="renderProducts()" aria-hidden="true" tabindex="-1" class="hidden">
+            <select id="productSortSelect" onchange="renderProducts()" class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white"><option value="featured">Sort: Featured</option><option value="priceLow">Price: Low to High</option><option value="priceHigh">Price: High to Low</option><option value="name">Name: A to Z</option></select>
+            <button type="button" onclick="openWishlist()" class="bg-[#0b2920] border border-amber-400/40 text-amber-300 rounded-xl px-4 py-3 text-sm font-bold"><i class="fa-solid fa-heart mr-2"></i>Wishlist <span id="wishlistCount">0</span></button>
+        </section>
       <div class="ml-delivery"><i class="fa-solid fa-location-dot"></i><span>Delivering to Aligarh - 202126</span><i class="fa-solid fa-chevron-right"></i></div>
     </section>
     <section class="ml-categories" aria-label="Shopping categories">
@@ -152,9 +157,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
       <button type="button" class="ml-cat" data-ml-category="Mall"><div class="ml-cat-icon">🛒</div><div class="ml-cat-label">Mall</div></button>
       <button type="button" class="ml-cat" data-ml-category="Bags"><div class="ml-cat-icon">👜</div><div class="ml-cat-label">Bags</div></button>
     </section>
-<section class="ml-recent hidden" id="mlRecentSection">
+<section class="ml-recent">
       <h2>Recently Viewed</h2>
-      <div class="ml-recent-items" id="mlRecentItems"></div>
+      <div class="ml-recent-items">
+        <div class="ml-recent-card"><div class="ml-product-emoji">🔌</div><div class="ml-discount">upto 60% OFF</div><p>USB Hubs</p></div>
+        <div class="ml-recent-card"><div class="ml-product-emoji">🧩</div><div class="ml-discount">upto 65% OFF</div><p>Semiconductor</p></div>
+      </div>
     </section>
 <main class="max-w-7xl mx-auto px-4 py-6">
         <div class="text-center mb-6">
@@ -208,11 +216,6 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             </div>
             <div id="deliveryOrdersContainer" class="space-y-4"></div>
         </div>
-        <section id="shopControls" class="mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input id="productSearchInput" type="search" oninput="renderProducts()" aria-hidden="true" tabindex="-1" class="hidden">
-            <select id="productSortSelect" onchange="renderProducts()" class="w-full bg-[#0b2920] border border-[#1b4f40] rounded-xl px-4 py-3 text-sm text-white"><option value="featured">Sort: Featured</option><option value="priceLow">Price: Low to High</option><option value="priceHigh">Price: High to Low</option><option value="name">Name: A to Z</option></select>
-            <button type="button" onclick="openWishlist()" class="bg-[#0b2920] border border-amber-400/40 text-amber-300 rounded-xl px-4 py-3 text-sm font-bold"><i class="fa-solid fa-heart mr-2"></i>Wishlist <span id="wishlistCount">0</span></button>
-        </section>
         <div id="adminDashboard" class="hidden max-w-5xl mx-auto space-y-4 mb-6">
             <div class="bg-[#0b2920] p-4 rounded-2xl border border-amber-400/30">
                 <h3 class="text-lg font-bold text-amber-400 mb-3"><i class="fa-solid fa-shield-halved mr-2"></i>Marketplace Admin Control Center</h3>
@@ -926,47 +929,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 });
             }
             document.getElementById('productGrid').innerHTML = html;
-            renderMLRecent(query);
-        }
-
-        function setBottomNavActive(button) {
-            document.querySelectorAll('.ml-bottom-nav button').forEach(btn => btn.classList.remove('active'));
-            if (button) button.classList.add('active');
-        }
-
-        function renderMLRecent(queryText) {
-            const section = document.getElementById('mlRecentSection');
-            const container = document.getElementById('mlRecentItems');
-            if (!section || !container) return;
-            const all = getProducts().filter(p => p.active !== false && (!p.moderationStatus || p.moderationStatus === 'active'));
-            let ids = [];
-            try { ids = JSON.parse(localStorage.getItem('mlRecentlyViewedIds') || '[]'); } catch (_) {}
-            let list = ids.map(id => all.find(p => String(p.id) === String(id))).filter(Boolean);
-            const q = String(queryText || '').trim().toLowerCase();
-            if (q) {
-                const found = all.filter(p => [p.name,p.desc,p.category,p.sellerName,p.brand].some(v => String(v || '').toLowerCase().includes(q)));
-                list = [...found, ...list.filter(p => !found.some(f => String(f.id) === String(p.id)))];
-            }
-            list = list.slice(0, 8);
-            if (!list.length) {
-                section.classList.add('hidden');
-                container.innerHTML = '';
-                return;
-            }
-            section.classList.remove('hidden');
-            container.innerHTML = list.map(p => `<div class="ml-recent-card" role="button" tabindex="0" onclick="openProductDetail(${Number(p.id)})"><img src="${escapeHTML(p.img || '')}" alt="${escapeHTML(p.name || 'Product')}"><p>${escapeHTML(p.name || 'Product')}</p></div>`).join('');
         }
 
         function openProductDetail(id) {
             let products = getProducts();
             let p = products.find(prod => prod.id === id);
             if (!p) return;
-            try {
-                let ids = JSON.parse(localStorage.getItem('mlRecentlyViewedIds') || '[]');
-                ids = [p.id, ...ids.filter(oldId => String(oldId) !== String(p.id))].slice(0, 8);
-                localStorage.setItem('mlRecentlyViewedIds', JSON.stringify(ids));
-                renderMLRecent(document.getElementById('productSearchInput')?.value || '');
-            } catch (_) {}
             let basePrice = Number(p.price) || 60;
             let optionsHtml = (p.category === 'Vegetables' || p.category === 'Fruits' || p.category === 'Grocery') ? `
                 <option value="0.25" data-label="250 Gram">250 Gram</option>
@@ -2041,7 +2009,18 @@ async function verifyFast2SMSOTP() {
             }
         }
 
+        function setBottomNavActive(label) {
+            document.querySelectorAll('.ml-bottom-nav button').forEach(function(button) {
+                const text = (button.innerText || '').trim();
+                const active = text === label;
+                button.classList.toggle('active', active);
+                if (active) button.setAttribute('aria-current', 'page');
+                else button.removeAttribute('aria-current');
+            });
+        }
+
         async function openMyOrders() {
+            setBottomNavActive('My Orders');
             toggleMenu();
             const role = localStorage.getItem('loggedInRole');
             const phone = localStorage.getItem('userPhone') || '';
@@ -2509,10 +2488,10 @@ function openSellerHistoryModal() {
     </script>
 
 <nav class="ml-bottom-nav" aria-label="Main navigation">
-  <button class="active" type="button" onclick="setBottomNavActive(this);window.scrollTo({top:0,behavior:'smooth'})"><i class="fa-solid fa-house"></i><span>Home</span></button>
-  <button type="button" onclick="setBottomNavActive(this);document.querySelector('.ml-categories').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-shirt"></i><span>Categories</span></button>
-  <button type="button" onclick="setBottomNavActive(this);document.querySelector('.ml-categories').scrollIntoView({behavior:'smooth'})"><i class="fa-regular fa-circle-check"></i><span>Mall</span></button>
-  <button type="button" onclick="setBottomNavActive(this);document.getElementById('productGrid').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-film"></i><span>Video Finds</span></button>
+  <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fa-solid fa-house"></i><span>Home</span></button>
+  <button type="button" onclick="document.querySelector('.ml-categories').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-shirt"></i><span>Categories</span></button>
+  <button type="button" onclick="document.querySelector('.ml-promo-strip').scrollIntoView({behavior:'smooth'})"><i class="fa-regular fa-circle-check"></i><span>Mall</span></button>
+  <button type="button" onclick="document.getElementById('productGrid').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-film"></i><span>Video Finds</span></button>
   <button type="button" onclick="openMyOrders()"><i class="fa-solid fa-box"></i><span>My Orders</span></button>
 </nav>
 
@@ -2585,13 +2564,6 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('productGrid')?.scrollIntoView({behavior:'smooth', block:'start'});
     });
   });
-});
-</script>
-
-
-<script id="ml-recent-init">
-document.addEventListener('DOMContentLoaded', function(){
-  if (typeof renderMLRecent === 'function') renderMLRecent(document.getElementById('productSearchInput')?.value || '');
 });
 </script>
 
