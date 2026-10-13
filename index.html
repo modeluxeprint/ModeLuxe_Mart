@@ -1593,37 +1593,56 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
         function applyRolePanelView(role) {
-            const dashboardIds = ['sellerDashboard', 'deliveryDashboard', 'adminDashboard'];
-            dashboardIds.forEach(id => {
+            const panelRoles = ['seller', 'delivery', 'admin'];
+            const isPanel = panelRoles.includes(role);
+            const dashboards = {
+                seller: 'sellerDashboard',
+                delivery: 'deliveryDashboard',
+                admin: 'adminDashboard'
+            };
+
+            // Hide every role dashboard first, then show only the selected one.
+            Object.values(dashboards).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
 
-            const productGrid = document.getElementById('productGrid');
-            const gridMessage = document.getElementById('gridMessage');
-            const mainHeading = document.getElementById('mainHeading');
-            const subHeading = document.getElementById('subHeading');
-            const isPanel = ['seller', 'delivery', 'admin'].includes(role);
+            // Hide storefront-only content while a management panel is active.
+            const storefrontSelectors = [
+                '#productGrid', '#gridMessage', '#productSortSelect',
+                '.ml-categories', '.ml-recent', '#mlRecentlyViewedSection',
+                '#mlVisualSearch', '#productSearchInput', '#productSortSelect',
+                '#wishlistButton', '#deliveryLocationRow', '#deliveryLocation',
+                '#mainHeading', '#subHeading'
+            ];
+            storefrontSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => {
+                    el.classList.toggle('hidden', isPanel);
+                });
+            });
 
-            if (productGrid) productGrid.classList.toggle('hidden', isPanel);
-            if (gridMessage) gridMessage.classList.toggle('hidden', isPanel);
-            if (mainHeading) mainHeading.closest('.text-center')?.classList.toggle('hidden', isPanel);
-            if (subHeading) subHeading.classList.toggle('hidden', isPanel);
+            // Hide the row containing search/sort/wishlist when in a panel.
+            const search = document.getElementById('productSearchInput') ||
+                           document.getElementById('mlVisualSearch');
+            if (search) {
+                const searchWrap = search.closest('.ml-search-wrap') ||
+                                   search.closest('[data-storefront-search]') ||
+                                   search.parentElement?.parentElement;
+                if (searchWrap) searchWrap.classList.toggle('hidden', isPanel);
+            }
 
-            const dashboardId = role === 'seller' ? 'sellerDashboard'
-                : role === 'delivery' ? 'deliveryDashboard'
-                : role === 'admin' ? 'adminDashboard' : null;
-            if (dashboardId) {
-                const dashboard = document.getElementById(dashboardId);
-                if (dashboard) dashboard.classList.remove('hidden');
-                if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
-                if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
-                if (role === 'admin' && typeof renderAdminDashboard === 'function') renderAdminDashboard();
-                dashboard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const targetId = dashboards[role];
+            if (isPanel && targetId) {
+                const target = document.getElementById(targetId);
+                if (target) {
+                    target.classList.remove('hidden');
+                    if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
+                    if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
+                    if (role === 'admin' && typeof renderAdminDashboard === 'function') renderAdminDashboard();
+                    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }
             } else {
-                if (productGrid) productGrid.classList.remove('hidden');
-                if (mainHeading) mainHeading.closest('.text-center')?.classList.remove('hidden');
-                if (subHeading) subHeading.classList.remove('hidden');
+                // User role returns to the normal storefront.
                 if (typeof renderProducts === 'function') renderProducts();
             }
         }
@@ -1835,7 +1854,7 @@ async function verifyFast2SMSOTP() {
     closeLoginModal();
     document.getElementById('dropdownMenu').classList.add('hidden');
     updateAuthUI();
-    renderProducts();
+    applyRolePanelView(role);
     alert('OTP verified. Login successful!');
     } catch (error) {
         console.error('StartMessaging verify OTP error:', error);
@@ -2003,7 +2022,7 @@ async function verifyFast2SMSOTP() {
         function logoutApp() {
             sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');
             localStorage.removeItem('loggedInRole'); localStorage.removeItem('userPhone');
-            updateAuthUI(); renderProducts(); toggleMenu(); alert("Logged out.");
+            updateAuthUI(); if (typeof applyRolePanelView === 'function') applyRolePanelView('user'); else renderProducts(); toggleMenu(); alert("Logged out.");
         }
 
         function openEditProfile() {
