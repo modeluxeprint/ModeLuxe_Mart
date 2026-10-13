@@ -1592,6 +1592,42 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         }
 
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
+        function applyRolePanelView(role) {
+            const dashboardIds = ['sellerDashboard', 'deliveryDashboard', 'adminDashboard'];
+            dashboardIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+
+            const productGrid = document.getElementById('productGrid');
+            const gridMessage = document.getElementById('gridMessage');
+            const mainHeading = document.getElementById('mainHeading');
+            const subHeading = document.getElementById('subHeading');
+            const isPanel = ['seller', 'delivery', 'admin'].includes(role);
+
+            if (productGrid) productGrid.classList.toggle('hidden', isPanel);
+            if (gridMessage) gridMessage.classList.toggle('hidden', isPanel);
+            if (mainHeading) mainHeading.closest('.text-center')?.classList.toggle('hidden', isPanel);
+            if (subHeading) subHeading.classList.toggle('hidden', isPanel);
+
+            const dashboardId = role === 'seller' ? 'sellerDashboard'
+                : role === 'delivery' ? 'deliveryDashboard'
+                : role === 'admin' ? 'adminDashboard' : null;
+            if (dashboardId) {
+                const dashboard = document.getElementById(dashboardId);
+                if (dashboard) dashboard.classList.remove('hidden');
+                if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
+                if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
+                if (role === 'admin' && typeof renderAdminDashboard === 'function') renderAdminDashboard();
+                dashboard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                if (productGrid) productGrid.classList.remove('hidden');
+                if (mainHeading) mainHeading.closest('.text-center')?.classList.remove('hidden');
+                if (subHeading) subHeading.classList.remove('hidden');
+                if (typeof renderProducts === 'function') renderProducts();
+            }
+        }
+
         function switchDirectPanel(role) {
             if (role === 'admin') {
                 if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) { document.getElementById('dropdownMenu').classList.add('hidden'); openAdminWithDeviceLock(); return; }
@@ -1600,7 +1636,8 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             if (localStorage.getItem('is_' + role + '_verified')) {
                 localStorage.setItem('loggedInRole', role);
                 document.getElementById('dropdownMenu').classList.add('hidden');
-                updateAuthUI(); renderProducts();
+                updateAuthUI();
+                applyRolePanelView(role);
             } else { openLoginModalForRole(role); }
         }
 
