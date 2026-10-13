@@ -2012,7 +2012,7 @@ async function verifyFast2SMSOTP() {
         function setBottomNavActive(label) {
             document.querySelectorAll('.ml-bottom-nav button').forEach(function(button) {
                 const text = (button.innerText || '').trim();
-                const active = text === label;
+                const active = (button.getAttribute('data-bottom-tab') || text) === label;
                 button.classList.toggle('active', active);
                 if (active) button.setAttribute('aria-current', 'page');
                 else button.removeAttribute('aria-current');
@@ -2488,11 +2488,11 @@ function openSellerHistoryModal() {
     </script>
 
 <nav class="ml-bottom-nav" aria-label="Main navigation">
-  <button class="active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fa-solid fa-house"></i><span>Home</span></button>
-  <button type="button" onclick="document.querySelector('.ml-categories').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-shirt"></i><span>Categories</span></button>
-  <button type="button" onclick="document.querySelector('.ml-promo-strip').scrollIntoView({behavior:'smooth'})"><i class="fa-regular fa-circle-check"></i><span>Mall</span></button>
-  <button type="button" onclick="document.getElementById('productGrid').scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-film"></i><span>Video Finds</span></button>
-  <button type="button" onclick="openMyOrders()"><i class="fa-solid fa-box"></i><span>My Orders</span></button>
+  <button type="button" data-bottom-tab="Home" onclick="navigateBottomTab('Home')"><i class="fa-solid fa-house"></i><span>Home</span></button>
+  <button type="button" data-bottom-tab="Categories" onclick="navigateBottomTab('Categories')"><i class="fa-solid fa-shirt"></i><span>Categories</span></button>
+  <button type="button" data-bottom-tab="Mall" onclick="navigateBottomTab('Mall')"><i class="fa-regular fa-circle-check"></i><span>Mall</span></button>
+  <button type="button" data-bottom-tab="Video Finds" onclick="navigateBottomTab('Video Finds')"><i class="fa-solid fa-film"></i><span>Video Finds</span></button>
+  <button type="button" data-bottom-tab="My Orders" onclick="navigateBottomTab('My Orders')"><i class="fa-solid fa-box"></i><span>My Orders</span></button>
 </nav>
 
 <script id="ml-visual-search-wire">
@@ -2565,6 +2565,46 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+</script>
+
+
+<script id="ml-bottom-tab-navigation">
+function navigateBottomTab(label) {
+    if (typeof setBottomNavActive === 'function') setBottomNavActive(label);
+    else {
+        document.querySelectorAll('.ml-bottom-nav button').forEach(function(button) {
+            const active = button.getAttribute('data-bottom-tab') === label;
+            button.classList.toggle('active', active);
+        });
+    }
+
+    if (label === 'Home') {
+        // Close any open overlay and return to the home storefront.
+        ['ordersModal','myOrdersModal','productDetailModal','cartModal','profileModal','dropdownMenu'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+        });
+        window.scrollTo({top:0, behavior:'smooth'});
+        return;
+    }
+    if (label === 'Categories') {
+        document.querySelector('.ml-categories')?.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+    }
+    if (label === 'Mall') {
+        const promo = document.querySelector('.ml-promo-strip');
+        if (promo) promo.scrollIntoView({behavior:'smooth', block:'center'});
+        else document.querySelector('.ml-recent')?.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+    }
+    if (label === 'Video Finds') {
+        document.getElementById('productGrid')?.scrollIntoView({behavior:'smooth', block:'start'});
+        return;
+    }
+    if (label === 'My Orders') {
+        if (typeof openMyOrders === 'function') openMyOrders();
+    }
+}
 </script>
 
 </body>
