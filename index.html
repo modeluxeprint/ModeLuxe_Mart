@@ -1108,6 +1108,15 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             return normalized;
         }
 
+
+        // Refresh the header delivery city/PIN immediately whenever a shipping address is saved.
+        const mlOriginalStoreShippingAddress = storeShippingAddress;
+        storeShippingAddress = function(addressObj) {
+            const savedAddress = mlOriginalStoreShippingAddress(addressObj);
+            if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
+            return savedAddress;
+        };
+
         let selectedShippingAddressId = null;
         let shippingAddressFormMode = 'new';
 
@@ -2747,6 +2756,32 @@ function openDeliveryAddressEditor() {
 
 document.addEventListener('DOMContentLoaded', updateDeliveryLocation);
 window.addEventListener('storage', updateDeliveryLocation);
+</script>
+
+
+<script id="ml-delivery-live-refresh">
+(function() {
+    function refreshDelivery() {
+        if (typeof updateDeliveryLocation === 'function') updateDeliveryLocation();
+    }
+    document.addEventListener('change', function(event) {
+        const el = event.target;
+        if (!el) return;
+        if (el.matches('[name="savedAddress"], #savedAddressSelect, [data-address-choice]')) {
+            refreshDelivery();
+        }
+    });
+    document.addEventListener('click', function(event) {
+        const el = event.target && event.target.closest
+            ? event.target.closest('[data-address-id], .saved-address-option, [onclick*="selectShippingAddress"]')
+            : null;
+        if (el) setTimeout(refreshDelivery, 0);
+    });
+    window.addEventListener('pageshow', refreshDelivery);
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) refreshDelivery();
+    });
+})();
 </script>
 
 </body>
