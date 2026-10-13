@@ -90,7 +90,10 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
                 </div>
                 <div id="authSection"><button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button></div>
                 <div class="relative">
-                    <button type="button" onclick="toggleMenu()" class="text-amber-400 text-xl px-1 py-1 focus:outline-none cursor-pointer"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    <button id="headerProfileMenuButton" type="button" onclick="toggleMenu()" aria-label="Open profile menu" class="w-11 h-11 rounded-full border-2 border-amber-400 bg-[#133e31] overflow-hidden flex items-center justify-center shrink-0 focus:outline-none cursor-pointer shadow">
+                        <img id="headerProfileMenuPhoto" alt="Profile photo" class="w-full h-full object-cover hidden">
+                        <i id="headerProfileMenuFallback" class="fa-solid fa-user text-amber-400 text-xl"></i>
+                    </button>
                     <div id="dropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-[#0b2920] text-gray-200 border border-[#133e31] rounded-xl shadow-2xl py-2 z-50 text-sm">
                         <button type="button" onclick="openEditProfile()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-user-pen text-amber-400"></i> Edit Profile & GPS</button>
                         <button type="button" onclick="openMyOrders()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-box-open text-amber-400"></i> My Orders</button>
@@ -114,11 +117,7 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
             </div>
         </div>
     </header>
-    <section class="ml-sale-banner" aria-label="Mega sale banner">
-      <div class="ml-sale-left">MEGA<span>BLOCKBUSTER</span>SALE</div>
-      <div class="ml-sale-right">UP TO<strong>80% OFF</strong><small>⚡ Sale is LIVE</small></div>
-    </section>
-    <section class="ml-search-location">
+<section class="ml-search-location">
       <div class="ml-search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input id="mlVisualSearch" type="search" placeholder="Search by Keyword or Product ID" aria-label="Search products">
@@ -1513,6 +1512,27 @@ body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(
               .catch(err => alert('Could not update product: ' + err.message));
         }
 
+
+        function syncHeaderProfileMenuPhoto() {
+            const photo = document.getElementById('headerProfileMenuPhoto');
+            const fallback = document.getElementById('headerProfileMenuFallback');
+            if (!photo || !fallback) return;
+            let savedPhoto = '';
+            try {
+                const profile = typeof getActiveProfile === 'function' ? getActiveProfile() : null;
+                savedPhoto = profile && profile.photo ? profile.photo : (localStorage.getItem('userProfilePic') || '');
+            } catch (_) {}
+            if (savedPhoto) {
+                photo.src = savedPhoto;
+                photo.classList.remove('hidden');
+                fallback.classList.add('hidden');
+            } else {
+                photo.removeAttribute('src');
+                photo.classList.add('hidden');
+                fallback.classList.remove('hidden');
+            }
+        }
+
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
         function switchDirectPanel(role) {
             if (role === 'admin') {
@@ -1747,6 +1767,7 @@ async function verifyFast2SMSOTP() {
         };
 
         function updateAuthUI() {
+            syncHeaderProfileMenuPhoto();
             let role = localStorage.getItem('loggedInRole');
             let authSection = document.getElementById('authSection');
             let cartBtnContainer = document.getElementById('headerCartButton');
@@ -1972,6 +1993,7 @@ async function verifyFast2SMSOTP() {
                 document.getElementById('profileModal').classList.add('hidden');
                 pendingProfilePhotoData = null;
                 updateAuthUI();
+                syncHeaderProfileMenuPhoto();
                 alert('Profile saved successfully for this login account!');
             } catch (error) {
                 console.error('Profile save error:', error);
@@ -2461,6 +2483,13 @@ document.addEventListener('DOMContentLoaded',function(){
  if(visual&&actual){
   visual.addEventListener('input',function(){actual.value=visual.value;actual.dispatchEvent(new Event('input',{bubbles:true}));});
  }
+});
+</script>
+
+
+<script id="header-profile-menu-init">
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof syncHeaderProfileMenuPhoto === 'function') syncHeaderProfileMenuPhoto();
 });
 </script>
 
