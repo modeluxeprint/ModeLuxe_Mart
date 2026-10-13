@@ -111,7 +111,6 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                         <button type="button" onclick="openMyOrders()" class="w-full text-left px-4 py-2.5 hover:bg-[#133e31] flex items-center gap-2"><i class="fa-solid fa-box-open text-amber-400"></i> My Orders</button>
                         <div id="categoryMenuSection">
                             <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
-                            <button type="button" onclick="filterCategory('All')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs font-semibold text-amber-400">✨ All Products</button>
                         </div>
                         <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-amber-400 tracking-wider">PANEL SWITCHER</div>
                         <button type="button" onclick="switchDirectPanel('user')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user text-amber-400"></i> User Panel</button>
@@ -2601,7 +2600,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const visibleSearch = document.getElementById('mlVisualSearch');
 
   tiles.forEach(function(tile) {
-    tile.addEventListener('click', function() {
+    tile.addEventListener('click', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
       const category = tile.getAttribute('data-ml-category') || 'All';
 
       if (category === 'Get Loans') {
