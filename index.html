@@ -1539,21 +1539,6 @@ async function verifyFast2SMSOTP() {
             return;
         }
 
-    if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) {
-        alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.');
-        return;
-    }
-    if (role === 'seller') {
-        const app = {
-            phone,
-            name: document.getElementById('loginKycFullName').value.trim() || localStorage.getItem('userName') || 'Seller',
-            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
-            shopName: document.getElementById('loginShopName')?.value.trim() || '',
-            status: 'pending',
-            appliedAt: new Date().toISOString()
-        };
-        db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
-    }
     if (role === 'seller' || role === 'delivery') {
         let saved = getSavedBankProfile(role, phone);
         if (!saved) {
@@ -1583,6 +1568,21 @@ async function verifyFast2SMSOTP() {
         }
     }
 
+    if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) {
+        alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.');
+        return;
+    }
+    if (role === 'seller') {
+        const app = {
+            phone,
+            name: document.getElementById('loginKycFullName').value.trim() || localStorage.getItem('userName') || 'Seller',
+            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
+            shopName: document.getElementById('loginShopName')?.value.trim() || '',
+            status: 'pending',
+            appliedAt: new Date().toISOString()
+        };
+        db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
+    }
     localStorage.setItem('loggedInRole', role);
     localStorage.setItem('userPhone', phone);
     if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
