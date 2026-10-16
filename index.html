@@ -623,11 +623,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 const saved = JSON.parse(localStorage.getItem(getActiveProfileKey()) || 'null');
                 if (saved && typeof saved === 'object') return saved;
             } catch (_) {}
+            // Do not fall back to global legacy fields: those caused one panel's
+            // profile/photo to leak into another role's profile.
             return {
-                name: localStorage.getItem('userName') || '',
+                name: '',
                 contactPhone: localStorage.getItem('userPhone') || '',
-                address: localStorage.getItem('userAddress') || '',
-                photo: localStorage.getItem('userProfilePic') || ''
+                address: '',
+                photo: ''
             };
         }
         function saveActiveProfile(profile) {
@@ -1587,7 +1589,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             let savedPhoto = '';
             try {
                 const profile = typeof getActiveProfile === 'function' ? getActiveProfile() : null;
-                savedPhoto = profile && profile.photo ? profile.photo : (localStorage.getItem('userProfilePic') || '');
+                savedPhoto = profile && profile.photo ? profile.photo : '';
             } catch (_) {}
             if (savedPhoto) {
                 photo.src = savedPhoto;
@@ -1906,6 +1908,7 @@ async function verifyFast2SMSOTP() {
     if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
     if (role === 'seller' && document.getElementById('loginShopName')?.value.trim()) localStorage.setItem('userShopName', document.getElementById('loginShopName').value.trim());
     sessionStorage.setItem('is_' + role + '_verified', 'true');
+    sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
     pendingLoginRole = null;
     pendingLoginPhone = null;
     closeLoginModal();
@@ -1922,14 +1925,7 @@ async function verifyFast2SMSOTP() {
 }
 
         window.onload = function() {
-            const savedPhoto = localStorage.getItem('userProfilePic') || '';
-            const preview = document.getElementById('profilePreviewImg');
-            const defaultIcon = document.getElementById('profileDefaultIcon');
-            if (savedPhoto && preview && defaultIcon) {
-                preview.src = savedPhoto;
-                preview.classList.remove('hidden');
-                defaultIcon.classList.add('hidden');
-            }
+            // Profile photos are loaded only when opening the active role's profile.
             updateAuthUI();
             renderProducts();
             updateCartBadge();
@@ -2081,6 +2077,10 @@ async function verifyFast2SMSOTP() {
 
         function logoutApp() {
             sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');
+            ['user','seller','delivery','admin'].forEach(function (role) {
+                sessionStorage.removeItem('is_' + role + '_verified');
+                sessionStorage.removeItem('modeluxe_verified_phone_' + role);
+            });
             localStorage.removeItem('loggedInRole'); localStorage.removeItem('userPhone');
             updateAuthUI(); if (typeof applyRolePanelView === 'function') applyRolePanelView('user'); else renderProducts(); toggleMenu(); alert("Logged out.");
         }
@@ -3078,6 +3078,11 @@ window.addEventListener('storage', updateDeliveryLocation);
     const main = document.querySelector('main');
     if (main) main.style.setProperty('display','block','important');
   }
+  function isVerifiedForCurrentPhone(role) {
+    const phone = String(localStorage.getItem('userPhone') || '').replace(/\D/g, '');
+    const verifiedPhone = String(sessionStorage.getItem('modeluxe_verified_phone_' + role) || '').replace(/\D/g, '');
+    return !!phone && sessionStorage.getItem('is_' + role + '_verified') === 'true' && verifiedPhone === phone;
+  }
   function switchPanel(role) {
     if (!['user','seller','delivery','admin'].includes(role)) return;
     // Admin must pass the existing owner OTP and device-lock checks.
@@ -3090,8 +3095,9 @@ window.addEventListener('storage', updateDeliveryLocation);
         window.openAdminWithDeviceLock();
         return;
       }
-    } else if (sessionStorage.getItem('is_' + role + '_verified') !== 'true') {
-      // Never auto-create a verification flag on a panel click.
+    } else if (!isVerifiedForCurrentPhone(role)) {
+      // Never allow a panel switch unless OTP was verified for this exact phone
+      // in the current browser session. In particular, User Panel also requires OTP.
       if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole(role);
       return;
     }
@@ -3123,7 +3129,16 @@ window.addEventListener('storage', updateDeliveryLocation);
     event.stopImmediatePropagation();
     switchPanel(btn.getAttribute('data-panel-switch'));
   }, true);
-  function init() { paintPanel(localStorage.getItem('loggedInRole') || 'user'); }
+  function init() {
+    const savedRole = localStorage.getItem('loggedInRole') || 'user';
+    if (savedRole !== 'admin' && !isVerifiedForCurrentPhone(savedRole)) {
+      // A persisted loggedInRole alone is not authentication.
+      localStorage.removeItem('loggedInRole');
+      paintPanel('user');
+      return;
+    }
+    paintPanel(savedRole);
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
   else init();
 })();
