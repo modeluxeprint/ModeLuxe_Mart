@@ -862,7 +862,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 document.getElementById('adminFreeDeliveryInput').value = marketplaceSettings.freeDeliveryAbove;
                 document.getElementById('adminSellersList').innerHTML = filteredSellers.length ? filteredSellers.map(([phone,a]) => { const st=String(a.status||'pending').toLowerCase(); const locked=st!=='pending' && st!==''; const approved=st==='approved'; const rejected=st==='rejected'; const suspended=st==='suspended'; return `<div class="bg-[#133e31] p-3 rounded-lg flex flex-wrap justify-between gap-2"><div><b>${escapeHTML(a.name || 'Seller')}</b><p>${escapeHTML(phone)} · Status: ${escapeHTML(a.status || 'pending')}</p><p>PAN/KYC: ${escapeHTML(a.pan || 'Not provided')} · Shop: ${escapeHTML(a.shopName || 'Not provided')}</p></div><div class="flex gap-2"><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','approved')" class="${approved?'bg-green-500 ring-2 ring-white font-extrabold':'bg-green-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${approved?'✓ Approved':'Approve'}</button><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','rejected')" class="${rejected?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${rejected?'✓ Rejected':'Reject'}</button><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','suspended')" class="${suspended?'bg-gray-500 ring-2 ring-white font-extrabold':'bg-gray-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${suspended?'✓ Suspended':'Suspend'}</button></div></div>`; }).join('') : '<p>No seller applications yet.</p>';
                 document.getElementById('adminProductsList').innerHTML = filteredProducts.length ? filteredProducts.map(([id,p]) => { const st=String(p.moderationStatus||'active').toLowerCase(); const locked=!!p.adminModerationLocked; return `<div class="bg-[#133e31] p-3 rounded-lg flex gap-3 items-center"><img src="${escapeHTML(p.img || '')}" class="w-12 h-12 object-cover rounded" onerror="this.style.display='none'"><div class="flex-1"><b>${escapeHTML(p.name || 'Product')}</b><p>₹${Number(p.price||0)} · Stock ${Number(p.stock ?? 0)} · ${escapeHTML(p.sellerName || p.sellerPhone || 'Seller')}</p><p>Status: ${escapeHTML(p.moderationStatus || 'active')}</p></div><div class="flex flex-col gap-1"><button ${locked?'disabled':''} onclick="moderateProduct('${id}','active')" class="${st==='active'?'bg-green-500 ring-2 ring-white font-extrabold':'bg-green-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='active'?'✓ Approved/Shown':'Approve/Show'}</button><button ${locked?'disabled':''} onclick="moderateProduct('${id}','hidden')" class="${st==='hidden'?'bg-yellow-500 ring-2 ring-white font-extrabold':'bg-yellow-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='hidden'?'✓ Hidden':'Hide'}</button><button ${locked?'disabled':''} onclick="moderateProduct('${id}','rejected')" class="${st==='rejected'?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='rejected'?'✓ Rejected':'Reject'}</button></div></div>`; }).join('') : '<p>No products for this selection.</p>';
-                const cancelledOrders = filteredOrders.filter(([id,o]) => String(o.status||'').toLowerCase()==='cancelled'); const activeAdminOrders = filteredOrders.filter(([id,o]) => String(o.status||'').toLowerCase()!=='cancelled'); document.getElementById('adminOrdersList').innerHTML = activeAdminOrders.length ? activeAdminOrders.slice().reverse().map(([id,o]) => { const locked=!!o.adminStatusLocked || ['return approved','refund pending'].includes(String(o.status||'').toLowerCase()); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Cancelled')" class="${String(o.status||'').toLowerCase()==='cancelled'?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-800'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Cancel</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Return Approved')" class="${String(o.status||'').toLowerCase()==='return approved'?'bg-amber-500 ring-2 ring-white font-extrabold':'bg-amber-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Approve Return</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Refund Pending')" class="${String(o.status||'').toLowerCase()==='refund pending'?'bg-blue-500 ring-2 ring-white font-extrabold':'bg-blue-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Mark Refund Pending</button></div></div>`; }).join('') : '<p>No active orders for this selection.</p>'; document.getElementById('adminCancelledOrdersList').innerHTML = cancelledOrders.length ? cancelledOrders.slice().reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: <strong class="text-red-300">Cancelled</strong> · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p></div>`).join('') : '<p>No cancelled orders for this selection.</p>';
+                const cancelledOrders = filteredOrders.filter(([id,o]) => String(o.status||'').toLowerCase()==='cancelled'); const activeAdminOrders = filteredOrders.filter(([id,o]) => mlIsReturnEligible(o, Object.values(products))); document.getElementById('adminOrdersList').innerHTML = activeAdminOrders.length ? activeAdminOrders.slice().reverse().map(([id,o]) => { const locked=!!o.adminStatusLocked || ['return approved','refund pending'].includes(String(o.status||'').toLowerCase()); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Cancelled')" class="${String(o.status||'').toLowerCase()==='cancelled'?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-800'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Cancel</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Return Approved')" class="${String(o.status||'').toLowerCase()==='return approved'?'bg-amber-500 ring-2 ring-white font-extrabold':'bg-amber-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Approve Return</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Refund Pending')" class="${String(o.status||'').toLowerCase()==='refund pending'?'bg-blue-500 ring-2 ring-white font-extrabold':'bg-blue-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Mark Refund Pending</button></div></div>`; }).join('') : '<p>No active orders for this selection.</p>'; document.getElementById('adminCancelledOrdersList').innerHTML = cancelledOrders.length ? cancelledOrders.slice().reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: <strong class="text-red-300">Cancelled</strong> · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p></div>`).join('') : '<p>No cancelled orders for this selection.</p>';
                 document.getElementById('adminPayoutsList').innerHTML = filteredPayouts.length ? filteredPayouts.map(([id,r]) => { const st = String(r.status || 'pending').toLowerCase(); const approved = st === 'approved' || st === 'approve'; const paid = st === 'paid' || st === 'completed'; const rejected = st.includes('reject') || st.includes('declin') || st.includes('cancel'); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(r.role || 'Payout')} · ₹${Number(r.requestedAmount || r.amount || r.grossAmount || 0)}</b><p>${escapeHTML(r.phone || r.userPhone || '')} · <strong>${escapeHTML(r.status || 'pending')}</strong></p><div class="flex flex-wrap gap-2 mt-2"><button type="button" onclick="setPayoutStatus('${id}','approved',this)" class="${approved ? 'bg-green-500 ring-2 ring-white font-extrabold' : 'bg-green-700'} px-3 py-1 rounded">${approved ? '✓ Approved' : 'Approve'}</button><button type="button" onclick="setPayoutStatus('${id}','paid',this)" class="${paid ? 'bg-blue-500 ring-2 ring-white font-extrabold' : 'bg-blue-700'} px-3 py-1 rounded">${paid ? '✓ Paid' : 'Mark Paid'}</button><button type="button" onclick="setPayoutStatus('${id}','rejected',this)" class="${rejected ? 'bg-red-500 ring-2 ring-white font-extrabold' : 'bg-red-700'} px-3 py-1 rounded">${rejected ? '✓ Rejected' : 'Reject'}</button></div></div>`; }).join('') : '<p>No payout requests for this selection (or existing requests use another database path).</p>';
             }).catch(err => alert('Admin data load nahi hua: ' + err.message + '. Firebase Rules check karein.'));
         }
@@ -953,15 +953,57 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             db.ref('marketplaceSettings').update(next).then(() => { marketplaceSettings = {...marketplaceSettings,...next}; applyMarketplaceSettings(); alert('Marketplace settings save ho gayi.'); })
               .catch(e => alert('Settings save nahi hui: ' + e.message));
         }
+        // Shared 7-day return eligibility: excludes perishables and daily-use grocery categories.
+        function mlReturnExcludedCategory(category) {
+            return ['fast food', 'grocery', 'vegetables', 'vegetable', 'fruits', 'fruit'].includes(String(category || '').trim().toLowerCase());
+        }
+        function mlOrderCategory(order, products) {
+            const o = order || {};
+            const list = Array.isArray(products) ? products : (typeof getProducts === 'function' ? getProducts() : []);
+            if (o.category) return String(o.category);
+            const items = Array.isArray(o.items) ? o.items : [];
+            const itemCategory = items.find(x => x && x.category)?.category;
+            if (itemCategory) return String(itemCategory);
+            const names = [o.product, o.productName, ...items.map(x => x && (x.name || x.product || x.productName))].filter(Boolean).map(x => String(x).toLowerCase());
+            const match = list.find(p => names.some(n => n === String(p.name || '').toLowerCase() || n.startsWith(String(p.name || '').toLowerCase() + ' ') || n.includes(String(p.name || '').toLowerCase())));
+            return match ? String(match.category || '') : '';
+        }
+        function mlOrderCreatedDate(order) {
+            const o = order || {};
+            const raw = o.createdAt || o.orderedAt || o.orderDate || o.dateTime || o.timestamp || o.created_at;
+            if (!raw) return null;
+            let d = typeof raw === 'number' ? new Date(raw) : new Date(raw);
+            if (Number.isNaN(d.getTime())) return null;
+            return d;
+        }
+        function mlIsReturnEligible(order, products) {
+            const o = order || {};
+            if (String(o.status || '').toLowerCase() !== 'delivered') return false;
+            if (mlReturnExcludedCategory(mlOrderCategory(o, products))) return false;
+            const created = mlOrderCreatedDate(o);
+            if (!created) return false;
+            const age = Date.now() - created.getTime();
+            return age >= 0 && age <= 7 * 24 * 60 * 60 * 1000;
+        }
+
         function requestOrderCancellation(orderId) {
             const phone = currentPhone();
             if (!phone) return alert('Pehle login karein.');
             db.ref('orders/' + orderId).update({cancellationRequest: 'Requested by customer', cancellationRequestedAt: new Date().toISOString()})
               .then(() => alert('Cancellation request bhej di gayi.')).catch(e => alert('Request nahi bhej paye: ' + e.message));
         }
-        function requestOrderReturn(orderId) {
+        async function requestOrderReturn(orderId) {
             const phone = currentPhone();
             if (!phone) return alert('Pehle login karein.');
+            try {
+                const snap = await db.ref('orders/' + orderId).once('value');
+                const order = snap.val();
+                if (!order || String(order.customerPhone || '').replace(/\D/g, '') !== String(phone).replace(/\D/g, '')) return alert('Order verify nahi ho paya.');
+                const productSnap = await db.ref('products').once('value');
+                const productData = productSnap.val() || {};
+                if (!mlIsReturnEligible(order, Object.values(productData))) return alert('Is order par 7 Day Easy Return Policy lagu nahi hai ya 7 din ki avadhi khatam ho chuki hai.');
+                if (order.returnRequest) return alert('Is order ki return request pehle hi bheji ja chuki hai.');
+            } catch (e) { return alert('Return eligibility verify nahi ho payi: ' + e.message); }
             const reason = prompt('Return/refund ka reason likhein:');
             if (!reason) return;
             db.ref('orders/' + orderId).update({returnRequest: reason, returnRequestedAt: new Date().toISOString()})
@@ -1608,7 +1650,9 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 lat: activeCheckoutProduct.shippingLat || '',
                 lng: activeCheckoutProduct.shippingLng || '', 
                 status: 'Order Placed',
+                category: (getProducts().find(p => String(p.name || '').toLowerCase() === String(activeCheckoutProduct.name || '').toLowerCase()) || {}).category || ((Array.isArray(activeCheckoutProduct.items) && activeCheckoutProduct.items[0]) ? activeCheckoutProduct.items[0].category || '' : ''),
                 deliveryBoy: null,
+                createdAt: new Date().toISOString(),
                 dateTime: new Date().toLocaleString()
             };
             try {
@@ -2440,7 +2484,7 @@ function updateBellBadgeCount() {
                     <p class="text-xs text-gray-300">Status: <span class="text-green-400 font-bold">${escapeHTML(o.status || 'Order Placed')}</span></p>
                     <button type="button" onclick="openSingleOrderDetail(${Number(o.id)})" class="w-full bg-amber-400 text-black rounded-lg py-2 font-bold text-xs"><i class="fa-solid fa-receipt mr-1"></i> Order Details</button>
                     ${!['Delivered','Cancelled','Return Approved','Refunded'].includes(o.status) ? `<button type="button" onclick="requestOrderCancellation(${Number(o.id)})" class="w-full mt-1 bg-red-900 text-red-100 rounded-lg py-2 font-bold text-xs">Request Cancellation</button>` : ''}
-                    ${o.status === 'Delivered' ? `<button type="button" onclick="requestOrderReturn(${Number(o.id)})" class="w-full mt-1 bg-[#133e31] border border-amber-400/30 text-amber-300 rounded-lg py-2 font-bold text-xs">Request Return / Refund</button>` : ''}
+                    ${mlIsReturnEligible(o, getProducts()) && !o.returnRequest ? `<button type="button" onclick="requestOrderReturn(${Number(o.id)})" class="w-full mt-1 bg-[#133e31] border border-amber-400/30 text-amber-300 rounded-lg py-2 font-bold text-xs">Request Return / Refund</button>` : ''}
                     <button type="button" onclick="requestSupportTicket(${Number(o.id)})" class="w-full mt-1 bg-[#133e31] border border-[#1b4f40] text-gray-200 rounded-lg py-2 font-bold text-xs">Report Issue / Complaint</button>
                     ${o.cancellationRequest ? `<p class="text-[10px] text-yellow-300">Cancellation: ${escapeHTML(o.cancellationRequest)}</p>` : ''}
                     ${o.returnRequest ? `<p class="text-[10px] text-yellow-300">Return: ${escapeHTML(o.returnRequest)}</p>` : ''}
