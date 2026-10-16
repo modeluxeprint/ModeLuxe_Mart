@@ -3212,5 +3212,44 @@ window.addEventListener('storage', updateDeliveryLocation);
   else init();
 })();
 </script>
+
+<style id="ml-categories-mouse-drag-only">
+  .ml-categories { justify-content:flex-start !important; cursor:grab; user-select:none; -webkit-user-select:none; touch-action:pan-x; }
+  .ml-categories.ml-cat-dragging { cursor:grabbing; scroll-behavior:auto !important; }
+  .ml-categories .ml-cat { -webkit-user-drag:none; }
+</style>
+<script id="ml-categories-mouse-drag-only-script">
+(function(){
+  function enableCategoryDrag(){
+    const rail=document.querySelector('.ml-categories');
+    if(!rail || rail.dataset.dragEnabled==='1') return;
+    rail.dataset.dragEnabled='1';
+    let down=false, startX=0, startScroll=0, moved=false, suppressClick=false;
+    rail.addEventListener('pointerdown',function(e){
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      down=true; moved=false; startX=e.clientX; startScroll=rail.scrollLeft;
+    });
+    rail.addEventListener('pointermove',function(e){
+      if(!down) return;
+      const dx=e.clientX-startX;
+      if(Math.abs(dx)>5) moved=true;
+      if(moved){ rail.scrollLeft=startScroll-dx; rail.classList.add('ml-cat-dragging'); if(e.pointerType==='mouse') e.preventDefault(); }
+    });
+    function finish(){
+      if(!down) return;
+      down=false; rail.classList.remove('ml-cat-dragging');
+      if(moved){ suppressClick=true; setTimeout(function(){suppressClick=false;},250); }
+    }
+    rail.addEventListener('pointerup',finish);
+    rail.addEventListener('pointercancel',finish);
+    rail.addEventListener('click',function(e){
+      if(suppressClick){ e.preventDefault(); e.stopImmediatePropagation(); suppressClick=false; }
+    },true);
+    rail.addEventListener('dragstart',function(e){e.preventDefault();});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',enableCategoryDrag,{once:true});
+  else enableCategoryDrag();
+})();
+</script>
 </body>
 </html>
