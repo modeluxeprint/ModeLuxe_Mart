@@ -227,6 +227,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div><p class="font-bold text-amber-400"><i class="fa-solid fa-wallet mr-1"></i> Seller Wallet Balance:</p><p class="text-gray-300 mt-0.5">10% company commission will be deducted upon withdrawal request.</p></div>
                 <div class="text-right"><span id="sellerTotalEarnings" class="text-sm font-bold text-green-400">₹0</span><button type="button" onclick="openWithdrawModal('Seller')" class="mt-2 block bg-amber-400 text-black text-[10px] px-3 py-1.5 rounded-lg font-bold hover:bg-amber-300 shadow cursor-pointer">Withdraw to Bank</button></div>
             </div>
+            <div id="sellerWithdrawalStatusCard" class="bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
+                    <button type="button" onclick="loadMyWithdrawalStatuses('seller')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
+                </div>
+                <div id="sellerWithdrawalStatusList" class="space-y-2 text-xs"><p class="text-gray-300">Loading withdrawal requests...</p></div>
+            </div>
             <div class="bg-[#0b2920] p-5 rounded-2xl shadow-xl border border-[#133e31]">
                 <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-plus-circle mr-1"></i> Add New Product (Cloud Database)</h3><span id="sellerNotificationBadge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hidden animate-pulse">🔔 New Order!</span></div>
                 <input type="text" id="newProdName" placeholder="Product Name (e.g. Momos)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
@@ -257,6 +264,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Total Deliveries</p><p id="delTotalCount" class="text-lg font-extrabold text-amber-400 mt-1">0</p></div>
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Total Earnings</p><p id="delTotalEarnings" class="text-lg font-extrabold text-green-400 mt-1">₹0</p><button type="button" onclick="openWithdrawModal('Delivery')" class="mt-2 bg-green-600 text-white text-[10px] px-2.5 py-1 rounded-lg font-bold hover:bg-green-500 shadow cursor-pointer w-full">Withdraw</button></div>
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Cash in Hand</p><p id="delCashInHand" class="text-lg font-extrabold text-blue-400 mt-1">₹0</p></div>
+            </div>
+            <div id="deliveryWithdrawalStatusCard" class="bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
+                    <button type="button" onclick="loadMyWithdrawalStatuses('delivery')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
+                </div>
+                <div id="deliveryWithdrawalStatusList" class="space-y-2 text-xs"><p class="text-gray-300">Loading withdrawal requests...</p></div>
             </div>
             <div class="flex justify-between items-center mb-2 border-b border-[#133e31] pb-2">
                 <h3 class="font-bold text-amber-400 text-base"><i class="fa-solid fa-motorcycle text-green-400 mr-2"></i> Delivery Partner - Assigned Orders</h3>
@@ -991,6 +1005,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             let p = products.find(prod => prod.id === id);
             if (!p) return;
             let basePrice = Number(p.price) || 60;
+            // Show the 7-day easy-return policy only for eligible User Panel products.
+            const returnExcludedCategories = ['fast food', 'grocery', 'vegetables', 'fruits'];
+            const productCategoryKey = String(p.category || '').trim().toLowerCase();
+            const showSevenDayReturnPolicy = !returnExcludedCategories.includes(productCategoryKey);
+            const returnPolicyHtml = showSevenDayReturnPolicy
+                ? `<div class="bg-[#133e31] border border-amber-400/30 p-2.5 rounded-xl text-amber-300 text-xs font-semibold flex items-center gap-2"><i class="fa-solid fa-rotate-left text-amber-400 text-sm"></i><span>7 Day Easy Return Policy</span></div>`
+                : '';
             let optionsHtml = (p.category === 'Vegetables' || p.category === 'Fruits' || p.category === 'Grocery') ? `
                 <option value="0.25" data-label="250 Gram">250 Gram</option>
                 <option value="0.5" data-label="500 Gram">500 Gram</option>
@@ -1014,6 +1035,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <button type="button" onclick="submitProductRating(${Number(p.id)})" class="text-xs text-amber-300 underline">Rate this product</button>
                 <p class="text-2xl font-extrabold text-amber-400 mt-1" id="displayDynamicPrice">₹${basePrice}</p>
                 <div class="bg-amber-400/10 border border-amber-400/30 p-2.5 rounded-xl text-amber-300 text-xs font-semibold flex items-center gap-2"><i class="fa-solid fa-truck-fast text-amber-400 text-sm"></i><span>Free Delivery on orders ≥ ₹199 (Below ₹199 delivery charge is ₹30)</span></div>
+                ${returnPolicyHtml}
                 <p class="text-xs text-gray-200 leading-relaxed bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]">${escapeHTML(p.desc || 'No description available.')}</p>
                 <div class="flex items-center justify-between border-t border-[#133e31] pt-3"><label class="text-xs font-bold text-gray-200">Select Quantity / Weight:</label><select id="selectedQtyWeight" onchange="updateCalculatedPrice(${basePrice})" class="bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-amber-400">${optionsHtml}</select></div>
                 <div class="flex gap-3 mt-4">
@@ -2293,6 +2315,52 @@ function completeVerifiedLogin(role, phone) {
         }
         function closeSingleOrderDetail() { document.getElementById('singleOrderDetailModal').classList.add('hidden'); }
 
+        async function loadMyWithdrawalStatuses(requestedRole) {
+    const role = String(requestedRole || '').toLowerCase();
+    const listId = role === 'seller' ? 'sellerWithdrawalStatusList' : role === 'delivery' ? 'deliveryWithdrawalStatusList' : '';
+    const list = listId ? document.getElementById(listId) : null;
+    if (!list) return;
+    const phone = String(localStorage.getItem('userPhone') || '');
+    if (!phone) { list.innerHTML = '<p class="text-gray-300">Please log in to view your requests.</p>'; return; }
+    list.innerHTML = '<p class="text-gray-300">Loading withdrawal requests...</p>';
+    try {
+        const snapshot = await db.ref('withdrawalRequests').once('value');
+        const all = snapshot.val() || {};
+        const matches = Object.entries(all).filter(([id, item]) => {
+            const itemRole = String(item && item.role || '').toLowerCase();
+            const itemPhone = String(item && (item.userPhone || item.phone) || '');
+            return itemRole === role && itemPhone === phone;
+        }).map(([id, item]) => ({ id, ...item })).sort((a, b) => String(b.requestedAt || '').localeCompare(String(a.requestedAt || '')));
+        if (!matches.length) {
+            list.innerHTML = '<p class="text-gray-300">Abhi koi withdrawal request nahi hai.</p>';
+            return;
+        }
+        const statusStyle = status => {
+            const st = String(status || 'Pending Review').toLowerCase();
+            if (st.includes('paid')) return 'text-green-300';
+            if (st.includes('approv')) return 'text-blue-300';
+            if (st.includes('reject')) return 'text-red-300';
+            return 'text-amber-300';
+        };
+        list.innerHTML = matches.map(item => {
+            const status = String(item.status || 'Pending Review');
+            const date = item.requestedAt ? new Date(item.requestedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable';
+            const amount = Number(item.requestedAmount || item.amount || item.grossAmount || 0);
+            const net = Number(item.netAmount ?? amount);
+            return `<div class="bg-[#133e31] border border-[#1b4f40] rounded-xl p-3 space-y-1.5">
+                <div class="flex justify-between items-start gap-2"><b class="text-gray-100">Request: ₹${amount.toFixed(2)}</b><b class="${statusStyle(status)}">${escapeHTML(status)}</b></div>
+                <p class="text-gray-300">You will receive: <span class="text-green-300 font-bold">₹${net.toFixed(2)}</span></p>
+                <p class="text-gray-400">Account: ••••${escapeHTML(String(item.bankAccountLast4 || '----'))}</p>
+                <p class="text-gray-400">Requested: ${escapeHTML(date)}</p>
+                ${item.reviewedAt ? `<p class="text-gray-300">Last updated: ${escapeHTML(new Date(item.reviewedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))}</p>` : ''}
+            </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Could not load withdrawal status:', error);
+        list.innerHTML = '<p class="text-red-300">Status load nahi ho paya. Internet/Firebase permissions check karein.</p>';
+    }
+}
+
         function getSellerAvailableBalance() {
     const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
     const deliveredOrders = orders.filter(order => order.status === 'Delivered');
@@ -2464,6 +2532,7 @@ function submitWithdrawRequest() {
 
             updateSellerWallet();
             updateDeliveryWallet();
+            loadMyWithdrawalStatuses(activeWithdrawRole.toLowerCase());
             closeWithdrawModal();
             alert(
                 'Withdrawal request submitted successfully!\n\n' +
@@ -2584,6 +2653,7 @@ function updateDeliveryWallet() {
         html || "<p class='text-xs text-gray-300'>No active orders.</p>"
     );
     updateSellerWallet();
+    loadMyWithdrawalStatuses('seller');
 }
 
         function renderDeliveryDashboard() {
@@ -2633,6 +2703,7 @@ function updateDeliveryWallet() {
         });
     }
     container.innerHTML = html;
+    loadMyWithdrawalStatuses('delivery');
 }
 
 function openDeliveryHistoryModal() {
