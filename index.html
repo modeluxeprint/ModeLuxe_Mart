@@ -136,6 +136,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 #mlRecentlyViewedItems .ml-recent-empty{color:#9ca3af;font-size:13px;padding:10px 2px;margin:0}
 </style>
 
+
+<style id="ml-address-modal-scroll-fix">
+/* Only fix the shipping address modal: keep its buttons reachable above the fixed bottom navigation. */
+#addressModal{z-index:130!important;align-items:flex-start!important;justify-content:center!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-top:14px!important;padding-bottom:calc(100px + env(safe-area-inset-bottom))!important;}
+#addressModal>div{max-height:calc(100dvh - 120px)!important;max-height:calc(100vh - 120px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;flex-shrink:0;margin-top:0!important;margin-bottom:0!important;}
+@media(max-width:600px){#addressModal{padding-left:12px!important;padding-right:12px!important;}#addressModal>div{max-height:calc(100dvh - 110px)!important;max-height:calc(100vh - 110px)!important;}}
+</style>
 </head>
 <body class="bg-[#081c15] text-gray-100 font-sans">
     <header class="bg-[#0b2920] text-white shadow-lg sticky top-0 z-50 border-b border-[#133e31]">
