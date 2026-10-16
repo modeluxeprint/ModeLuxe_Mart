@@ -2270,10 +2270,12 @@ function completeVerifiedLogin(role, phone) {
             setBottomNavActive('My Orders');
             toggleMenu();
             const role = localStorage.getItem('loggedInRole');
-            const phone = localStorage.getItem('userPhone') || '';
-            if (role !== 'seller' && role !== 'delivery' && !phone) {
-                alert('Apne orders dekhne ke liye pehle customer login karein.');
-                openLoginModal();
+            const phone = String(localStorage.getItem('userPhone') || '').replace(/\D/g, '');
+            const verifiedPhone = String(sessionStorage.getItem('modeluxe_verified_phone_user') || '').replace(/\D/g, '');
+            const customerVerified = !!phone && role === 'user' && sessionStorage.getItem('is_user_verified') === 'true' && verifiedPhone === phone;
+            if (!customerVerified) {
+                alert('Apne orders dekhne ke liye pehle customer login karke OTP verify karein.');
+                openLoginModalForRole('user');
                 return;
             }
             let allOrders = JSON.parse(localStorage.getItem('myOrders')) || [];
@@ -2285,9 +2287,7 @@ function completeVerifiedLogin(role, phone) {
             } catch (err) {
                 console.warn('Could not refresh orders from Firebase:', err);
             }
-            const orders = role === 'seller' || role === 'delivery'
-                ? allOrders
-                : allOrders.filter(o => String(o.customerPhone || '') === String(phone));
+            const orders = allOrders.filter(o => String(o.customerPhone || '').replace(/\D/g, '') === phone);
             let html = orders.length === 0 ? "<p class='text-gray-300 text-sm text-center py-4'>No orders found for this account.</p>" : "";
             orders.slice().reverse().forEach(o => {
                 html += `<div class="border border-[#133e31] p-3.5 rounded-xl text-sm bg-[#133e31] space-y-2">
