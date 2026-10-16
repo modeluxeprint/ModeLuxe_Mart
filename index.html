@@ -48,12 +48,8 @@ main{max-width:none!important;margin:0!important;padding:0 0 16px!important}
 .ml-search-wrap input{border:0;outline:0;min-width:0;flex:1;font-size:15px;color:#f3f4f6;background:transparent}
 .ml-search-wrap button{border:0;background:transparent;color:#a5a5b5;font-size:20px;padding:4px}
 .ml-delivery{margin:17px 4px 0;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:700;cursor:pointer}.ml-delivery:focus-visible{outline:2px solid #fbbf24;outline-offset:4px;border-radius:8px}
-.ml-categories{display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:12px;overflow-x:auto;overflow-y:hidden;padding:12px 10px 7px;background:#081c15;scrollbar-width:none;cursor:grab;user-select:none;-webkit-user-select:none;scroll-behavior:auto;touch-action:pan-y;overscroll-behavior-x:contain}
+.ml-categories{display:flex;gap:12px;overflow-x:auto;padding:12px 10px 7px;background:#081c15;scrollbar-width:none}
 .ml-categories::-webkit-scrollbar{display:none}
-.ml-categories.is-dragging{cursor:grabbing;scroll-snap-type:none}
-.ml-categories .ml-cat{flex-shrink:0;user-select:none;-webkit-user-select:none}
-.ml-categories .ml-cat-icon{pointer-events:none}
-.ml-categories .ml-cat-label{pointer-events:none}
 .ml-cat{flex:0 0 96px;text-align:center;font-size:12px;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ml-cat-icon{height:80px;border-radius:22px;border:3px solid #fbbf24;outline:1px dashed #fbbf24;outline-offset:-6px;background:linear-gradient(145deg,#174638,#0b2920);display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:inset 0 0 0 3px #081c15}
 .ml-cat-label{margin-top:8px}
@@ -74,7 +70,16 @@ main{max-width:none!important;margin:0!important;padding:0 0 16px!important}
 .ml-bottom-nav button.active{color:#fbbf24;font-weight:700}
 .ml-bottom-nav button.active i{color:#fbbf24}.ml-bottom-nav button.active span{color:#fbbf24}
 body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(#addressModal):not(#paymentModal):not(#successModal):not(#loginModal):not(#notificationsModal):not(#profileModal):not(#ordersModal):not(#singleOrderDetailModal):not(#editProductModal):not(#wishlistModal):not(#adminDeviceLockModal):not(#appAlertModal){z-index:90}
-@media(min-width:700px){.ml-sale-banner{height:150px}.ml-sale-right{font-size:28px}.ml-sale-right strong{font-size:46px}.ml-categories{justify-content:flex-start}.ml-recent{padding-left:24px}}
+@media(min-width:700px){.ml-sale-banner{height:150px}.ml-sale-right{font-size:28px}.ml-sale-right strong{font-size:46px}.ml-categories{justify-content:center}.ml-recent{padding-left:24px}}
+
+/* Highlight the currently active panel in the Panel Switcher */
+.panel-switch-item.active-panel-switch {
+    color: #fbbf24 !important;
+    background: #133e31 !important;
+    font-weight: 700 !important;
+    box-shadow: inset 3px 0 0 #fbbf24;
+}
+.panel-switch-item.active-panel-switch i { color: #fbbf24 !important; }
 </style>
 
 
@@ -158,10 +163,10 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                             <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
                         </div>
                         <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-amber-400 tracking-wider">PANEL SWITCHER</div>
-                        <button type="button" onclick="switchDirectPanel('user')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user text-amber-400"></i> User Panel</button>
-                        <button type="button" onclick="switchDirectPanel('seller')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-store text-amber-400"></i> Seller Panel (Manage)</button>
-                        <button type="button" onclick="switchDirectPanel('delivery')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-motorcycle text-amber-400"></i> Delivery Partner Panel</button>
-                        <button type="button" onclick="switchDirectPanel('admin')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-amber-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</button>
+                        <button type="button" data-panel-switch="user" onclick="switchDirectPanel('user')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user"></i> User Panel</button>
+                        <button type="button" data-panel-switch="seller" onclick="switchDirectPanel('seller')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-store"></i> Seller Panel (Manage)</button>
+                        <button type="button" data-panel-switch="delivery" onclick="switchDirectPanel('delivery')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-motorcycle"></i> Delivery Partner Panel</button>
+                        <button type="button" data-panel-switch="admin" onclick="switchDirectPanel('admin')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</button>
                         <hr class="my-1 border-[#133e31]">
                         <button type="button" id="logoutMenuButton" onclick="logoutApp()" class="hidden w-full text-left px-4 py-2.5 hover:bg-red-950 text-red-400 flex items-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
                     </div>
@@ -222,6 +227,18 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div><p class="font-bold text-amber-400"><i class="fa-solid fa-wallet mr-1"></i> Seller Wallet Balance:</p><p class="text-gray-300 mt-0.5">10% company commission will be deducted upon withdrawal request.</p></div>
                 <div class="text-right"><span id="sellerTotalEarnings" class="text-sm font-bold text-green-400">₹0</span><button type="button" onclick="openWithdrawModal('Seller')" class="mt-2 block bg-amber-400 text-black text-[10px] px-3 py-1.5 rounded-lg font-bold hover:bg-amber-300 shadow cursor-pointer">Withdraw to Bank</button></div>
             </div>
+            <div class="mb-0">
+                <button type="button" onclick="toggleWithdrawalStatus('seller')" class="w-full bg-[#0b2920] border border-amber-400/40 text-amber-300 p-3 rounded-xl font-bold text-sm shadow">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i>Payment Request Status
+                </button>
+            </div>
+            <div id="sellerWithdrawalStatusCard" class="hidden bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
+                    <button type="button" onclick="loadMyWithdrawalStatuses('seller')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
+                </div>
+                <div id="sellerWithdrawalStatusList" class="space-y-2 text-xs"><p class="text-gray-300">Loading withdrawal requests...</p></div>
+            </div>
             <div class="bg-[#0b2920] p-5 rounded-2xl shadow-xl border border-[#133e31]">
                 <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-plus-circle mr-1"></i> Add New Product (Cloud Database)</h3><span id="sellerNotificationBadge" class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hidden animate-pulse">🔔 New Order!</span></div>
                 <input type="text" id="newProdName" placeholder="Product Name (e.g. Momos)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 text-xs mb-2.5 outline-none focus:border-amber-400">
@@ -252,6 +269,18 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Total Deliveries</p><p id="delTotalCount" class="text-lg font-extrabold text-amber-400 mt-1">0</p></div>
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Total Earnings</p><p id="delTotalEarnings" class="text-lg font-extrabold text-green-400 mt-1">₹0</p><button type="button" onclick="openWithdrawModal('Delivery')" class="mt-2 bg-green-600 text-white text-[10px] px-2.5 py-1 rounded-lg font-bold hover:bg-green-500 shadow cursor-pointer w-full">Withdraw</button></div>
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Cash in Hand</p><p id="delCashInHand" class="text-lg font-extrabold text-blue-400 mt-1">₹0</p></div>
+            </div>
+            <div class="mb-0">
+                <button type="button" onclick="toggleWithdrawalStatus('delivery')" class="w-full bg-[#0b2920] border border-amber-400/40 text-amber-300 p-3 rounded-xl font-bold text-sm shadow">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i>Payment Request Status
+                </button>
+            </div>
+            <div id="deliveryWithdrawalStatusCard" class="hidden bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
+                    <button type="button" onclick="loadMyWithdrawalStatuses('delivery')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
+                </div>
+                <div id="deliveryWithdrawalStatusList" class="space-y-2 text-xs"><p class="text-gray-300">Loading withdrawal requests...</p></div>
             </div>
             <div class="flex justify-between items-center mb-2 border-b border-[#133e31] pb-2">
                 <h3 class="font-bold text-amber-400 text-base"><i class="fa-solid fa-motorcycle text-green-400 mr-2"></i> Delivery Partner - Assigned Orders</h3>
@@ -429,37 +458,41 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             <button type="button" onclick="closeSuccessModal()" class="w-full bg-amber-400 text-black py-3 rounded-xl text-sm font-bold hover:bg-amber-300 transition cursor-pointer shadow">View Orders / Back to Home</button>
         </div>
     </div>
-    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 px-4">
-        <div class="bg-[#0b2920] text-gray-100 border border-[#133e31] w-full max-w-sm p-6 rounded-2xl shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-start justify-center z-[150] px-4 py-4 overflow-y-auto">
+        <div class="bg-[#0b2920] text-gray-100 border border-[#133e31] w-full max-w-sm p-5 rounded-2xl shadow-2xl relative text-center max-h-[calc(100dvh-110px)] overflow-y-auto mb-20">
             <button type="button" onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-300 cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
             <h3 class="text-xl font-bold text-amber-400 mb-2">Mobile OTP Login</h3>
             <p class="text-xs text-gray-300 mb-4">StartMessaging SMS OTP verification is required to sign in.</p>
-            <div class="space-y-3 text-left text-xs mb-3">
-                <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option><option value="admin">Admin (Owner)</option></select></div>
-                <div><label class="block font-medium text-gray-200 mb-1">Mobile Number</label><input type="tel" id="loginPhoneInput" maxlength="10" placeholder="10-digit number" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400 mb-2"></div>
-                <div id="loginBankSection" class="pt-2 border-t border-[#1b4f40] space-y-2">
-                    <p class="font-bold text-amber-400"><i class="fa-solid fa-shield-halved mr-1"></i> Seller / Delivery Verification</p>
-                    
-                    <input type="text" id="loginKycFullName" placeholder="Full Name (as on PAN/Aadhaar)" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginShopName" placeholder="Shop / Business Name (Seller)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginPanNumber" placeholder="PAN Number (e.g. ABCDE1234F)" maxlength="10" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                    <div id="deliveryVehicleSection" class="hidden space-y-2">
-                        <input type="text" id="loginVehicleNumber" placeholder="Vehicle Number (e.g. UP 81 AB 1234)" maxlength="15" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                        <select id="loginVehicleType" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="">Select Vehicle Type</option><option value="Bike">Bike / Scooter</option><option value="Scooter">Scooter</option><option value="Cycle">Cycle</option><option value="Other">Other</option></select>
+            <div class="space-y-3 text-left text-xs mb-3" id="loginWizard">
+                <section id="loginStepPhone" class="space-y-3">
+                    <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option><option value="admin">Admin (Owner)</option></select></div>
+                    <div><label class="block font-medium text-gray-200 mb-1">Mobile Number</label><input type="tel" id="loginPhoneInput" maxlength="10" inputmode="numeric" placeholder="10-digit number" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
+                    <button type="button" onclick="sendFast2SMSOTP()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-bold hover:bg-amber-300 cursor-pointer shadow">Send OTP</button>
+                    <div id="otpBoxSection" class="hidden pt-3 space-y-2 border-t border-[#1b4f40]">
+                        <label class="block font-medium text-gray-200 mb-1">Enter 6-Digit OTP</label>
+                        <input type="text" id="loginOtpInput" maxlength="6" inputmode="numeric" placeholder="Enter OTP" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                        <button type="button" onclick="verifyFast2SMSOTP()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-500 cursor-pointer shadow">Verify OTP & Continue</button>
                     </div>
-                    <input type="text" id="loginAadhaarNumber" placeholder="Aadhaar Number (12 digits)" maxlength="12" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    
-                    <p class="font-bold text-amber-400 pt-2"><i class="fa-solid fa-bank mr-1"></i> Bank Account for Payouts:</p>
-                    <input type="text" id="loginBankName" placeholder="Account Holder Name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginBankAcc" placeholder="Bank Account Number" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginBankIfsc" placeholder="IFSC Code (e.g. SBIN000XXXX)" maxlength="11" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                </div>
-                <button type="button" onclick="sendFast2SMSOTP()" class="w-full bg-amber-400 text-black py-2.5 rounded-xl font-bold hover:bg-amber-300 cursor-pointer shadow mt-2">Send OTP</button>
-                <div id="otpBoxSection" class="hidden pt-2 space-y-2 border-t border-[#1b4f40] mt-2">
-                    <label class="block font-medium text-gray-200 mb-1">Enter 6-Digit OTP</label>
-                    <input type="text" id="loginOtpInput" maxlength="6" placeholder="Enter OTP" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none mb-2.5 focus:border-amber-400">
-                    <button type="button" onclick="verifyFast2SMSOTP()" class="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold hover:bg-green-500 cursor-pointer shadow">Verify & Login</button>
-                </div>
+                </section>
+                <section id="loginStepVerification" class="hidden space-y-3">
+                    <div class="rounded-xl border border-amber-400/30 bg-[#133e31] p-3"><p class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-shield-halved mr-1"></i> Seller / Delivery Verification</p><p class="text-gray-300 mt-1">Step 2 of 3 — apni details bharein.</p></div>
+                    <input type="text" id="loginKycFullName" placeholder="Full Name (as on PAN/Aadhaar)" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <div id="sellerShopField"><input type="text" id="loginShopName" placeholder="Shop / Business Name (Seller)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400"></div>
+                    <input type="text" id="loginPanNumber" placeholder="PAN Number (e.g. ABCDE1234F)" maxlength="10" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                    <div id="deliveryVehicleSection" class="hidden space-y-2">
+                        <input type="text" id="loginVehicleNumber" placeholder="Vehicle Number (e.g. UP 81 AB 1234)" maxlength="15" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                        <select id="loginVehicleType" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400"><option value="">Select Vehicle Type</option><option value="Bike">Bike / Scooter</option><option value="Scooter">Scooter</option><option value="Cycle">Cycle</option><option value="Other">Other</option></select>
+                    </div>
+                    <input type="text" id="loginAadhaarNumber" placeholder="Aadhaar Number (12 digits)" maxlength="12" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <div class="grid grid-cols-2 gap-2"><button type="button" onclick="showLoginWizardStep('phone')" class="w-full border border-[#1b4f40] text-gray-200 py-3 rounded-xl font-bold">Back</button><button type="button" onclick="continueSellerDeliveryVerification()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-bold">Next</button></div>
+                </section>
+                <section id="loginStepBank" class="hidden space-y-3">
+                    <div class="rounded-xl border border-amber-400/30 bg-[#133e31] p-3"><p class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-building-columns mr-1"></i> Bank Account for Payouts</p><p class="text-gray-300 mt-1">Step 3 of 3 — bank details bharein aur finish karein.</p></div>
+                    <input type="text" id="loginBankName" placeholder="Account Holder Name" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <input type="text" id="loginBankAcc" placeholder="Bank Account Number" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <input type="text" id="loginBankIfsc" placeholder="IFSC Code (e.g. SBIN000XXXX)" maxlength="11" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                    <div class="grid grid-cols-2 gap-2"><button type="button" onclick="showLoginWizardStep('verification')" class="w-full border border-[#1b4f40] text-gray-200 py-3 rounded-xl font-bold">Back</button><button type="button" onclick="finishSellerDeliveryLogin()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-extrabold shadow">Finish</button></div>
+                </section>
             </div>
         </div>
     </div>
@@ -598,7 +631,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 
         // IMPORTANT: Admin UI access is not a security boundary. Enforce roles in Firebase Rules/server too.
         // Add the owner's verified phone here before using the Admin role (digits only).
-        const ADMIN_PHONE_ALLOWLIST = []; 
+        const ADMIN_PHONE_ALLOWLIST = ['9719505955']; // Owner mobile: +91 9719505955 
         let liveSellerApplications = {};
         let livePayoutRequests = {};
         let marketplaceSettings = { commissionPercent: 10, deliveryFee: 30, freeDeliveryAbove: 199 };
@@ -618,11 +651,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 const saved = JSON.parse(localStorage.getItem(getActiveProfileKey()) || 'null');
                 if (saved && typeof saved === 'object') return saved;
             } catch (_) {}
+            // Do not fall back to global legacy fields: those caused one panel's
+            // profile/photo to leak into another role's profile.
             return {
-                name: localStorage.getItem('userName') || '',
+                name: '',
                 contactPhone: localStorage.getItem('userPhone') || '',
-                address: localStorage.getItem('userAddress') || '',
-                photo: localStorage.getItem('userProfilePic') || ''
+                address: '',
+                photo: ''
             };
         }
         function saveActiveProfile(profile) {
@@ -980,6 +1015,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             let p = products.find(prod => prod.id === id);
             if (!p) return;
             let basePrice = Number(p.price) || 60;
+            // Show the 7-day easy-return policy only for eligible User Panel products.
+            const returnExcludedCategories = ['fast food', 'grocery', 'vegetables', 'fruits'];
+            const productCategoryKey = String(p.category || '').trim().toLowerCase();
+            const showSevenDayReturnPolicy = !returnExcludedCategories.includes(productCategoryKey);
+            const returnPolicyHtml = showSevenDayReturnPolicy
+                ? `<div class="bg-[#133e31] border border-amber-400/30 p-2.5 rounded-xl text-amber-300 text-xs font-semibold flex items-center gap-2"><i class="fa-solid fa-rotate-left text-amber-400 text-sm"></i><span>7 Day Easy Return Policy</span></div>`
+                : '';
             let optionsHtml = (p.category === 'Vegetables' || p.category === 'Fruits' || p.category === 'Grocery') ? `
                 <option value="0.25" data-label="250 Gram">250 Gram</option>
                 <option value="0.5" data-label="500 Gram">500 Gram</option>
@@ -1003,6 +1045,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <button type="button" onclick="submitProductRating(${Number(p.id)})" class="text-xs text-amber-300 underline">Rate this product</button>
                 <p class="text-2xl font-extrabold text-amber-400 mt-1" id="displayDynamicPrice">₹${basePrice}</p>
                 <div class="bg-amber-400/10 border border-amber-400/30 p-2.5 rounded-xl text-amber-300 text-xs font-semibold flex items-center gap-2"><i class="fa-solid fa-truck-fast text-amber-400 text-sm"></i><span>Free Delivery on orders ≥ ₹199 (Below ₹199 delivery charge is ₹30)</span></div>
+                ${returnPolicyHtml}
                 <p class="text-xs text-gray-200 leading-relaxed bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]">${escapeHTML(p.desc || 'No description available.')}</p>
                 <div class="flex items-center justify-between border-t border-[#133e31] pt-3"><label class="text-xs font-bold text-gray-200">Select Quantity / Weight:</label><select id="selectedQtyWeight" onchange="updateCalculatedPrice(${basePrice})" class="bg-[#133e31] border border-[#1b4f40] text-white rounded-xl px-3 py-2 text-xs font-semibold outline-none focus:border-amber-400">${optionsHtml}</select></div>
                 <div class="flex gap-3 mt-4">
@@ -1582,7 +1625,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             let savedPhoto = '';
             try {
                 const profile = typeof getActiveProfile === 'function' ? getActiveProfile() : null;
-                savedPhoto = profile && profile.photo ? profile.photo : (localStorage.getItem('userProfilePic') || '');
+                savedPhoto = profile && profile.photo ? profile.photo : '';
             } catch (_) {}
             if (savedPhoto) {
                 photo.src = savedPhoto;
@@ -1619,8 +1662,13 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             ];
             storefrontSections.forEach(selector => {
                 document.querySelectorAll(selector).forEach(el => {
-                    el.classList.toggle('hidden', panelMode);
-                    el.style.setProperty('display', panelMode ? 'none' : '', 'important');
+                    if (panelMode) {
+                        el.classList.add('hidden');
+                        el.style.setProperty('display', 'none', 'important');
+                    } else {
+                        el.classList.remove('hidden');
+                        el.style.removeProperty('display');
+                    }
                 });
             });
 
@@ -1628,11 +1676,20 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             const main = document.querySelector('main');
             if (main) main.style.setProperty('display', 'block', 'important');
 
+            document.body.setAttribute('data-active-panel', role);
             if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
             if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
             if (role === 'admin' && typeof loadAdminPanel === 'function') loadAdminPanel();
             if (role === 'user' && typeof renderProducts === 'function') renderProducts();
 
+            // Renderers may update dashboard contents; enforce visibility afterward.
+            Object.entries(dashboards).forEach(([key, el]) => {
+                if (!el) return;
+                const show = key === role;
+                el.classList.toggle('hidden', !show);
+                el.style.setProperty('display', show ? 'block' : 'none', 'important');
+            });
+            updatePanelSwitcherHighlight(role);
             const target = dashboards[role];
             if (panelMode && target) {
                 target.scrollIntoView({ behavior: 'auto', block: 'start' });
@@ -1641,27 +1698,14 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             }
         }
 
-        /*
-         * TEMPORARILY DISABLED ORIGINAL OTP-GATED PANEL SWITCH LOGIC.
-         * Kept here as a comment so it can be restored later:
-        function switchDirectPanel(role) {
-            if (role === 'admin') {
-                if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) { document.getElementById('dropdownMenu').classList.add('hidden'); openAdminWithDeviceLock(); return; }
-                openLoginModalForRole('admin'); return;
-            }
-            if (localStorage.getItem('is_' + role + '_verified')) {
-                localStorage.setItem('loggedInRole', role);
-                document.getElementById('dropdownMenu').classList.add('hidden');
-                updateAuthUI();
-                applyRolePanelView(role);
-            } else { openLoginModalForRole(role); }
-        }
+        // Remove any legacy no-OTP flags. OTP verification is session-only below.
+        ['user', 'seller', 'delivery'].forEach(role => {
+            localStorage.removeItem('is_' + role + '_verified');
+        });
+        localStorage.setItem('modeluxeOtpPanelGateVersion', 'otp-gate-session-only-2026-10-16');
 
-         */
-
-        // TEMPORARY TEST MODE: switch User / Seller / Delivery panels without
-        // sending another OTP. This is only a front-end convenience, NOT security.
-        // Admin keeps its existing owner-phone and device-lock checks.
+        // OTP-GATED PANEL SWITCHING RESTORED for User / Seller / Delivery.
+        // Admin keeps the existing owner-phone, OTP, and device-lock checks.
         function switchDirectPanel(role) {
             if (role === 'admin') {
                 if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) {
@@ -1672,19 +1716,44 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 openLoginModalForRole('admin');
                 return;
             }
-
             if (!['user', 'seller', 'delivery'].includes(role)) role = 'user';
-            localStorage.setItem('loggedInRole', role);
-            // Temporary switch-mode flags; no OTP is sent by this action.
-            if (role === 'user') localStorage.setItem('is_user_verified', 'true');
-            if (role === 'seller') localStorage.setItem('is_seller_verified', 'true');
-            if (role === 'delivery') localStorage.setItem('is_delivery_verified', 'true');
-
-            document.getElementById('dropdownMenu').classList.add('hidden');
-            closeLoginModal();
-            updateAuthUI();
-            applyRolePanelView(role);
+            if (sessionStorage.getItem('is_' + role + '_verified') === 'true') {
+                localStorage.setItem('loggedInRole', role);
+                updatePanelSwitcherHighlight(role);
+                document.getElementById('dropdownMenu').classList.add('hidden');
+                updateAuthUI();
+                applyRolePanelView(role);
+            } else {
+                openLoginModalForRole(role);
+            }
         }
+
+        function updatePanelSwitcherHighlight(role) {
+            role = role || localStorage.getItem('loggedInRole') || 'user';
+            document.querySelectorAll('[data-panel-switch]').forEach(function (button) {
+                const active = button.getAttribute('data-panel-switch') === role;
+                button.classList.toggle('active-panel-switch', active);
+                button.setAttribute('aria-current', active ? 'page' : 'false');
+            });
+        }
+
+        // Keep the highlight in sync when the menu is opened.
+        document.addEventListener('DOMContentLoaded', function () {
+            updatePanelSwitcherHighlight(localStorage.getItem('loggedInRole') || 'user');
+            // Bind panel navigation directly so a click always changes the actual view,
+            // not only the yellow active-state styling.
+            document.querySelectorAll('[data-panel-switch]').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    const role = button.getAttribute('data-panel-switch') || 'user';
+                    // Always call the final global panel switcher, which controls the actual dashboard.
+                    if (typeof window.switchDirectPanel === 'function') window.switchDirectPanel(role);
+                    else switchDirectPanel(role);
+                }, true);
+            });
+        });
+
 
         function openLoginModalForRole(role) {
             document.getElementById('loginModal').classList.remove('hidden');
@@ -1708,80 +1777,72 @@ function getSavedBankProfile(role, phone) {
     }
 }
 
+function showLoginWizardStep(step) {
+    const phoneStep = document.getElementById('loginStepPhone');
+    const verificationStep = document.getElementById('loginStepVerification');
+    const bankStep = document.getElementById('loginStepBank');
+    if (phoneStep) phoneStep.classList.toggle('hidden', step !== 'phone');
+    if (verificationStep) verificationStep.classList.toggle('hidden', step !== 'verification');
+    if (bankStep) bankStep.classList.toggle('hidden', step !== 'bank');
+    const modal = document.querySelector('#loginModal > div');
+    if (modal) modal.scrollTop = 0;
+}
+
 function handleRoleSelectionChange() {
     const role = document.getElementById('loginRoleSelect').value;
-    const phone = document.getElementById('loginPhoneInput').value.trim();
-    const bankSec = document.getElementById('loginBankSection');
     const vehicleSec = document.getElementById('deliveryVehicleSection');
-    if (role !== 'seller' && role !== 'delivery') {
-        bankSec.classList.add('hidden');
-        vehicleSec.classList.add('hidden');
-        return;
+    const shopField = document.getElementById('sellerShopField');
+    const otpBox = document.getElementById('otpBoxSection');
+    if (otpBox) otpBox.classList.add('hidden');
+    showLoginWizardStep('phone');
+    if (vehicleSec) vehicleSec.classList.toggle('hidden', role !== 'delivery');
+    if (shopField) shopField.classList.toggle('hidden', role !== 'seller');
+}
+
+function validateSellerDeliveryDetails() {
+    const role = document.getElementById('loginRoleSelect').value;
+    const fullName = document.getElementById('loginKycFullName').value.trim();
+    const pan = document.getElementById('loginPanNumber').value.trim().toUpperCase();
+    const aadhaar = document.getElementById('loginAadhaarNumber').value.replace(/\D/g, '');
+    if (!fullName) { alert('Full name bharein.'); return false; }
+    if (role === 'seller' && !document.getElementById('loginShopName').value.trim()) { alert('Shop / Business Name bharein.'); return false; }
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) { alert('Valid PAN number bharein.'); return false; }
+    if (!/^\d{12}$/.test(aadhaar)) { alert('12-digit Aadhaar number bharein.'); return false; }
+    if (role === 'delivery') {
+        const vehicle = document.getElementById('loginVehicleNumber').value.trim().toUpperCase();
+        const vehicleType = document.getElementById('loginVehicleType').value;
+        if (!vehicle || !vehicleType) { alert('Delivery partner ke liye vehicle number aur type zaroori hai.'); return false; }
     }
-    bankSec.classList.remove('hidden');
-    vehicleSec.classList.toggle('hidden', role !== 'delivery');
-    const saved = phone.length === 10 ? getSavedBankProfile(role, phone) : null;
+    return true;
+}
+
+function continueSellerDeliveryVerification() {
+    if (!validateSellerDeliveryDetails()) return;
+    const role = document.getElementById('loginRoleSelect').value;
+    const phone = document.getElementById('loginPhoneInput').value.trim();
+    const saved = getSavedBankProfile(role, phone);
     if (saved) {
         document.getElementById('loginBankName').value = saved.name || '';
         document.getElementById('loginBankAcc').value = saved.account || '';
         document.getElementById('loginBankIfsc').value = saved.ifsc || '';
     }
+    showLoginWizardStep('bank');
 }
 
 async function sendFast2SMSOTP() {
     const role = document.getElementById('loginRoleSelect').value;
     const phone = document.getElementById('loginPhoneInput').value.trim();
     const sendButton = document.querySelector('button[onclick="sendFast2SMSOTP()"]');
-
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-        alert('Enter valid 10-digit Indian mobile number.');
-        return;
-    }
-
-    if (role === 'seller' || role === 'delivery') {
-        const fullName = document.getElementById('loginKycFullName').value.trim();
-        const pan = document.getElementById('loginPanNumber').value.trim().toUpperCase();
-        const aadhaar = document.getElementById('loginAadhaarNumber').value.replace(/\D/g, '');
-        if (!fullName) { alert('Full name bharein.'); return; }
-        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) { alert('Valid PAN number bharein.'); return; }
-        if (!/^\d{12}$/.test(aadhaar)) { alert('12-digit Aadhaar number bharein.'); return; }
-        if (role === 'delivery') {
-            const vehicle = document.getElementById('loginVehicleNumber').value.trim().toUpperCase();
-            const vehicleType = document.getElementById('loginVehicleType').value;
-            if (!vehicle || !vehicleType) { alert('Delivery partner ke liye vehicle number aur type zaroori hai.'); return; }
-        }
-    }
-
-    if (role === 'seller' || role === 'delivery') {
-        const saved = getSavedBankProfile(role, phone);
-        if (!saved) {
-            const name = document.getElementById('loginBankName').value.trim();
-            const account = document.getElementById('loginBankAcc').value.trim();
-            const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
-            if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
-                alert('Pehle Account Holder Name, Account Number aur valid IFSC Code bharein.');
-                return;
-            }
-        }
-    }
-
+    if (!/^[6-9]\d{9}$/.test(phone)) { alert('Enter valid 10-digit Indian mobile number.'); return; }
     try {
         if (sendButton) { sendButton.disabled = true; sendButton.textContent = 'Sending OTP...'; }
         const response = await fetch('https://modeluxe-otp.vaishumodeluxe.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'send', phoneNumber: '+91' + phone })
         });
-
         const result = await response.json();
-        if (!response.ok || result.success !== true || !result.requestId) {
-            throw new Error(result.message || 'OTP send failed. Worker response check karein.');
-        }
-
-        pendingLoginRole = role;
-        pendingLoginPhone = phone;
-        pendingOtpRequestId = result.requestId;
-        generatedOtpCode = null;
+        if (!response.ok || result.success !== true || !result.requestId) throw new Error(result.message || 'OTP send failed. Worker response check karein.');
+        pendingLoginRole = role; pendingLoginPhone = phone; pendingOtpRequestId = result.requestId; generatedOtpCode = null;
         document.getElementById('loginOtpInput').value = '';
         document.getElementById('otpBoxSection').classList.remove('hidden');
         alert('OTP sent successfully! Please check your message box.');
@@ -1798,107 +1859,83 @@ async function verifyFast2SMSOTP() {
     const phone = document.getElementById('loginPhoneInput').value.trim();
     const otp = document.getElementById('loginOtpInput').value.trim();
     const verifyButton = document.querySelector('button[onclick="verifyFast2SMSOTP()"]');
-
-    if (!/^\d{4,6}$/.test(otp)) {
-        alert('SMS mein aaya hua 4-6 digit OTP enter karein.');
-        return;
-    }
-    if (pendingLoginPhone !== phone || pendingLoginRole !== role || !pendingOtpRequestId) {
-        alert('Is mobile number ke liye pehle Send OTP par click karein.');
-        return;
-    }
-
+    if (!/^\d{4,6}$/.test(otp)) { alert('SMS mein aaya hua 4-6 digit OTP enter karein.'); return; }
+    if (pendingLoginPhone !== phone || pendingLoginRole !== role || !pendingOtpRequestId) { alert('Is mobile number ke liye pehle Send OTP par click karein.'); return; }
     try {
         if (verifyButton) { verifyButton.disabled = true; verifyButton.textContent = 'Verifying...'; }
         const response = await fetch('https://modeluxe-otp.vaishumodeluxe.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'verify',
-                requestId: pendingOtpRequestId,
-                otpCode: otp
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', requestId: pendingOtpRequestId, otpCode: otp })
         });
-
         const result = await response.json();
-        if (!response.ok || result.success !== true || result.verified !== true) {
-            alert(result.message || 'OTP galat hai ya expire ho gaya hai. Dobara try karein.');
+        if (!response.ok || result.success !== true || result.verified !== true) { alert(result.message || 'OTP galat hai ya expire ho gaya hai. Dobara try karein.'); return; }
+        if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) { alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.'); return; }
+        sessionStorage.setItem('is_' + role + '_verified', 'true');
+        sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
+        if (role === 'seller' || role === 'delivery') {
+            // OTP step is complete; KYC and bank details are deliberately separate steps.
+            showLoginWizardStep('verification');
+            const heading = document.querySelector('#loginStepVerification .text-gray-300');
+            if (heading) heading.textContent = 'Step 2 of 3 — apni details bharein. OTP verified: ' + phone;
             return;
         }
-
-    if (role === 'seller' || role === 'delivery') {
-        let saved = getSavedBankProfile(role, phone);
-        if (!saved) {
-            const name = document.getElementById('loginBankName').value.trim();
-            const account = document.getElementById('loginBankAcc').value.trim();
-            const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
-            if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
-                alert('Bank details sahi se bharein.');
-                return;
-            }
-            saved = { name, account, ifsc };
-            localStorage.setItem(getBankProfileKey(role, phone), JSON.stringify(saved));
-        }
-        localStorage.setItem('userBankName', saved.name);
-        localStorage.setItem('userBankAcc', saved.account);
-        localStorage.setItem('userBankIfsc', saved.ifsc);
-        const kycDetails = {
-            fullName: document.getElementById('loginKycFullName').value.trim(),
-            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
-            aadhaar: document.getElementById('loginAadhaarNumber').value.replace(/\D/g, ''),
-            vehicleNumber: role === 'delivery' ? document.getElementById('loginVehicleNumber').value.trim().toUpperCase() : '',
-            vehicleType: role === 'delivery' ? document.getElementById('loginVehicleType').value : ''
-        };
-        localStorage.setItem('profileDetails_' + role + '_' + phone, JSON.stringify(kycDetails));
-        if (role === 'delivery' && !localStorage.getItem('deliveryBoyName')) {
-            localStorage.setItem('deliveryBoyName', prompt('Enter Delivery Partner Name:', 'Delivery Boy') || 'Delivery Boy');
-        }
-    }
-
-    if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) {
-        alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.');
-        return;
-    }
-    if (role === 'seller') {
-        const app = {
-            phone,
-            name: document.getElementById('loginKycFullName').value.trim() || localStorage.getItem('userName') || 'Seller',
-            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
-            shopName: document.getElementById('loginShopName')?.value.trim() || '',
-            status: 'pending',
-            appliedAt: new Date().toISOString()
-        };
-        db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
-    }
-    localStorage.setItem('loggedInRole', role);
-    localStorage.setItem('userPhone', phone);
-    if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
-    if (role === 'seller' && document.getElementById('loginShopName')?.value.trim()) localStorage.setItem('userShopName', document.getElementById('loginShopName').value.trim());
-    localStorage.setItem('is_' + role + '_verified', 'true');
-    pendingLoginRole = null;
-    pendingLoginPhone = null;
-    closeLoginModal();
-    document.getElementById('dropdownMenu').classList.add('hidden');
-    updateAuthUI();
-    applyRolePanelView(role);
-    alert('OTP verified. Login successful!');
+        completeVerifiedLogin(role, phone);
     } catch (error) {
         console.error('StartMessaging verify OTP error:', error);
         alert('OTP verify nahi ho paya: ' + (error.message || 'Unknown error') + '. Cloudflare Worker logs check karein.');
     } finally {
-        if (verifyButton) { verifyButton.disabled = false; verifyButton.textContent = 'Verify & Login'; }
+        if (verifyButton) { verifyButton.disabled = false; verifyButton.textContent = 'Verify OTP & Continue'; }
     }
 }
 
+function finishSellerDeliveryLogin() {
+    const role = document.getElementById('loginRoleSelect').value;
+    const phone = document.getElementById('loginPhoneInput').value.trim();
+    if (role !== 'seller' && role !== 'delivery') { alert('Role selection check karein.'); return; }
+    if (pendingLoginRole !== role || pendingLoginPhone !== phone || !sessionStorage.getItem('is_' + role + '_verified') || sessionStorage.getItem('modeluxe_verified_phone_' + role) !== phone) {
+        alert('Pehle isi mobile number ka OTP verify karein.'); showLoginWizardStep('phone'); return;
+    }
+    if (!validateSellerDeliveryDetails()) { showLoginWizardStep('verification'); return; }
+    const name = document.getElementById('loginBankName').value.trim();
+    const account = document.getElementById('loginBankAcc').value.trim();
+    const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
+    if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) { alert('Account Holder Name, Account Number aur valid IFSC Code bharein.'); return; }
+    const saved = { name, account, ifsc };
+    localStorage.setItem(getBankProfileKey(role, phone), JSON.stringify(saved));
+    localStorage.setItem('userBankName', saved.name); localStorage.setItem('userBankAcc', saved.account); localStorage.setItem('userBankIfsc', saved.ifsc);
+    const kycDetails = {
+        fullName: document.getElementById('loginKycFullName').value.trim(),
+        pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
+        aadhaar: document.getElementById('loginAadhaarNumber').value.replace(/\D/g, ''),
+        shopName: role === 'seller' ? document.getElementById('loginShopName').value.trim() : '',
+        vehicleNumber: role === 'delivery' ? document.getElementById('loginVehicleNumber').value.trim().toUpperCase() : '',
+        vehicleType: role === 'delivery' ? document.getElementById('loginVehicleType').value : ''
+    };
+    localStorage.setItem('profileDetails_' + role + '_' + phone, JSON.stringify(kycDetails));
+    if (role === 'delivery' && !localStorage.getItem('deliveryBoyName')) localStorage.setItem('deliveryBoyName', kycDetails.fullName || 'Delivery Boy');
+    if (role === 'seller') {
+        const app = { phone, name: kycDetails.fullName || 'Seller', pan: kycDetails.pan, shopName: kycDetails.shopName, status: 'pending', appliedAt: new Date().toISOString() };
+        if (typeof db !== 'undefined' && db && db.ref) db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
+        localStorage.setItem('userName', kycDetails.fullName);
+        if (kycDetails.shopName) localStorage.setItem('userShopName', kycDetails.shopName);
+    }
+    completeVerifiedLogin(role, phone);
+}
+
+function completeVerifiedLogin(role, phone) {
+    localStorage.setItem('loggedInRole', role);
+    localStorage.setItem('userPhone', phone);
+    sessionStorage.setItem('is_' + role + '_verified', 'true');
+    sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
+    pendingLoginRole = null; pendingLoginPhone = null; pendingOtpRequestId = null;
+    closeLoginModal();
+    const menu = document.getElementById('dropdownMenu'); if (menu) menu.classList.add('hidden');
+    updateAuthUI(); applyRolePanelView(role);
+    alert('OTP verified. Login successful!');
+}
+
         window.onload = function() {
-            const savedPhoto = localStorage.getItem('userProfilePic') || '';
-            const preview = document.getElementById('profilePreviewImg');
-            const defaultIcon = document.getElementById('profileDefaultIcon');
-            if (savedPhoto && preview && defaultIcon) {
-                preview.src = savedPhoto;
-                preview.classList.remove('hidden');
-                defaultIcon.classList.add('hidden');
-            }
+            // Profile photos are loaded only when opening the active role's profile.
             updateAuthUI();
             renderProducts();
             updateCartBadge();
@@ -1921,7 +1958,7 @@ async function verifyFast2SMSOTP() {
                     ? `<img src="${headerPhoto.replace(/"/g, '&quot;')}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
                     : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
                 const displayName = (profile.name || role.toUpperCase()).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-                authSection.innerHTML = `<span class="inline-flex max-w-[112px] min-w-0 items-center gap-1 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
+                if (authSection) authSection.innerHTML = `<span class="inline-flex max-w-[112px] min-w-0 items-center gap-1 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
@@ -1940,7 +1977,7 @@ async function verifyFast2SMSOTP() {
                 if (typeof applyRolePanelView === 'function') applyRolePanelView(role);
             } else {
                 cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.add('hidden'); updateCartBadge();
-                authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
+                if (authSection) authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
                 document.getElementById('sellerDashboard').classList.add('hidden');
                 document.getElementById('deliveryDashboard').classList.add('hidden');
                 document.getElementById('adminDashboard').classList.add('hidden');
@@ -2050,6 +2087,10 @@ async function verifyFast2SMSOTP() {
 
         function logoutApp() {
             sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');
+            ['user','seller','delivery','admin'].forEach(function (role) {
+                sessionStorage.removeItem('is_' + role + '_verified');
+                sessionStorage.removeItem('modeluxe_verified_phone_' + role);
+            });
             localStorage.removeItem('loggedInRole'); localStorage.removeItem('userPhone');
             updateAuthUI(); if (typeof applyRolePanelView === 'function') applyRolePanelView('user'); else renderProducts(); toggleMenu(); alert("Logged out.");
         }
@@ -2284,6 +2325,62 @@ async function verifyFast2SMSOTP() {
         }
         function closeSingleOrderDetail() { document.getElementById('singleOrderDetailModal').classList.add('hidden'); }
 
+        function toggleWithdrawalStatus(requestedRole) {
+    const role = String(requestedRole || '').toLowerCase();
+    const cardId = role === 'seller' ? 'sellerWithdrawalStatusCard' : role === 'delivery' ? 'deliveryWithdrawalStatusCard' : '';
+    const card = cardId ? document.getElementById(cardId) : null;
+    if (!card) return;
+    const opening = card.classList.contains('hidden');
+    card.classList.toggle('hidden', !opening);
+    if (opening) loadMyWithdrawalStatuses(role);
+}
+
+        async function loadMyWithdrawalStatuses(requestedRole) {
+    const role = String(requestedRole || '').toLowerCase();
+    const listId = role === 'seller' ? 'sellerWithdrawalStatusList' : role === 'delivery' ? 'deliveryWithdrawalStatusList' : '';
+    const list = listId ? document.getElementById(listId) : null;
+    if (!list) return;
+    const phone = String(localStorage.getItem('userPhone') || '');
+    if (!phone) { list.innerHTML = '<p class="text-gray-300">Please log in to view your requests.</p>'; return; }
+    list.innerHTML = '<p class="text-gray-300">Loading withdrawal requests...</p>';
+    try {
+        const snapshot = await db.ref('withdrawalRequests').once('value');
+        const all = snapshot.val() || {};
+        const matches = Object.entries(all).filter(([id, item]) => {
+            const itemRole = String(item && item.role || '').toLowerCase();
+            const itemPhone = String(item && (item.userPhone || item.phone) || '');
+            return itemRole === role && itemPhone === phone;
+        }).map(([id, item]) => ({ id, ...item })).sort((a, b) => String(b.requestedAt || '').localeCompare(String(a.requestedAt || '')));
+        if (!matches.length) {
+            list.innerHTML = '<p class="text-gray-300">Abhi koi withdrawal request nahi hai.</p>';
+            return;
+        }
+        const statusStyle = status => {
+            const st = String(status || 'Pending Review').toLowerCase();
+            if (st.includes('paid')) return 'text-green-300';
+            if (st.includes('approv')) return 'text-blue-300';
+            if (st.includes('reject')) return 'text-red-300';
+            return 'text-amber-300';
+        };
+        list.innerHTML = matches.map(item => {
+            const status = String(item.status || 'Pending Review');
+            const date = item.requestedAt ? new Date(item.requestedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable';
+            const amount = Number(item.requestedAmount || item.amount || item.grossAmount || 0);
+            const net = Number(item.netAmount ?? amount);
+            return `<div class="bg-[#133e31] border border-[#1b4f40] rounded-xl p-3 space-y-1.5">
+                <div class="flex justify-between items-start gap-2"><b class="text-gray-100">Request: ₹${amount.toFixed(2)}</b><b class="${statusStyle(status)}">${escapeHTML(status)}</b></div>
+                <p class="text-gray-300">You will receive: <span class="text-green-300 font-bold">₹${net.toFixed(2)}</span></p>
+                <p class="text-gray-400">Account: ••••${escapeHTML(String(item.bankAccountLast4 || '----'))}</p>
+                <p class="text-gray-400">Requested: ${escapeHTML(date)}</p>
+                ${item.reviewedAt ? `<p class="text-gray-300">Last updated: ${escapeHTML(new Date(item.reviewedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }))}</p>` : ''}
+            </div>`;
+        }).join('');
+    } catch (error) {
+        console.error('Could not load withdrawal status:', error);
+        list.innerHTML = '<p class="text-red-300">Status load nahi ho paya. Internet/Firebase permissions check karein.</p>';
+    }
+}
+
         function getSellerAvailableBalance() {
     const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
     const deliveredOrders = orders.filter(order => order.status === 'Delivered');
@@ -2455,6 +2552,7 @@ function submitWithdrawRequest() {
 
             updateSellerWallet();
             updateDeliveryWallet();
+            loadMyWithdrawalStatuses(activeWithdrawRole.toLowerCase());
             closeWithdrawModal();
             alert(
                 'Withdrawal request submitted successfully!\n\n' +
@@ -2575,6 +2673,7 @@ function updateDeliveryWallet() {
         html || "<p class='text-xs text-gray-300'>No active orders.</p>"
     );
     updateSellerWallet();
+    loadMyWithdrawalStatuses('seller');
 }
 
         function renderDeliveryDashboard() {
@@ -2624,6 +2723,7 @@ function updateDeliveryWallet() {
         });
     }
     container.innerHTML = html;
+    loadMyWithdrawalStatuses('delivery');
 }
 
 function openDeliveryHistoryModal() {
@@ -2718,39 +2818,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-
-<script id="ml-category-mouse-drag">
-document.addEventListener('DOMContentLoaded', function () {
-  const rail = document.querySelector('.ml-categories');
-  if (!rail) return;
-  let down = false, startX = 0, startScroll = 0, moved = false;
-  rail.addEventListener('mousedown', function (e) {
-    if (e.button !== 0) return;
-    down = true; moved = false;
-    startX = e.pageX; startScroll = rail.scrollLeft;
-    rail.classList.add('is-dragging');
-  });
-  window.addEventListener('mousemove', function (e) {
-    if (!down) return;
-    const dx = e.pageX - startX;
-    if (Math.abs(dx) > 4) moved = true;
-    if (moved) { e.preventDefault(); rail.scrollLeft = startScroll - dx; }
-  });
-  window.addEventListener('mouseup', function () {
-    if (!down) return;
-    down = false; rail.classList.remove('is-dragging');
-    if (moved) {
-      rail.dataset.draggedAt = String(Date.now());
-      setTimeout(() => { moved = false; }, 80);
-    }
-  });
-  rail.addEventListener('click', function (e) {
-    const at = Number(rail.dataset.draggedAt || 0);
-    if (at && Date.now() - at < 250) { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }
-  }, true);
-  rail.addEventListener('dragstart', e => e.preventDefault());
-});
-</script>
 
 <script id="ml-category-actions">
 document.addEventListener('DOMContentLoaded', function () {
@@ -2971,5 +3038,179 @@ window.addEventListener('storage', updateDeliveryLocation);
 })();
 </script>
 
+
+<!-- FINAL PANEL NAVIGATION OVERRIDE: ensures the actual dashboard view changes, not only the menu highlight. -->
+<style>
+  body[data-active-panel="seller"] #sellerDashboard,
+  body[data-active-panel="delivery"] #deliveryDashboard,
+  body[data-active-panel="admin"] #adminDashboard { display:block !important; }
+  body[data-active-panel="seller"] #deliveryDashboard,
+  body[data-active-panel="seller"] #adminDashboard,
+  body[data-active-panel="delivery"] #sellerDashboard,
+  body[data-active-panel="delivery"] #adminDashboard,
+  body[data-active-panel="admin"] #sellerDashboard,
+  body[data-active-panel="admin"] #deliveryDashboard { display:none !important; }
+  [data-panel-switch].active-panel-switch { background:#164638 !important; color:#ffc928 !important; font-weight:800 !important; border-left:5px solid #ffc928 !important; }
+  [data-panel-switch].active-panel-switch i { color:#ffc928 !important; }
+</style>
+<script>
+(function () {
+  const panelIds = { seller: 'sellerDashboard', delivery: 'deliveryDashboard', admin: 'adminDashboard' };
+  const shopSelectors = ['.ml-search-location', '.ml-categories', '.ml-recent', '#shopControls', '#productGrid', '#gridMessage', '#mainHeading', '#subHeading', '#notificationBanner', '#categoryMenuSection'];
+  window.applyRolePanelView = function (requestedRole) {
+    const role = ['seller','delivery','admin'].includes(requestedRole) ? requestedRole : 'user';
+    document.body.setAttribute('data-active-panel', role);
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    shopSelectors.forEach(selector => document.querySelectorAll(selector).forEach(el => {
+      const hide = role !== 'user';
+      el.classList.toggle('hidden', hide);
+      if (hide) el.style.setProperty('display','none','important');
+      else el.style.removeProperty('display');
+    }));
+    const main = document.querySelector('main');
+    if (main) main.style.setProperty('display','block','important');
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      const active = btn.getAttribute('data-panel-switch') === role;
+      btn.classList.toggle('active-panel-switch', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+    if (role === 'seller' && typeof window.renderSellerDashboard === 'function') window.renderSellerDashboard();
+    if (role === 'delivery' && typeof window.renderDeliveryDashboard === 'function') window.renderDeliveryDashboard();
+    if (role === 'admin' && typeof window.loadAdminPanel === 'function') window.loadAdminPanel();
+    // Reassert visibility after legacy renderers/auth code run.
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    if (role !== 'user' && document.getElementById(panelIds[role])) {
+      document.getElementById(panelIds[role]).scrollIntoView({behavior:'auto',block:'start'});
+    } else window.scrollTo({top:0,behavior:'auto'});
+  };
+  window.switchDirectPanel = function (role) {
+    // Delegate to the final, OTP-enforcing panel switcher below.
+    if (typeof window.__modeluxeOtpGatedSwitchPanel === 'function') window.__modeluxeOtpGatedSwitchPanel(role);
+    else if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole(role);
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      btn.addEventListener('click', function (event) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        window.switchDirectPanel(btn.getAttribute('data-panel-switch'));
+      }, true);
+    });
+    const role = localStorage.getItem('loggedInRole') || 'user';
+    window.applyRolePanelView(role);
+  });
+})();
+</script>
+
+
+<!-- SINGLE FINAL PANEL SWITCHER: keeps the selected dashboard and menu highlight in sync. -->
+<style>
+  [data-panel-switch].active-panel-switch { background:#164638 !important; color:#ffc928 !important; font-weight:800 !important; border-left:5px solid #ffc928 !important; }
+  [data-panel-switch].active-panel-switch i { color:#ffc928 !important; }
+</style>
+<script>
+(function () {
+  const panelIds = { seller: 'sellerDashboard', delivery: 'deliveryDashboard', admin: 'adminDashboard' };
+  const shopSelectors = ['.ml-search-location','.ml-categories','.ml-recent','#shopControls','#productGrid','#gridMessage','#mainHeading','#subHeading','#notificationBanner','#categoryMenuSection'];
+  function paintPanel(role) {
+    role = ['seller','delivery','admin'].includes(role) ? role : 'user';
+    document.body.setAttribute('data-active-panel', role);
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    shopSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      const hide = role !== 'user';
+      el.classList.toggle('hidden', hide);
+      if (hide) el.style.setProperty('display','none','important');
+      else el.style.removeProperty('display');
+    }));
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      const active = btn.getAttribute('data-panel-switch') === role;
+      btn.classList.toggle('active-panel-switch', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+    const main = document.querySelector('main');
+    if (main) main.style.setProperty('display','block','important');
+  }
+  function isVerifiedForCurrentPhone(role) {
+    const phone = String(localStorage.getItem('userPhone') || '').replace(/\D/g, '');
+    const verifiedPhone = String(sessionStorage.getItem('modeluxe_verified_phone_' + role) || '').replace(/\D/g, '');
+    return !!phone && sessionStorage.getItem('is_' + role + '_verified') === 'true' && verifiedPhone === phone;
+  }
+  function switchPanel(role) {
+    if (!['user','seller','delivery','admin'].includes(role)) return;
+    // Admin must pass the existing owner OTP and device-lock checks.
+    if (role === 'admin') {
+      if (!(typeof window.isAdmin === 'function' && window.isAdmin())) {
+        if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole('admin');
+        return;
+      }
+      if (typeof window.openAdminWithDeviceLock === 'function') {
+        window.openAdminWithDeviceLock();
+        return;
+      }
+    } else if (!isVerifiedForCurrentPhone(role)) {
+      // Never allow a panel switch unless OTP was verified for this exact phone
+      // in the current browser session. In particular, User Panel also requires OTP.
+      if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole(role);
+      return;
+    }
+    localStorage.setItem('loggedInRole', role);
+    const menu = document.getElementById('dropdownMenu');
+    if (menu) menu.classList.add('hidden');
+    if (typeof window.closeLoginModal === 'function') window.closeLoginModal();
+    if (typeof window.updateAuthUI === 'function') window.updateAuthUI();
+    if (role === 'seller' && typeof window.renderSellerDashboard === 'function') window.renderSellerDashboard();
+    if (role === 'delivery' && typeof window.renderDeliveryDashboard === 'function') window.renderDeliveryDashboard();
+    if (role === 'admin' && typeof window.loadAdminPanel === 'function') window.loadAdminPanel();
+    if (role === 'user' && typeof window.renderProducts === 'function') window.renderProducts();
+    paintPanel(role);
+    requestAnimationFrame(() => paintPanel(role));
+    setTimeout(() => paintPanel(role), 120);
+    setTimeout(() => paintPanel(role), 400);
+    if (role !== 'user' && document.getElementById(panelIds[role])) {
+      setTimeout(() => document.getElementById(panelIds[role])?.scrollIntoView({block:'start',behavior:'auto'}), 130);
+    } else window.scrollTo(0,0);
+  }
+  window.applyRolePanelView = paintPanel;
+  window.__modeluxeOtpGatedSwitchPanel = switchPanel;
+  window.switchDirectPanel = switchPanel;
+  // One capture handler only; suppress older inline handlers for these buttons.
+  document.addEventListener('click', function (event) {
+    const btn = event.target && event.target.closest ? event.target.closest('[data-panel-switch]') : null;
+    if (!btn) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    switchPanel(btn.getAttribute('data-panel-switch'));
+  }, true);
+  function init() {
+    const savedRole = localStorage.getItem('loggedInRole') || 'user';
+    if (savedRole !== 'admin' && !isVerifiedForCurrentPhone(savedRole)) {
+      // A persisted loggedInRole alone is not authentication.
+      localStorage.removeItem('loggedInRole');
+      paintPanel('user');
+      return;
+    }
+    paintPanel(savedRole);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
+})();
+</script>
 </body>
 </html>
