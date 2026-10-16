@@ -228,6 +228,14 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             <p class="text-xs text-amber-300 font-medium mb-2">🔔 Order alerts पाने के लिए नोटिफिकेशन अनुमति दें:</p>
             <button type="button" onclick="requestNotificationPermission()" class="bg-amber-400 text-black text-xs px-4 py-2 rounded-xl font-bold hover:bg-amber-300 transition cursor-pointer">Enable Browser Notifications</button>
         </div>
+        <!-- Seller approval status gate: shown until Admin approves the application -->
+        <div id="sellerApprovalGate" class="hidden max-w-2xl mx-auto mb-6 bg-[#0b2920] p-6 rounded-2xl border border-amber-400/40 text-center">
+            <div class="text-3xl text-amber-400 mb-3"><i class="fa-solid fa-store"></i></div>
+            <h3 class="text-xl font-extrabold text-amber-400 mb-2">Seller Application Status</h3>
+            <p id="sellerApprovalStatusText" class="text-white">Your seller application is pending Admin approval.</p>
+            <p class="text-gray-300 text-sm mt-2">Admin approval milne ke baad hi Seller Dashboard khulega.</p>
+            <button type="button" onclick="refreshSellerApprovalStatus()" class="mt-4 bg-amber-400 text-black px-4 py-2 rounded-xl font-bold">Check Status</button>
+        </div>
         <!-- Seller Dashboard -->
         <div id="sellerDashboard" class="hidden max-w-2xl mx-auto space-y-6 mb-6">
             <div class="bg-[#0b2920] p-4 rounded-2xl shadow border border-amber-400/30 text-xs flex justify-between items-center">
@@ -1779,10 +1787,40 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         }
 
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
+        async function refreshSellerApprovalStatus() {
+            const gate = document.getElementById('sellerApprovalGate');
+            const dashboard = document.getElementById('sellerDashboard');
+            const statusText = document.getElementById('sellerApprovalStatusText');
+            const phone = String(localStorage.getItem('userPhone') || '');
+            if (gate) { gate.classList.remove('hidden'); gate.style.setProperty('display', 'block', 'important'); }
+            if (dashboard) { dashboard.classList.add('hidden'); dashboard.style.setProperty('display', 'none', 'important'); }
+            if (statusText) statusText.textContent = 'Application status check ho raha hai…';
+            try {
+                if (!phone || typeof db === 'undefined' || !db || !db.ref) throw new Error('Database unavailable');
+                const snap = await db.ref('sellerApplications/' + phone).once('value');
+                const application = snap.val();
+                const status = String(application && application.status || 'pending').toLowerCase();
+                if (status === 'approved') {
+                    if (gate) { gate.classList.add('hidden'); gate.style.setProperty('display', 'none', 'important'); }
+                    if (dashboard) { dashboard.classList.remove('hidden'); dashboard.style.setProperty('display', 'block', 'important'); }
+                    if (typeof renderSellerDashboard === 'function') renderSellerDashboard();
+                    return true;
+                }
+                const messages = { rejected: 'Aapki seller application reject ho gayi hai. Admin se sampark karein.', suspended: 'Aapka seller account suspend hai. Admin se sampark karein.' };
+                if (statusText) statusText.textContent = messages[status] || 'Aapki seller application pending hai. Admin approval tak Seller Dashboard band rahega.';
+                return false;
+            } catch (e) {
+                if (statusText) statusText.textContent = 'Seller application status check nahi ho paya. Internet/Firebase connection check karein. Approval verify hone tak dashboard band rahega.';
+                return false;
+            }
+        }
+
         function applyRolePanelView(role) {
             // One source of truth for role navigation: show exactly one role view.
             role = ['seller', 'delivery', 'admin'].includes(role) ? role : 'user';
             const panelMode = role !== 'user';
+            const sellerGate = document.getElementById('sellerApprovalGate');
+            if (sellerGate) { sellerGate.classList.toggle('hidden', role !== 'seller'); sellerGate.style.setProperty('display', role === 'seller' ? 'block' : 'none', 'important'); }
             const dashboards = {
                 seller: document.getElementById('sellerDashboard'),
                 delivery: document.getElementById('deliveryDashboard'),
@@ -1790,10 +1828,11 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             };
             Object.entries(dashboards).forEach(([key, el]) => {
                 if (!el) return;
-                const show = key === role;
+                const show = key === role && key !== 'seller';
                 el.classList.toggle('hidden', !show);
                 el.style.setProperty('display', show ? 'block' : 'none', 'important');
             });
+            if (role === 'seller') refreshSellerApprovalStatus();
 
             // Hide the complete storefront header area (not the site header) for staff panels.
             const storefrontSections = [
