@@ -71,6 +71,15 @@ main{max-width:none!important;margin:0!important;padding:0 0 16px!important}
 .ml-bottom-nav button.active i{color:#fbbf24}.ml-bottom-nav button.active span{color:#fbbf24}
 body>div.fixed:not(#cartModal):not(#withdrawModal):not(#productDetailModal):not(#addressModal):not(#paymentModal):not(#successModal):not(#loginModal):not(#notificationsModal):not(#profileModal):not(#ordersModal):not(#singleOrderDetailModal):not(#editProductModal):not(#wishlistModal):not(#adminDeviceLockModal):not(#appAlertModal){z-index:90}
 @media(min-width:700px){.ml-sale-banner{height:150px}.ml-sale-right{font-size:28px}.ml-sale-right strong{font-size:46px}.ml-categories{justify-content:center}.ml-recent{padding-left:24px}}
+
+/* Highlight the currently active panel in the Panel Switcher */
+.panel-switch-item.active-panel-switch {
+    color: #fbbf24 !important;
+    background: #133e31 !important;
+    font-weight: 700 !important;
+    box-shadow: inset 3px 0 0 #fbbf24;
+}
+.panel-switch-item.active-panel-switch i { color: #fbbf24 !important; }
 </style>
 
 
@@ -154,10 +163,10 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                             <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-gray-400 tracking-wider">CATEGORIES</div>
                         </div>
                         <div class="border-t border-b border-[#133e31] my-1 py-1 px-4 text-[10px] font-bold text-amber-400 tracking-wider">PANEL SWITCHER</div>
-                        <button type="button" onclick="switchDirectPanel('user')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user text-amber-400"></i> User Panel</button>
-                        <button type="button" onclick="switchDirectPanel('seller')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-store text-amber-400"></i> Seller Panel (Manage)</button>
-                        <button type="button" onclick="switchDirectPanel('delivery')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-motorcycle text-amber-400"></i> Delivery Partner Panel</button>
-                        <button type="button" onclick="switchDirectPanel('admin')" class="w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-amber-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</button>
+                        <button type="button" data-panel-switch="user" onclick="switchDirectPanel('user')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-user"></i> User Panel</button>
+                        <button type="button" data-panel-switch="seller" onclick="switchDirectPanel('seller')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-store"></i> Seller Panel (Manage)</button>
+                        <button type="button" data-panel-switch="delivery" onclick="switchDirectPanel('delivery')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-motorcycle"></i> Delivery Partner Panel</button>
+                        <button type="button" data-panel-switch="admin" onclick="switchDirectPanel('admin')" class="panel-switch-item w-full text-left px-4 py-2 hover:bg-[#133e31] text-xs text-gray-300 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</button>
                         <hr class="my-1 border-[#133e31]">
                         <button type="button" id="logoutMenuButton" onclick="logoutApp()" class="hidden w-full text-left px-4 py-2.5 hover:bg-red-950 text-red-400 flex items-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
                     </div>
@@ -594,7 +603,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 
         // IMPORTANT: Admin UI access is not a security boundary. Enforce roles in Firebase Rules/server too.
         // Add the owner's verified phone here before using the Admin role (digits only).
-        const ADMIN_PHONE_ALLOWLIST = []; 
+        const ADMIN_PHONE_ALLOWLIST = ['9719505955']; // Owner mobile: +91 9719505955 
         let liveSellerApplications = {};
         let livePayoutRequests = {};
         let marketplaceSettings = { commissionPercent: 10, deliveryFee: 30, freeDeliveryAbove: 199 };
@@ -1593,72 +1602,120 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 
         function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
         function applyRolePanelView(role) {
-            const panelRoles = ['seller', 'delivery', 'admin'];
-            const isPanel = panelRoles.includes(role);
+            // One source of truth for role navigation: show exactly one role view.
+            role = ['seller', 'delivery', 'admin'].includes(role) ? role : 'user';
+            const panelMode = role !== 'user';
             const dashboards = {
-                seller: 'sellerDashboard',
-                delivery: 'deliveryDashboard',
-                admin: 'adminDashboard'
+                seller: document.getElementById('sellerDashboard'),
+                delivery: document.getElementById('deliveryDashboard'),
+                admin: document.getElementById('adminDashboard')
             };
-
-            // Hide every role dashboard first, then show only the selected one.
-            Object.values(dashboards).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('hidden');
+            Object.entries(dashboards).forEach(([key, el]) => {
+                if (!el) return;
+                const show = key === role;
+                el.classList.toggle('hidden', !show);
+                el.style.setProperty('display', show ? 'block' : 'none', 'important');
             });
 
-            // Hide storefront-only content while a management panel is active.
-            const storefrontSelectors = [
-                '#productGrid', '#gridMessage', '#productSortSelect',
-                '.ml-categories', '.ml-recent', '#mlRecentlyViewedSection',
-                '#mlVisualSearch', '#productSearchInput', '#productSortSelect',
-                '#wishlistButton', '#deliveryLocationRow', '#deliveryLocation',
-                '#mainHeading', '#subHeading'
+            // Hide the complete storefront header area (not the site header) for staff panels.
+            const storefrontSections = [
+                '.ml-search-location', '.ml-categories', '.ml-recent',
+                '#shopControls', '#productGrid', '#gridMessage', '#mainHeading', '#subHeading'
             ];
-            storefrontSelectors.forEach(selector => {
+            storefrontSections.forEach(selector => {
                 document.querySelectorAll(selector).forEach(el => {
-                    el.classList.toggle('hidden', isPanel);
+                    if (panelMode) {
+                        el.classList.add('hidden');
+                        el.style.setProperty('display', 'none', 'important');
+                    } else {
+                        el.classList.remove('hidden');
+                        el.style.removeProperty('display');
+                    }
                 });
             });
 
-            // Hide the row containing search/sort/wishlist when in a panel.
-            const search = document.getElementById('productSearchInput') ||
-                           document.getElementById('mlVisualSearch');
-            if (search) {
-                const searchWrap = search.closest('.ml-search-wrap') ||
-                                   search.closest('[data-storefront-search]') ||
-                                   search.parentElement?.parentElement;
-                if (searchWrap) searchWrap.classList.toggle('hidden', isPanel);
-            }
+            // The dashboard containers live inside <main>; keep main visible for staff panels.
+            const main = document.querySelector('main');
+            if (main) main.style.setProperty('display', 'block', 'important');
 
-            const targetId = dashboards[role];
-            if (isPanel && targetId) {
-                const target = document.getElementById(targetId);
-                if (target) {
-                    target.classList.remove('hidden');
-                    if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
-                    if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
-                    if (role === 'admin' && typeof renderAdminDashboard === 'function') renderAdminDashboard();
-                    target.scrollIntoView({ behavior: 'auto', block: 'start' });
-                }
+            document.body.setAttribute('data-active-panel', role);
+            if (role === 'seller' && typeof renderSellerDashboard === 'function') renderSellerDashboard();
+            if (role === 'delivery' && typeof renderDeliveryDashboard === 'function') renderDeliveryDashboard();
+            if (role === 'admin' && typeof loadAdminPanel === 'function') loadAdminPanel();
+            if (role === 'user' && typeof renderProducts === 'function') renderProducts();
+
+            // Renderers may update dashboard contents; enforce visibility afterward.
+            Object.entries(dashboards).forEach(([key, el]) => {
+                if (!el) return;
+                const show = key === role;
+                el.classList.toggle('hidden', !show);
+                el.style.setProperty('display', show ? 'block' : 'none', 'important');
+            });
+            updatePanelSwitcherHighlight(role);
+            const target = dashboards[role];
+            if (panelMode && target) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
             } else {
-                // User role returns to the normal storefront.
-                if (typeof renderProducts === 'function') renderProducts();
+                window.scrollTo({ top: 0, behavior: 'auto' });
             }
         }
 
+        // Remove any legacy no-OTP flags. OTP verification is session-only below.
+        ['user', 'seller', 'delivery'].forEach(role => {
+            localStorage.removeItem('is_' + role + '_verified');
+        });
+        localStorage.setItem('modeluxeOtpPanelGateVersion', 'otp-gate-session-only-2026-10-16');
+
+        // OTP-GATED PANEL SWITCHING RESTORED for User / Seller / Delivery.
+        // Admin keeps the existing owner-phone, OTP, and device-lock checks.
         function switchDirectPanel(role) {
             if (role === 'admin') {
-                if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) { document.getElementById('dropdownMenu').classList.add('hidden'); openAdminWithDeviceLock(); return; }
-                openLoginModalForRole('admin'); return;
+                if (localStorage.getItem('loggedInRole') === 'admin' && isAdmin()) {
+                    document.getElementById('dropdownMenu').classList.add('hidden');
+                    openAdminWithDeviceLock();
+                    return;
+                }
+                openLoginModalForRole('admin');
+                return;
             }
-            if (localStorage.getItem('is_' + role + '_verified')) {
+            if (!['user', 'seller', 'delivery'].includes(role)) role = 'user';
+            if (sessionStorage.getItem('is_' + role + '_verified') === 'true') {
                 localStorage.setItem('loggedInRole', role);
+                updatePanelSwitcherHighlight(role);
                 document.getElementById('dropdownMenu').classList.add('hidden');
                 updateAuthUI();
                 applyRolePanelView(role);
-            } else { openLoginModalForRole(role); }
+            } else {
+                openLoginModalForRole(role);
+            }
         }
+
+        function updatePanelSwitcherHighlight(role) {
+            role = role || localStorage.getItem('loggedInRole') || 'user';
+            document.querySelectorAll('[data-panel-switch]').forEach(function (button) {
+                const active = button.getAttribute('data-panel-switch') === role;
+                button.classList.toggle('active-panel-switch', active);
+                button.setAttribute('aria-current', active ? 'page' : 'false');
+            });
+        }
+
+        // Keep the highlight in sync when the menu is opened.
+        document.addEventListener('DOMContentLoaded', function () {
+            updatePanelSwitcherHighlight(localStorage.getItem('loggedInRole') || 'user');
+            // Bind panel navigation directly so a click always changes the actual view,
+            // not only the yellow active-state styling.
+            document.querySelectorAll('[data-panel-switch]').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    const role = button.getAttribute('data-panel-switch') || 'user';
+                    // Always call the final global panel switcher, which controls the actual dashboard.
+                    if (typeof window.switchDirectPanel === 'function') window.switchDirectPanel(role);
+                    else switchDirectPanel(role);
+                }, true);
+            });
+        });
+
 
         function openLoginModalForRole(role) {
             document.getElementById('loginModal').classList.remove('hidden');
@@ -1848,7 +1905,7 @@ async function verifyFast2SMSOTP() {
     localStorage.setItem('userPhone', phone);
     if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
     if (role === 'seller' && document.getElementById('loginShopName')?.value.trim()) localStorage.setItem('userShopName', document.getElementById('loginShopName').value.trim());
-    localStorage.setItem('is_' + role + '_verified', 'true');
+    sessionStorage.setItem('is_' + role + '_verified', 'true');
     pendingLoginRole = null;
     pendingLoginPhone = null;
     closeLoginModal();
@@ -1910,6 +1967,8 @@ async function verifyFast2SMSOTP() {
                 if (role === 'seller') renderSellerDashboard();
                 if (role === 'delivery') renderDeliveryDashboard();
                 if (role === 'admin') loadAdminPanel();
+                // Reconcile visibility after legacy auth UI updates.
+                if (typeof applyRolePanelView === 'function') applyRolePanelView(role);
             } else {
                 cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.add('hidden'); updateCartBadge();
                 authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
@@ -1917,6 +1976,7 @@ async function verifyFast2SMSOTP() {
                 document.getElementById('deliveryDashboard').classList.add('hidden');
                 document.getElementById('adminDashboard').classList.add('hidden');
                 document.getElementById('shopControls').classList.remove('hidden');
+                if (typeof applyRolePanelView === 'function') applyRolePanelView('user');
             }
         }
 
@@ -2909,5 +2969,164 @@ window.addEventListener('storage', updateDeliveryLocation);
 })();
 </script>
 
+
+<!-- FINAL PANEL NAVIGATION OVERRIDE: ensures the actual dashboard view changes, not only the menu highlight. -->
+<style>
+  body[data-active-panel="seller"] #sellerDashboard,
+  body[data-active-panel="delivery"] #deliveryDashboard,
+  body[data-active-panel="admin"] #adminDashboard { display:block !important; }
+  body[data-active-panel="seller"] #deliveryDashboard,
+  body[data-active-panel="seller"] #adminDashboard,
+  body[data-active-panel="delivery"] #sellerDashboard,
+  body[data-active-panel="delivery"] #adminDashboard,
+  body[data-active-panel="admin"] #sellerDashboard,
+  body[data-active-panel="admin"] #deliveryDashboard { display:none !important; }
+  [data-panel-switch].active-panel-switch { background:#164638 !important; color:#ffc928 !important; font-weight:800 !important; border-left:5px solid #ffc928 !important; }
+  [data-panel-switch].active-panel-switch i { color:#ffc928 !important; }
+</style>
+<script>
+(function () {
+  const panelIds = { seller: 'sellerDashboard', delivery: 'deliveryDashboard', admin: 'adminDashboard' };
+  const shopSelectors = ['.ml-search-location', '.ml-categories', '.ml-recent', '#shopControls', '#productGrid', '#gridMessage', '#mainHeading', '#subHeading', '#notificationBanner', '#categoryMenuSection'];
+  window.applyRolePanelView = function (requestedRole) {
+    const role = ['seller','delivery','admin'].includes(requestedRole) ? requestedRole : 'user';
+    document.body.setAttribute('data-active-panel', role);
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    shopSelectors.forEach(selector => document.querySelectorAll(selector).forEach(el => {
+      const hide = role !== 'user';
+      el.classList.toggle('hidden', hide);
+      if (hide) el.style.setProperty('display','none','important');
+      else el.style.removeProperty('display');
+    }));
+    const main = document.querySelector('main');
+    if (main) main.style.setProperty('display','block','important');
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      const active = btn.getAttribute('data-panel-switch') === role;
+      btn.classList.toggle('active-panel-switch', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+    if (role === 'seller' && typeof window.renderSellerDashboard === 'function') window.renderSellerDashboard();
+    if (role === 'delivery' && typeof window.renderDeliveryDashboard === 'function') window.renderDeliveryDashboard();
+    if (role === 'admin' && typeof window.loadAdminPanel === 'function') window.loadAdminPanel();
+    // Reassert visibility after legacy renderers/auth code run.
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    if (role !== 'user' && document.getElementById(panelIds[role])) {
+      document.getElementById(panelIds[role]).scrollIntoView({behavior:'auto',block:'start'});
+    } else window.scrollTo({top:0,behavior:'auto'});
+  };
+  window.switchDirectPanel = function (role) {
+    // Delegate to the final, OTP-enforcing panel switcher below.
+    if (typeof window.__modeluxeOtpGatedSwitchPanel === 'function') window.__modeluxeOtpGatedSwitchPanel(role);
+    else if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole(role);
+  };
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      btn.addEventListener('click', function (event) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        window.switchDirectPanel(btn.getAttribute('data-panel-switch'));
+      }, true);
+    });
+    const role = localStorage.getItem('loggedInRole') || 'user';
+    window.applyRolePanelView(role);
+  });
+})();
+</script>
+
+
+<!-- SINGLE FINAL PANEL SWITCHER: keeps the selected dashboard and menu highlight in sync. -->
+<style>
+  [data-panel-switch].active-panel-switch { background:#164638 !important; color:#ffc928 !important; font-weight:800 !important; border-left:5px solid #ffc928 !important; }
+  [data-panel-switch].active-panel-switch i { color:#ffc928 !important; }
+</style>
+<script>
+(function () {
+  const panelIds = { seller: 'sellerDashboard', delivery: 'deliveryDashboard', admin: 'adminDashboard' };
+  const shopSelectors = ['.ml-search-location','.ml-categories','.ml-recent','#shopControls','#productGrid','#gridMessage','#mainHeading','#subHeading','#notificationBanner','#categoryMenuSection'];
+  function paintPanel(role) {
+    role = ['seller','delivery','admin'].includes(role) ? role : 'user';
+    document.body.setAttribute('data-active-panel', role);
+    Object.entries(panelIds).forEach(([key,id]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const show = key === role;
+      el.classList.toggle('hidden', !show);
+      el.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+    shopSelectors.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+      const hide = role !== 'user';
+      el.classList.toggle('hidden', hide);
+      if (hide) el.style.setProperty('display','none','important');
+      else el.style.removeProperty('display');
+    }));
+    document.querySelectorAll('[data-panel-switch]').forEach(btn => {
+      const active = btn.getAttribute('data-panel-switch') === role;
+      btn.classList.toggle('active-panel-switch', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+    const main = document.querySelector('main');
+    if (main) main.style.setProperty('display','block','important');
+  }
+  function switchPanel(role) {
+    if (!['user','seller','delivery','admin'].includes(role)) return;
+    // Admin must pass the existing owner OTP and device-lock checks.
+    if (role === 'admin') {
+      if (!(typeof window.isAdmin === 'function' && window.isAdmin())) {
+        if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole('admin');
+        return;
+      }
+      if (typeof window.openAdminWithDeviceLock === 'function') {
+        window.openAdminWithDeviceLock();
+        return;
+      }
+    } else if (sessionStorage.getItem('is_' + role + '_verified') !== 'true') {
+      // Never auto-create a verification flag on a panel click.
+      if (typeof window.openLoginModalForRole === 'function') window.openLoginModalForRole(role);
+      return;
+    }
+    localStorage.setItem('loggedInRole', role);
+    const menu = document.getElementById('dropdownMenu');
+    if (menu) menu.classList.add('hidden');
+    if (typeof window.closeLoginModal === 'function') window.closeLoginModal();
+    if (typeof window.updateAuthUI === 'function') window.updateAuthUI();
+    if (role === 'seller' && typeof window.renderSellerDashboard === 'function') window.renderSellerDashboard();
+    if (role === 'delivery' && typeof window.renderDeliveryDashboard === 'function') window.renderDeliveryDashboard();
+    if (role === 'admin' && typeof window.loadAdminPanel === 'function') window.loadAdminPanel();
+    if (role === 'user' && typeof window.renderProducts === 'function') window.renderProducts();
+    paintPanel(role);
+    requestAnimationFrame(() => paintPanel(role));
+    setTimeout(() => paintPanel(role), 120);
+    setTimeout(() => paintPanel(role), 400);
+    if (role !== 'user' && document.getElementById(panelIds[role])) {
+      setTimeout(() => document.getElementById(panelIds[role])?.scrollIntoView({block:'start',behavior:'auto'}), 130);
+    } else window.scrollTo(0,0);
+  }
+  window.applyRolePanelView = paintPanel;
+  window.__modeluxeOtpGatedSwitchPanel = switchPanel;
+  window.switchDirectPanel = switchPanel;
+  // One capture handler only; suppress older inline handlers for these buttons.
+  document.addEventListener('click', function (event) {
+    const btn = event.target && event.target.closest ? event.target.closest('[data-panel-switch]') : null;
+    if (!btn) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    switchPanel(btn.getAttribute('data-panel-switch'));
+  }, true);
+  function init() { paintPanel(localStorage.getItem('loggedInRole') || 'user'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
+})();
+</script>
 </body>
 </html>
