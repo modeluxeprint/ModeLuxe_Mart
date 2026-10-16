@@ -1952,7 +1952,7 @@ async function verifyFast2SMSOTP() {
                     ? `<img src="${headerPhoto.replace(/"/g, '&quot;')}" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-amber-400">`
                     : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
                 const displayName = (profile.name || role.toUpperCase()).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-                authSection.innerHTML = `<span class="inline-flex max-w-[112px] min-w-0 items-center gap-1 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
+                if (authSection) authSection.innerHTML = `<span class="inline-flex max-w-[112px] min-w-0 items-center gap-1 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
@@ -1971,7 +1971,7 @@ async function verifyFast2SMSOTP() {
                 if (typeof applyRolePanelView === 'function') applyRolePanelView(role);
             } else {
                 cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.add('hidden'); updateCartBadge();
-                authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
+                if (authSection) authSection.innerHTML = `<button type="button" onclick="openLoginModal()" class="bg-amber-400 text-black px-3.5 py-1.5 rounded-xl font-bold text-xs shadow hover:bg-amber-300 transition cursor-pointer"><i class="fa-solid fa-user mr-1"></i> Quick Login</button>`;
                 document.getElementById('sellerDashboard').classList.add('hidden');
                 document.getElementById('deliveryDashboard').classList.add('hidden');
                 document.getElementById('adminDashboard').classList.add('hidden');
