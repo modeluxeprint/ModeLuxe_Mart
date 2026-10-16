@@ -2391,20 +2391,42 @@ function completeVerifiedLogin(role, phone) {
     }
 }
 
-        function getSellerAvailableBalance() {
+        // Calculate deductions from Firebase withdrawal requests so the wallet stays
+// consistent after refresh/re-login. Pending, approved and paid requests remain
+// deducted; rejected/cancelled/declined requests are returned to the wallet.
+async function getPersistedWithdrawalTotal(role, phone) {
+    if (!phone) return 0;
+    const snapshot = await db.ref('withdrawalRequests').once('value');
+    const all = snapshot.val() || {};
+    const wantedRole = String(role || '').toLowerCase();
+    return Object.values(all).reduce((total, request) => {
+        if (!request) return total;
+        const requestRole = String(request.role || '').toLowerCase();
+        const requestPhone = String(request.userPhone || request.phone || '');
+        const status = String(request.status || 'Pending Review').trim().toLowerCase();
+        const isReleased = status.includes('reject') || status.includes('declin') ||
+            status.includes('cancel') || status.includes('fail');
+        if (requestRole !== wantedRole || requestPhone !== String(phone) || isReleased) return total;
+        return total + Number(request.requestedAmount || request.amount || request.grossAmount || 0);
+    }, 0);
+}
+
+async function getSellerAvailableBalance() {
     const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
     const deliveredOrders = orders.filter(order => order.status === 'Delivered');
     const productEarnings = deliveredOrders.reduce((sum, order) => sum + Number(order.price || 0), 0);
-    const withdrawn = Number(localStorage.getItem('sellerWithdrawnTotal') || 0);
+    const phone = String(localStorage.getItem('userPhone') || '');
+    const withdrawn = await getPersistedWithdrawalTotal('seller', phone);
     return Math.max(0, productEarnings - withdrawn);
 }
 
-function getDeliveryAvailableBalance() {
+async function getDeliveryAvailableBalance() {
     const orders = JSON.parse(localStorage.getItem('myOrders') || '[]');
     const currentBoy = localStorage.getItem('deliveryBoyName') || 'Delivery Boy';
     const deliveredOrders = orders.filter(order => order.deliveryBoy === currentBoy && order.status === 'Delivered');
     const deliveryEarnings = deliveredOrders.length * 16;
-    const withdrawn = Number(localStorage.getItem('deliveryWithdrawnTotal') || 0);
+    const phone = String(localStorage.getItem('userPhone') || '');
+    const withdrawn = await getPersistedWithdrawalTotal('delivery', phone);
     return Math.max(0, deliveryEarnings - withdrawn);
 }
 
@@ -2507,7 +2529,7 @@ function updateWithdrawalPreview() {
         '₹' + netAmount.toFixed(2);
 }
 
-function submitWithdrawRequest() {
+async function submitWithdrawRequest() {
     const amount = Number(document.getElementById('bankAmount').value);
     const phone = localStorage.getItem('userPhone') || '';
     const role = activeWithdrawRole.toLowerCase();
@@ -2525,9 +2547,16 @@ function submitWithdrawRequest() {
         return;
     }
 
-    const balance = activeWithdrawRole === 'Seller'
-        ? getSellerAvailableBalance()
-        : getDeliveryAvailableBalance();
+    let balance;
+    try {
+        balance = activeWithdrawRole === 'Seller'
+            ? await getSellerAvailableBalance()
+            : await getDeliveryAvailableBalance();
+    } catch (error) {
+        console.error('Could not verify withdrawal wallet balance:', error);
+        alert('Wallet balance verify nahi ho paya. Internet/Firebase permissions check karke dobara try karein.');
+        return;
+    }
 
     if (amount > balance) {
         alert('Insufficient wallet balance. Available: ₹' + balance.toFixed(2));
@@ -2553,13 +2582,8 @@ function submitWithdrawRequest() {
     // Save a payout request for review; this does NOT transfer money automatically.
     db.ref('withdrawalRequests').push(request)
         .then(() => {
-            // Wallet amount tabhi deduct karein jab Firebase request successfully save ho jaye.
-            const withdrawnKey = activeWithdrawRole === 'Seller'
-                ? 'sellerWithdrawnTotal'
-                : 'deliveryWithdrawnTotal';
-            const alreadyWithdrawn = Number(localStorage.getItem(withdrawnKey) || 0);
-            localStorage.setItem(withdrawnKey, String(Math.round((alreadyWithdrawn + amount) * 100) / 100));
-
+            // Firebase withdrawal request is the source of truth for deductions.
+            // Do not store a second local total, which could reset or double-count.
             updateSellerWallet();
             updateDeliveryWallet();
             loadMyWithdrawalStatuses(activeWithdrawRole.toLowerCase());
@@ -2579,14 +2603,28 @@ function submitWithdrawRequest() {
         });
 }
 
-function updateSellerWallet() {
+async function updateSellerWallet() {
     const walletElement = document.getElementById('sellerTotalEarnings');
-    if (walletElement) walletElement.innerText = '₹' + getSellerAvailableBalance().toFixed(2);
+    if (!walletElement) return;
+    try {
+        walletElement.innerText = '…';
+        walletElement.innerText = '₹' + (await getSellerAvailableBalance()).toFixed(2);
+    } catch (error) {
+        console.error('Could not update seller wallet:', error);
+        walletElement.innerText = '—';
+    }
 }
 
-function updateDeliveryWallet() {
+async function updateDeliveryWallet() {
     const walletElement = document.getElementById('delTotalEarnings');
-    if (walletElement) walletElement.innerText = '₹' + getDeliveryAvailableBalance().toFixed(2);
+    if (!walletElement) return;
+    try {
+        walletElement.innerText = '…';
+        walletElement.innerText = '₹' + (await getDeliveryAvailableBalance()).toFixed(2);
+    } catch (error) {
+        console.error('Could not update delivery wallet:', error);
+        walletElement.innerText = '—';
+    }
 }
 
         function renderSellerDashboard() {
