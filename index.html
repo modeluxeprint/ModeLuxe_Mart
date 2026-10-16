@@ -1091,6 +1091,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             const role = localStorage.getItem('loggedInRole');
             if (role === 'seller') loadMyWithdrawalStatuses('seller');
             else if (role === 'delivery') loadMyWithdrawalStatuses('delivery');
+            // Keep the Admin payout list and counter in sync as soon as any seller/delivery
+            // submits a request; no manual refresh or page reload should be needed.
+            else if (role === 'admin' && sessionStorage.getItem('modeluxeAdminDeviceUnlocked') === 'yes') {
+                const dashboard = document.getElementById('adminDashboard');
+                if (dashboard && !dashboard.classList.contains('hidden')) loadAdminPanel();
+            }
         }, error => console.error('Firebase withdrawal notifications failed:', error));
 
         db.ref('products').on('value', (snapshot) => {
@@ -2167,10 +2173,16 @@ function completeVerifiedLogin(role, phone) {
                     : `<span class="w-7 h-7 rounded-full bg-[#0b2920] border border-amber-400/50 flex items-center justify-center"><i class="fa-solid fa-user text-amber-400"></i></span>`;
                 const displayName = (profile.name || role.toUpperCase()).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
                 if (authSection) authSection.innerHTML = `<span class="inline-flex max-w-[112px] min-w-0 items-center gap-1 text-[10px] text-amber-400 font-bold overflow-hidden">${headerPhoto ? `<img src="${headerPhoto.replace(/"/g, "&quot;")}" alt="Profile" class="w-7 h-7 rounded-full object-cover shrink-0">` : `<span class="w-7 h-7 rounded-full bg-[#133e31] flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-amber-400"></i></span>`}<span class="min-w-0 truncate leading-tight">${displayName}</span></span>`;
-                if (role === 'seller' || role === 'delivery') {
-                    cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
+                if (role === 'seller' || role === 'delivery' || role === 'admin') {
+                    // Cart is for shoppers only; keep it hidden in all management panels.
+                    cartBtnContainer.classList.add('hidden');
+                    bellIconContainer.classList.remove('hidden');
+                    updateBellBadgeCount();
                 } else {
-                    cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.remove('hidden'); updateCartBadge(); updateBellBadgeCount();
+                    cartBtnContainer.classList.remove('hidden');
+                    bellIconContainer.classList.remove('hidden');
+                    updateCartBadge();
+                    updateBellBadgeCount();
                 }
                 document.getElementById('sellerDashboard').classList.toggle('hidden', role !== 'seller');
                 document.getElementById('deliveryDashboard').classList.toggle('hidden', role !== 'delivery');
