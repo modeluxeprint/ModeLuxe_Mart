@@ -1073,27 +1073,41 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         let activeNotificationPhone = '';
         function attachUserNotificationListener() {
             const phone = String(localStorage.getItem('userPhone') || '');
-            if (phone === activeNotificationPhone) return;
-            if (activeNotificationPhone) db.ref('userNotifications/' + activeNotificationPhone).off();
+            if (phone === activeNotificationPhone) { updateBellBadgeCount(); return; }
+            if (activeNotificationPhone) db.ref('userNotifications/' + activeNotificationPhone).off('value');
             activeNotificationPhone = phone; liveUserNotifications = {};
             if (!phone) { updateBellBadgeCount(); return; }
-            db.ref('userNotifications/' + phone).on('value', snap => { liveUserNotifications = snap.val() || {}; updateBellBadgeCount(); const modal=document.getElementById('notificationsModal'); if (modal && !modal.classList.contains('hidden')) openNotificationsModal(); }, err => console.error('User notifications failed:', err));
+            db.ref('userNotifications/' + phone).on('value', snap => {
+                liveUserNotifications = snap.val() || {};
+                updateBellBadgeCount();
+                const modal = document.getElementById('notificationsModal');
+                if (modal && !modal.classList.contains('hidden')) openNotificationsModal();
+            }, err => console.error('User notifications failed:', err));
+            updateBellBadgeCount();
         }
         db.ref('productRatings').on('value', snapshot => {
             liveProductRatings = snapshot.val() || {};
             renderProducts();
         });
         db.ref('withdrawalRequests').on('value', snapshot => {
+            // Keep the latest payout state in memory so wallet, status list and bell
+            // update immediately without requiring a page refresh.
             liveWithdrawalRequests = snapshot.val() || {};
+            const role = localStorage.getItem('loggedInRole');
+            const phone = String(localStorage.getItem('userPhone') || '');
+            if (role === 'seller') {
+                updateSellerWallet();
+                if (phone) loadMyWithdrawalStatuses('seller');
+            } else if (role === 'delivery') {
+                updateDeliveryWallet();
+                if (phone) loadMyWithdrawalStatuses('delivery');
+            }
             updateBellBadgeCount();
             const modal = document.getElementById('notificationsModal');
             if (modal && !modal.classList.contains('hidden')) openNotificationsModal();
-            const role = localStorage.getItem('loggedInRole');
-            if (role === 'seller') loadMyWithdrawalStatuses('seller');
-            else if (role === 'delivery') loadMyWithdrawalStatuses('delivery');
             // Keep the Admin payout list and counter in sync as soon as any seller/delivery
             // submits a request; no manual refresh or page reload should be needed.
-            else if (role === 'admin' && sessionStorage.getItem('modeluxeAdminDeviceUnlocked') === 'yes') {
+            if (role === 'admin' && sessionStorage.getItem('modeluxeAdminDeviceUnlocked') === 'yes') {
                 const dashboard = document.getElementById('adminDashboard');
                 if (dashboard && !dashboard.classList.contains('hidden')) loadAdminPanel();
             }
@@ -2143,7 +2157,11 @@ function completeVerifiedLogin(role, phone) {
     pendingLoginRole = null; pendingLoginPhone = null; pendingOtpRequestId = null;
     closeLoginModal();
     const menu = document.getElementById('dropdownMenu'); if (menu) menu.classList.add('hidden');
+    activeNotificationPhone = '';
+    attachUserNotificationListener();
     updateAuthUI(); applyRolePanelView(role);
+    if (role === 'seller') updateSellerWallet();
+    if (role === 'delivery') updateDeliveryWallet();
     alert('OTP verified. Login successful!');
 }
 
@@ -2682,12 +2700,10 @@ async function getSellerAvailableBalance() {
     const productEarnings = deliveredOrders.reduce((sum, order) => sum + Number(order.price || 0), 0);
     const phone = String(localStorage.getItem('userPhone') || '');
     const totals = await getPersistedWithdrawalTotals('seller', phone);
-    // If rejected/cancelled requests exist, show their returned total without
-    // adding the already displayed residual wallet balance a second time.
-    // Otherwise retain the normal earnings-minus-withdrawals calculation.
-    if (totals.rejected > 0) {
-        return Math.max(0, totals.rejected - Math.max(0, totals.deducted - productEarnings));
-    }
+    // Rejected/cancelled requests are NOT added as a separate credit.
+    // They are simply excluded from deductions, so the originally withheld
+    // amount becomes available once (not twice). Only active/approved/paid
+    // requests are subtracted from delivered-order earnings.
     return Math.max(0, productEarnings - totals.deducted);
 }
 
