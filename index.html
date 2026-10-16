@@ -434,37 +434,41 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             <button type="button" onclick="closeSuccessModal()" class="w-full bg-amber-400 text-black py-3 rounded-xl text-sm font-bold hover:bg-amber-300 transition cursor-pointer shadow">View Orders / Back to Home</button>
         </div>
     </div>
-    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50 px-4">
-        <div class="bg-[#0b2920] text-gray-100 border border-[#133e31] w-full max-w-sm p-6 rounded-2xl shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-start justify-center z-[150] px-4 py-4 overflow-y-auto">
+        <div class="bg-[#0b2920] text-gray-100 border border-[#133e31] w-full max-w-sm p-5 rounded-2xl shadow-2xl relative text-center max-h-[calc(100dvh-110px)] overflow-y-auto mb-20">
             <button type="button" onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-300 cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
             <h3 class="text-xl font-bold text-amber-400 mb-2">Mobile OTP Login</h3>
             <p class="text-xs text-gray-300 mb-4">StartMessaging SMS OTP verification is required to sign in.</p>
-            <div class="space-y-3 text-left text-xs mb-3">
-                <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option><option value="admin">Admin (Owner)</option></select></div>
-                <div><label class="block font-medium text-gray-200 mb-1">Mobile Number</label><input type="tel" id="loginPhoneInput" maxlength="10" placeholder="10-digit number" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400 mb-2"></div>
-                <div id="loginBankSection" class="pt-2 border-t border-[#1b4f40] space-y-2">
-                    <p class="font-bold text-amber-400"><i class="fa-solid fa-shield-halved mr-1"></i> Seller / Delivery Verification</p>
-                    
-                    <input type="text" id="loginKycFullName" placeholder="Full Name (as on PAN/Aadhaar)" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginShopName" placeholder="Shop / Business Name (Seller)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginPanNumber" placeholder="PAN Number (e.g. ABCDE1234F)" maxlength="10" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                    <div id="deliveryVehicleSection" class="hidden space-y-2">
-                        <input type="text" id="loginVehicleNumber" placeholder="Vehicle Number (e.g. UP 81 AB 1234)" maxlength="15" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                        <select id="loginVehicleType" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"><option value="">Select Vehicle Type</option><option value="Bike">Bike / Scooter</option><option value="Scooter">Scooter</option><option value="Cycle">Cycle</option><option value="Other">Other</option></select>
+            <div class="space-y-3 text-left text-xs mb-3" id="loginWizard">
+                <section id="loginStepPhone" class="space-y-3">
+                    <div><label class="block font-medium text-gray-200 mb-1">Select Role</label><select id="loginRoleSelect" onchange="handleRoleSelectionChange()" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none font-semibold focus:border-amber-400"><option value="user">User (Customer)</option><option value="seller">Seller (Manage Products)</option><option value="delivery">Delivery Partner</option><option value="admin">Admin (Owner)</option></select></div>
+                    <div><label class="block font-medium text-gray-200 mb-1">Mobile Number</label><input type="tel" id="loginPhoneInput" maxlength="10" inputmode="numeric" placeholder="10-digit number" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400"></div>
+                    <button type="button" onclick="sendFast2SMSOTP()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-bold hover:bg-amber-300 cursor-pointer shadow">Send OTP</button>
+                    <div id="otpBoxSection" class="hidden pt-3 space-y-2 border-t border-[#1b4f40]">
+                        <label class="block font-medium text-gray-200 mb-1">Enter 6-Digit OTP</label>
+                        <input type="text" id="loginOtpInput" maxlength="6" inputmode="numeric" placeholder="Enter OTP" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                        <button type="button" onclick="verifyFast2SMSOTP()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-500 cursor-pointer shadow">Verify OTP & Continue</button>
                     </div>
-                    <input type="text" id="loginAadhaarNumber" placeholder="Aadhaar Number (12 digits)" maxlength="12" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    
-                    <p class="font-bold text-amber-400 pt-2"><i class="fa-solid fa-bank mr-1"></i> Bank Account for Payouts:</p>
-                    <input type="text" id="loginBankName" placeholder="Account Holder Name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginBankAcc" placeholder="Bank Account Number" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none focus:border-amber-400">
-                    <input type="text" id="loginBankIfsc" placeholder="IFSC Code (e.g. SBIN000XXXX)" maxlength="11" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 uppercase outline-none focus:border-amber-400">
-                </div>
-                <button type="button" onclick="sendFast2SMSOTP()" class="w-full bg-amber-400 text-black py-2.5 rounded-xl font-bold hover:bg-amber-300 cursor-pointer shadow mt-2">Send OTP</button>
-                <div id="otpBoxSection" class="hidden pt-2 space-y-2 border-t border-[#1b4f40] mt-2">
-                    <label class="block font-medium text-gray-200 mb-1">Enter 6-Digit OTP</label>
-                    <input type="text" id="loginOtpInput" maxlength="6" placeholder="Enter OTP" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-2.5 outline-none mb-2.5 focus:border-amber-400">
-                    <button type="button" onclick="verifyFast2SMSOTP()" class="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold hover:bg-green-500 cursor-pointer shadow">Verify & Login</button>
-                </div>
+                </section>
+                <section id="loginStepVerification" class="hidden space-y-3">
+                    <div class="rounded-xl border border-amber-400/30 bg-[#133e31] p-3"><p class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-shield-halved mr-1"></i> Seller / Delivery Verification</p><p class="text-gray-300 mt-1">Step 2 of 3 — apni details bharein.</p></div>
+                    <input type="text" id="loginKycFullName" placeholder="Full Name (as on PAN/Aadhaar)" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <div id="sellerShopField"><input type="text" id="loginShopName" placeholder="Shop / Business Name (Seller)" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400"></div>
+                    <input type="text" id="loginPanNumber" placeholder="PAN Number (e.g. ABCDE1234F)" maxlength="10" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                    <div id="deliveryVehicleSection" class="hidden space-y-2">
+                        <input type="text" id="loginVehicleNumber" placeholder="Vehicle Number (e.g. UP 81 AB 1234)" maxlength="15" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                        <select id="loginVehicleType" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400"><option value="">Select Vehicle Type</option><option value="Bike">Bike / Scooter</option><option value="Scooter">Scooter</option><option value="Cycle">Cycle</option><option value="Other">Other</option></select>
+                    </div>
+                    <input type="text" id="loginAadhaarNumber" placeholder="Aadhaar Number (12 digits)" maxlength="12" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <div class="grid grid-cols-2 gap-2"><button type="button" onclick="showLoginWizardStep('phone')" class="w-full border border-[#1b4f40] text-gray-200 py-3 rounded-xl font-bold">Back</button><button type="button" onclick="continueSellerDeliveryVerification()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-bold">Next</button></div>
+                </section>
+                <section id="loginStepBank" class="hidden space-y-3">
+                    <div class="rounded-xl border border-amber-400/30 bg-[#133e31] p-3"><p class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-building-columns mr-1"></i> Bank Account for Payouts</p><p class="text-gray-300 mt-1">Step 3 of 3 — bank details bharein aur finish karein.</p></div>
+                    <input type="text" id="loginBankName" placeholder="Account Holder Name" autocomplete="name" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <input type="text" id="loginBankAcc" placeholder="Bank Account Number" inputmode="numeric" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 outline-none focus:border-amber-400">
+                    <input type="text" id="loginBankIfsc" placeholder="IFSC Code (e.g. SBIN000XXXX)" maxlength="11" autocomplete="off" class="w-full bg-[#133e31] border border-[#1b4f40] text-white rounded-xl p-3 uppercase outline-none focus:border-amber-400">
+                    <div class="grid grid-cols-2 gap-2"><button type="button" onclick="showLoginWizardStep('verification')" class="w-full border border-[#1b4f40] text-gray-200 py-3 rounded-xl font-bold">Back</button><button type="button" onclick="finishSellerDeliveryLogin()" class="w-full bg-amber-400 text-black py-3 rounded-xl font-extrabold shadow">Finish</button></div>
+                </section>
             </div>
         </div>
     </div>
@@ -1741,80 +1745,72 @@ function getSavedBankProfile(role, phone) {
     }
 }
 
+function showLoginWizardStep(step) {
+    const phoneStep = document.getElementById('loginStepPhone');
+    const verificationStep = document.getElementById('loginStepVerification');
+    const bankStep = document.getElementById('loginStepBank');
+    if (phoneStep) phoneStep.classList.toggle('hidden', step !== 'phone');
+    if (verificationStep) verificationStep.classList.toggle('hidden', step !== 'verification');
+    if (bankStep) bankStep.classList.toggle('hidden', step !== 'bank');
+    const modal = document.querySelector('#loginModal > div');
+    if (modal) modal.scrollTop = 0;
+}
+
 function handleRoleSelectionChange() {
     const role = document.getElementById('loginRoleSelect').value;
-    const phone = document.getElementById('loginPhoneInput').value.trim();
-    const bankSec = document.getElementById('loginBankSection');
     const vehicleSec = document.getElementById('deliveryVehicleSection');
-    if (role !== 'seller' && role !== 'delivery') {
-        bankSec.classList.add('hidden');
-        vehicleSec.classList.add('hidden');
-        return;
+    const shopField = document.getElementById('sellerShopField');
+    const otpBox = document.getElementById('otpBoxSection');
+    if (otpBox) otpBox.classList.add('hidden');
+    showLoginWizardStep('phone');
+    if (vehicleSec) vehicleSec.classList.toggle('hidden', role !== 'delivery');
+    if (shopField) shopField.classList.toggle('hidden', role !== 'seller');
+}
+
+function validateSellerDeliveryDetails() {
+    const role = document.getElementById('loginRoleSelect').value;
+    const fullName = document.getElementById('loginKycFullName').value.trim();
+    const pan = document.getElementById('loginPanNumber').value.trim().toUpperCase();
+    const aadhaar = document.getElementById('loginAadhaarNumber').value.replace(/\D/g, '');
+    if (!fullName) { alert('Full name bharein.'); return false; }
+    if (role === 'seller' && !document.getElementById('loginShopName').value.trim()) { alert('Shop / Business Name bharein.'); return false; }
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) { alert('Valid PAN number bharein.'); return false; }
+    if (!/^\d{12}$/.test(aadhaar)) { alert('12-digit Aadhaar number bharein.'); return false; }
+    if (role === 'delivery') {
+        const vehicle = document.getElementById('loginVehicleNumber').value.trim().toUpperCase();
+        const vehicleType = document.getElementById('loginVehicleType').value;
+        if (!vehicle || !vehicleType) { alert('Delivery partner ke liye vehicle number aur type zaroori hai.'); return false; }
     }
-    bankSec.classList.remove('hidden');
-    vehicleSec.classList.toggle('hidden', role !== 'delivery');
-    const saved = phone.length === 10 ? getSavedBankProfile(role, phone) : null;
+    return true;
+}
+
+function continueSellerDeliveryVerification() {
+    if (!validateSellerDeliveryDetails()) return;
+    const role = document.getElementById('loginRoleSelect').value;
+    const phone = document.getElementById('loginPhoneInput').value.trim();
+    const saved = getSavedBankProfile(role, phone);
     if (saved) {
         document.getElementById('loginBankName').value = saved.name || '';
         document.getElementById('loginBankAcc').value = saved.account || '';
         document.getElementById('loginBankIfsc').value = saved.ifsc || '';
     }
+    showLoginWizardStep('bank');
 }
 
 async function sendFast2SMSOTP() {
     const role = document.getElementById('loginRoleSelect').value;
     const phone = document.getElementById('loginPhoneInput').value.trim();
     const sendButton = document.querySelector('button[onclick="sendFast2SMSOTP()"]');
-
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-        alert('Enter valid 10-digit Indian mobile number.');
-        return;
-    }
-
-    if (role === 'seller' || role === 'delivery') {
-        const fullName = document.getElementById('loginKycFullName').value.trim();
-        const pan = document.getElementById('loginPanNumber').value.trim().toUpperCase();
-        const aadhaar = document.getElementById('loginAadhaarNumber').value.replace(/\D/g, '');
-        if (!fullName) { alert('Full name bharein.'); return; }
-        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) { alert('Valid PAN number bharein.'); return; }
-        if (!/^\d{12}$/.test(aadhaar)) { alert('12-digit Aadhaar number bharein.'); return; }
-        if (role === 'delivery') {
-            const vehicle = document.getElementById('loginVehicleNumber').value.trim().toUpperCase();
-            const vehicleType = document.getElementById('loginVehicleType').value;
-            if (!vehicle || !vehicleType) { alert('Delivery partner ke liye vehicle number aur type zaroori hai.'); return; }
-        }
-    }
-
-    if (role === 'seller' || role === 'delivery') {
-        const saved = getSavedBankProfile(role, phone);
-        if (!saved) {
-            const name = document.getElementById('loginBankName').value.trim();
-            const account = document.getElementById('loginBankAcc').value.trim();
-            const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
-            if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
-                alert('Pehle Account Holder Name, Account Number aur valid IFSC Code bharein.');
-                return;
-            }
-        }
-    }
-
+    if (!/^[6-9]\d{9}$/.test(phone)) { alert('Enter valid 10-digit Indian mobile number.'); return; }
     try {
         if (sendButton) { sendButton.disabled = true; sendButton.textContent = 'Sending OTP...'; }
         const response = await fetch('https://modeluxe-otp.vaishumodeluxe.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'send', phoneNumber: '+91' + phone })
         });
-
         const result = await response.json();
-        if (!response.ok || result.success !== true || !result.requestId) {
-            throw new Error(result.message || 'OTP send failed. Worker response check karein.');
-        }
-
-        pendingLoginRole = role;
-        pendingLoginPhone = phone;
-        pendingOtpRequestId = result.requestId;
-        generatedOtpCode = null;
+        if (!response.ok || result.success !== true || !result.requestId) throw new Error(result.message || 'OTP send failed. Worker response check karein.');
+        pendingLoginRole = role; pendingLoginPhone = phone; pendingOtpRequestId = result.requestId; generatedOtpCode = null;
         document.getElementById('loginOtpInput').value = '';
         document.getElementById('otpBoxSection').classList.remove('hidden');
         alert('OTP sent successfully! Please check your message box.');
@@ -1831,97 +1827,79 @@ async function verifyFast2SMSOTP() {
     const phone = document.getElementById('loginPhoneInput').value.trim();
     const otp = document.getElementById('loginOtpInput').value.trim();
     const verifyButton = document.querySelector('button[onclick="verifyFast2SMSOTP()"]');
-
-    if (!/^\d{4,6}$/.test(otp)) {
-        alert('SMS mein aaya hua 4-6 digit OTP enter karein.');
-        return;
-    }
-    if (pendingLoginPhone !== phone || pendingLoginRole !== role || !pendingOtpRequestId) {
-        alert('Is mobile number ke liye pehle Send OTP par click karein.');
-        return;
-    }
-
+    if (!/^\d{4,6}$/.test(otp)) { alert('SMS mein aaya hua 4-6 digit OTP enter karein.'); return; }
+    if (pendingLoginPhone !== phone || pendingLoginRole !== role || !pendingOtpRequestId) { alert('Is mobile number ke liye pehle Send OTP par click karein.'); return; }
     try {
         if (verifyButton) { verifyButton.disabled = true; verifyButton.textContent = 'Verifying...'; }
         const response = await fetch('https://modeluxe-otp.vaishumodeluxe.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'verify',
-                requestId: pendingOtpRequestId,
-                otpCode: otp
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', requestId: pendingOtpRequestId, otpCode: otp })
         });
-
         const result = await response.json();
-        if (!response.ok || result.success !== true || result.verified !== true) {
-            alert(result.message || 'OTP galat hai ya expire ho gaya hai. Dobara try karein.');
+        if (!response.ok || result.success !== true || result.verified !== true) { alert(result.message || 'OTP galat hai ya expire ho gaya hai. Dobara try karein.'); return; }
+        if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) { alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.'); return; }
+        sessionStorage.setItem('is_' + role + '_verified', 'true');
+        sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
+        if (role === 'seller' || role === 'delivery') {
+            // OTP step is complete; KYC and bank details are deliberately separate steps.
+            showLoginWizardStep('verification');
+            const heading = document.querySelector('#loginStepVerification .text-gray-300');
+            if (heading) heading.textContent = 'Step 2 of 3 — apni details bharein. OTP verified: ' + phone;
             return;
         }
-
-    if (role === 'seller' || role === 'delivery') {
-        let saved = getSavedBankProfile(role, phone);
-        if (!saved) {
-            const name = document.getElementById('loginBankName').value.trim();
-            const account = document.getElementById('loginBankAcc').value.trim();
-            const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
-            if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
-                alert('Bank details sahi se bharein.');
-                return;
-            }
-            saved = { name, account, ifsc };
-            localStorage.setItem(getBankProfileKey(role, phone), JSON.stringify(saved));
-        }
-        localStorage.setItem('userBankName', saved.name);
-        localStorage.setItem('userBankAcc', saved.account);
-        localStorage.setItem('userBankIfsc', saved.ifsc);
-        const kycDetails = {
-            fullName: document.getElementById('loginKycFullName').value.trim(),
-            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
-            aadhaar: document.getElementById('loginAadhaarNumber').value.replace(/\D/g, ''),
-            vehicleNumber: role === 'delivery' ? document.getElementById('loginVehicleNumber').value.trim().toUpperCase() : '',
-            vehicleType: role === 'delivery' ? document.getElementById('loginVehicleType').value : ''
-        };
-        localStorage.setItem('profileDetails_' + role + '_' + phone, JSON.stringify(kycDetails));
-        if (role === 'delivery' && !localStorage.getItem('deliveryBoyName')) {
-            localStorage.setItem('deliveryBoyName', prompt('Enter Delivery Partner Name:', 'Delivery Boy') || 'Delivery Boy');
-        }
-    }
-
-    if (role === 'admin' && !ADMIN_PHONE_ALLOWLIST.includes(phone)) {
-        alert('Admin phone allowlist mein nahi hai. Website owner ko ADMIN_PHONE_ALLOWLIST configure karna hoga.');
-        return;
-    }
-    if (role === 'seller') {
-        const app = {
-            phone,
-            name: document.getElementById('loginKycFullName').value.trim() || localStorage.getItem('userName') || 'Seller',
-            pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
-            shopName: document.getElementById('loginShopName')?.value.trim() || '',
-            status: 'pending',
-            appliedAt: new Date().toISOString()
-        };
-        db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
-    }
-    localStorage.setItem('loggedInRole', role);
-    localStorage.setItem('userPhone', phone);
-    if (role === 'seller' && document.getElementById('loginKycFullName').value.trim()) localStorage.setItem('userName', document.getElementById('loginKycFullName').value.trim());
-    if (role === 'seller' && document.getElementById('loginShopName')?.value.trim()) localStorage.setItem('userShopName', document.getElementById('loginShopName').value.trim());
-    sessionStorage.setItem('is_' + role + '_verified', 'true');
-    sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
-    pendingLoginRole = null;
-    pendingLoginPhone = null;
-    closeLoginModal();
-    document.getElementById('dropdownMenu').classList.add('hidden');
-    updateAuthUI();
-    applyRolePanelView(role);
-    alert('OTP verified. Login successful!');
+        completeVerifiedLogin(role, phone);
     } catch (error) {
         console.error('StartMessaging verify OTP error:', error);
         alert('OTP verify nahi ho paya: ' + (error.message || 'Unknown error') + '. Cloudflare Worker logs check karein.');
     } finally {
-        if (verifyButton) { verifyButton.disabled = false; verifyButton.textContent = 'Verify & Login'; }
+        if (verifyButton) { verifyButton.disabled = false; verifyButton.textContent = 'Verify OTP & Continue'; }
     }
+}
+
+function finishSellerDeliveryLogin() {
+    const role = document.getElementById('loginRoleSelect').value;
+    const phone = document.getElementById('loginPhoneInput').value.trim();
+    if (role !== 'seller' && role !== 'delivery') { alert('Role selection check karein.'); return; }
+    if (pendingLoginRole !== role || pendingLoginPhone !== phone || !sessionStorage.getItem('is_' + role + '_verified') || sessionStorage.getItem('modeluxe_verified_phone_' + role) !== phone) {
+        alert('Pehle isi mobile number ka OTP verify karein.'); showLoginWizardStep('phone'); return;
+    }
+    if (!validateSellerDeliveryDetails()) { showLoginWizardStep('verification'); return; }
+    const name = document.getElementById('loginBankName').value.trim();
+    const account = document.getElementById('loginBankAcc').value.trim();
+    const ifsc = document.getElementById('loginBankIfsc').value.trim().toUpperCase();
+    if (!name || !account || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) { alert('Account Holder Name, Account Number aur valid IFSC Code bharein.'); return; }
+    const saved = { name, account, ifsc };
+    localStorage.setItem(getBankProfileKey(role, phone), JSON.stringify(saved));
+    localStorage.setItem('userBankName', saved.name); localStorage.setItem('userBankAcc', saved.account); localStorage.setItem('userBankIfsc', saved.ifsc);
+    const kycDetails = {
+        fullName: document.getElementById('loginKycFullName').value.trim(),
+        pan: document.getElementById('loginPanNumber').value.trim().toUpperCase(),
+        aadhaar: document.getElementById('loginAadhaarNumber').value.replace(/\D/g, ''),
+        shopName: role === 'seller' ? document.getElementById('loginShopName').value.trim() : '',
+        vehicleNumber: role === 'delivery' ? document.getElementById('loginVehicleNumber').value.trim().toUpperCase() : '',
+        vehicleType: role === 'delivery' ? document.getElementById('loginVehicleType').value : ''
+    };
+    localStorage.setItem('profileDetails_' + role + '_' + phone, JSON.stringify(kycDetails));
+    if (role === 'delivery' && !localStorage.getItem('deliveryBoyName')) localStorage.setItem('deliveryBoyName', kycDetails.fullName || 'Delivery Boy');
+    if (role === 'seller') {
+        const app = { phone, name: kycDetails.fullName || 'Seller', pan: kycDetails.pan, shopName: kycDetails.shopName, status: 'pending', appliedAt: new Date().toISOString() };
+        if (typeof db !== 'undefined' && db && db.ref) db.ref('sellerApplications/' + phone).transaction(existing => existing || app).catch(err => console.warn('Seller application save failed:', err));
+        localStorage.setItem('userName', kycDetails.fullName);
+        if (kycDetails.shopName) localStorage.setItem('userShopName', kycDetails.shopName);
+    }
+    completeVerifiedLogin(role, phone);
+}
+
+function completeVerifiedLogin(role, phone) {
+    localStorage.setItem('loggedInRole', role);
+    localStorage.setItem('userPhone', phone);
+    sessionStorage.setItem('is_' + role + '_verified', 'true');
+    sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
+    pendingLoginRole = null; pendingLoginPhone = null; pendingOtpRequestId = null;
+    closeLoginModal();
+    const menu = document.getElementById('dropdownMenu'); if (menu) menu.classList.add('hidden');
+    updateAuthUI(); applyRolePanelView(role);
+    alert('OTP verified. Login successful!');
 }
 
         window.onload = function() {
