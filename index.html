@@ -1698,11 +1698,9 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             }
         }
 
-        // Remove any legacy no-OTP flags. OTP verification is session-only below.
-        ['user', 'seller', 'delivery'].forEach(role => {
-            localStorage.removeItem('is_' + role + '_verified');
-        });
-        localStorage.setItem('modeluxeOtpPanelGateVersion', 'otp-gate-session-only-2026-10-16');
+        // Keep OTP verification for the same role and phone across page refreshes.
+        // Explicit Logout still clears these persistent verification markers.
+        localStorage.setItem('modeluxeOtpPanelGateVersion', 'otp-gate-persistent-login-2026-10-16');
 
         // OTP-GATED PANEL SWITCHING RESTORED for User / Seller / Delivery.
         // Admin keeps the existing owner-phone, OTP, and device-lock checks.
@@ -1717,7 +1715,8 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 return;
             }
             if (!['user', 'seller', 'delivery'].includes(role)) role = 'user';
-            if (sessionStorage.getItem('is_' + role + '_verified') === 'true') {
+            if (localStorage.getItem('is_' + role + '_verified') === 'true' &&
+                String(localStorage.getItem('modeluxe_verified_phone_' + role) || '') === String(localStorage.getItem('userPhone') || '')) {
                 localStorage.setItem('loggedInRole', role);
                 updatePanelSwitcherHighlight(role);
                 document.getElementById('dropdownMenu').classList.add('hidden');
@@ -1925,6 +1924,8 @@ function finishSellerDeliveryLogin() {
 function completeVerifiedLogin(role, phone) {
     localStorage.setItem('loggedInRole', role);
     localStorage.setItem('userPhone', phone);
+    localStorage.setItem('is_' + role + '_verified', 'true');
+    localStorage.setItem('modeluxe_verified_phone_' + role, phone);
     sessionStorage.setItem('is_' + role + '_verified', 'true');
     sessionStorage.setItem('modeluxe_verified_phone_' + role, phone);
     pendingLoginRole = null; pendingLoginPhone = null; pendingOtpRequestId = null;
@@ -2090,6 +2091,8 @@ function completeVerifiedLogin(role, phone) {
             ['user','seller','delivery','admin'].forEach(function (role) {
                 sessionStorage.removeItem('is_' + role + '_verified');
                 sessionStorage.removeItem('modeluxe_verified_phone_' + role);
+                localStorage.removeItem('is_' + role + '_verified');
+                localStorage.removeItem('modeluxe_verified_phone_' + role);
             });
             localStorage.removeItem('loggedInRole'); localStorage.removeItem('userPhone');
             updateAuthUI(); if (typeof applyRolePanelView === 'function') applyRolePanelView('user'); else renderProducts(); toggleMenu(); alert("Logged out.");
@@ -2271,8 +2274,8 @@ function completeVerifiedLogin(role, phone) {
             toggleMenu();
             const role = localStorage.getItem('loggedInRole');
             const phone = String(localStorage.getItem('userPhone') || '').replace(/\D/g, '');
-            const verifiedPhone = String(sessionStorage.getItem('modeluxe_verified_phone_user') || '').replace(/\D/g, '');
-            const customerVerified = !!phone && role === 'user' && sessionStorage.getItem('is_user_verified') === 'true' && verifiedPhone === phone;
+            const verifiedPhone = String(localStorage.getItem('modeluxe_verified_phone_user') || '').replace(/\D/g, '');
+            const customerVerified = !!phone && role === 'user' && localStorage.getItem('is_user_verified') === 'true' && verifiedPhone === phone;
             if (!customerVerified) {
                 alert('Apne orders dekhne ke liye pehle customer login karke OTP verify karein.');
                 openLoginModalForRole('user');
@@ -3149,8 +3152,8 @@ window.addEventListener('storage', updateDeliveryLocation);
   }
   function isVerifiedForCurrentPhone(role) {
     const phone = String(localStorage.getItem('userPhone') || '').replace(/\D/g, '');
-    const verifiedPhone = String(sessionStorage.getItem('modeluxe_verified_phone_' + role) || '').replace(/\D/g, '');
-    return !!phone && sessionStorage.getItem('is_' + role + '_verified') === 'true' && verifiedPhone === phone;
+    const verifiedPhone = String(localStorage.getItem('modeluxe_verified_phone_' + role) || '').replace(/\D/g, '');
+    return !!phone && localStorage.getItem('is_' + role + '_verified') === 'true' && verifiedPhone === phone;
   }
   function switchPanel(role) {
     if (!['user','seller','delivery','admin'].includes(role)) return;
