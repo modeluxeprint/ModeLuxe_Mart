@@ -227,7 +227,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div><p class="font-bold text-amber-400"><i class="fa-solid fa-wallet mr-1"></i> Seller Wallet Balance:</p><p class="text-gray-300 mt-0.5">10% company commission will be deducted upon withdrawal request.</p></div>
                 <div class="text-right"><span id="sellerTotalEarnings" class="text-sm font-bold text-green-400">₹0</span><button type="button" onclick="openWithdrawModal('Seller')" class="mt-2 block bg-amber-400 text-black text-[10px] px-3 py-1.5 rounded-lg font-bold hover:bg-amber-300 shadow cursor-pointer">Withdraw to Bank</button></div>
             </div>
-            <div id="sellerWithdrawalStatusCard" class="bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+            <div class="mb-0">
+                <button type="button" onclick="toggleWithdrawalStatus('seller')" class="w-full bg-[#0b2920] border border-amber-400/40 text-amber-300 p-3 rounded-xl font-bold text-sm shadow">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i>Payment Request Status
+                </button>
+            </div>
+            <div id="sellerWithdrawalStatusCard" class="hidden bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
                 <div class="flex items-center justify-between gap-3 mb-3">
                     <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
                     <button type="button" onclick="loadMyWithdrawalStatuses('seller')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
@@ -265,7 +270,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Total Earnings</p><p id="delTotalEarnings" class="text-lg font-extrabold text-green-400 mt-1">₹0</p><button type="button" onclick="openWithdrawModal('Delivery')" class="mt-2 bg-green-600 text-white text-[10px] px-2.5 py-1 rounded-lg font-bold hover:bg-green-500 shadow cursor-pointer w-full">Withdraw</button></div>
                 <div class="bg-[#133e31] p-3 rounded-xl border border-[#1b4f40]"><p class="text-[10px] text-gray-300 uppercase font-bold">Cash in Hand</p><p id="delCashInHand" class="text-lg font-extrabold text-blue-400 mt-1">₹0</p></div>
             </div>
-            <div id="deliveryWithdrawalStatusCard" class="bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
+            <div class="mb-0">
+                <button type="button" onclick="toggleWithdrawalStatus('delivery')" class="w-full bg-[#0b2920] border border-amber-400/40 text-amber-300 p-3 rounded-xl font-bold text-sm shadow">
+                    <i class="fa-solid fa-money-bill-transfer mr-2"></i>Payment Request Status
+                </button>
+            </div>
+            <div id="deliveryWithdrawalStatusCard" class="hidden bg-[#0b2920] p-4 rounded-2xl shadow border border-[#133e31]">
                 <div class="flex items-center justify-between gap-3 mb-3">
                     <h3 class="font-bold text-amber-400 text-sm"><i class="fa-solid fa-money-bill-transfer mr-2"></i>Withdrawal Request Status</h3>
                     <button type="button" onclick="loadMyWithdrawalStatuses('delivery')" class="text-xs border border-amber-400/40 text-amber-300 px-3 py-1.5 rounded-lg">Refresh</button>
@@ -2314,6 +2324,16 @@ function completeVerifiedLogin(role, phone) {
             document.getElementById('singleOrderDetailModal').classList.remove('hidden');
         }
         function closeSingleOrderDetail() { document.getElementById('singleOrderDetailModal').classList.add('hidden'); }
+
+        function toggleWithdrawalStatus(requestedRole) {
+    const role = String(requestedRole || '').toLowerCase();
+    const cardId = role === 'seller' ? 'sellerWithdrawalStatusCard' : role === 'delivery' ? 'deliveryWithdrawalStatusCard' : '';
+    const card = cardId ? document.getElementById(cardId) : null;
+    if (!card) return;
+    const opening = card.classList.contains('hidden');
+    card.classList.toggle('hidden', !opening);
+    if (opening) loadMyWithdrawalStatuses(role);
+}
 
         async function loadMyWithdrawalStatuses(requestedRole) {
     const role = String(requestedRole || '').toLowerCase();
