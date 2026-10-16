@@ -633,8 +633,8 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         // Online payment is intentionally disabled until a trusted server endpoint is configured.
         // Never put Razorpay secret keys in this file. Only a public Key ID belongs in the browser.
         const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
-        const RAZORPAY_CREATE_ORDER_URL = ""; // Set to your HTTPS backend endpoint
-        const RAZORPAY_VERIFY_PAYMENT_URL = ""; // Set to your HTTPS backend endpoint
+        const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
+        const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
 
         // IMPORTANT: Admin UI access is not a security boundary. Enforce roles in Firebase Rules/server too.
         // Add the owner's verified phone here before using the Admin role (digits only).
