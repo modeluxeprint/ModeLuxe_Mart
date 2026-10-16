@@ -901,14 +901,41 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                   .then(loadAdminPanel).catch(e => alert('Product update nahi hua: ' + e.message));
             }).catch(e => alert('Product status check nahi hua: ' + e.message));
         }
+        function getOrderSellerPhones(order) {
+            const phones = new Set();
+            const productsList = typeof getProducts === 'function' ? (getProducts() || []) : [];
+            const productList = Array.isArray(productsList) ? productsList : Object.values(productsList);
+            const addPhone = value => { const phone = String(value || '').trim(); if (phone && phone !== 'admin') phones.add(phone); };
+            addPhone(order && order.sellerPhone);
+            const orderItems = Array.isArray(order && order.items) ? order.items : [];
+            orderItems.forEach(item => {
+                addPhone(item && item.sellerPhone);
+                const match = productList.find(product =>
+                    (item && item.id != null && String(product.id) === String(item.id)) ||
+                    (item && (item.name || item.productName) && String(product.name || '').trim().toLowerCase() === String(item.name || item.productName).trim().toLowerCase())
+                );
+                if (match) addPhone(match.sellerPhone);
+            });
+            if (!orderItems.length && order) {
+                const match = productList.find(product => String(product.name || '').trim().toLowerCase() === String(order.product || order.productName || '').trim().toLowerCase());
+                if (match) addPhone(match.sellerPhone);
+            }
+            return Array.from(phones);
+        }
         function adminSetOrderStatus(id, status) {
             if (!isAdmin()) return alert('Admin access required.');
             return db.ref('orders/' + id).once('value').then(snap => {
                 const current = snap.val() || {};
                 if (current.adminStatusLocked) return alert('Is order/return/refund ka status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                const sellerPhones = getOrderSellerPhones(current);
                 const update = {status, adminStatusLocked: true, adminUpdatedAt: new Date().toISOString(), adminUpdatedBy: currentPhone()};
                 return db.ref('orders/' + id).update(update)
-                  .then(() => Promise.all([pushUserNotification(current.customerPhone, 'Order / Return / Refund Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status'), pushUserNotification(current.sellerPhone, 'Order Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status')]))
+                  .then(() => {
+                    const notifications = [pushUserNotification(current.customerPhone, 'Order / Return / Refund Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status')];
+                    sellerPhones.forEach(phone => notifications.push(pushUserNotification(phone, 'Order / Return / Refund Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status')));
+                    if (!sellerPhones.length) console.warn('Seller notification not sent: seller phone could not be resolved for order', id);
+                    return Promise.all(notifications);
+                  })
                   .then(loadAdminPanel).catch(e => alert('Order update nahi hua: ' + e.message));
             }).catch(e => alert('Order status check nahi hua: ' + e.message));
         }
