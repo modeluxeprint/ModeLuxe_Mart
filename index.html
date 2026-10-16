@@ -316,6 +316,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">Customers / Customer Order History <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminCustomersList" class="space-y-2 text-xs mt-3"></div></details>
             <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">Product Moderation / Stock <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminProductsList" class="space-y-2 text-xs mt-3"></div></details>
             <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">All Orders, Returns & Refund Requests <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminOrdersList" class="space-y-2 text-xs mt-3"></div></details>
+            <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">Cancelled Orders <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminCancelledOrdersList" class="space-y-2 text-xs mt-3"></div></details>
             <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">Customer Support / Complaints <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminTicketsList" class="space-y-2 text-xs mt-3"></div></details>
             <details class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]"><summary class="font-bold text-amber-400 mb-1 cursor-pointer">Withdrawal / Payout Requests <span class="text-gray-400 text-xs font-normal">· Click to open</span></summary><div id="adminPayoutsList" class="space-y-2 text-xs mt-3"></div></details>
             <div class="bg-[#0b2920] p-4 rounded-2xl border border-[#133e31]">
@@ -859,39 +860,71 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 document.getElementById('adminCommissionInput').value = marketplaceSettings.commissionPercent;
                 document.getElementById('adminDeliveryFeeInput').value = marketplaceSettings.deliveryFee;
                 document.getElementById('adminFreeDeliveryInput').value = marketplaceSettings.freeDeliveryAbove;
-                document.getElementById('adminSellersList').innerHTML = filteredSellers.length ? filteredSellers.map(([phone,a]) => `<div class="bg-[#133e31] p-3 rounded-lg flex flex-wrap justify-between gap-2"><div><b>${escapeHTML(a.name || 'Seller')}</b><p>${escapeHTML(phone)} · Status: ${escapeHTML(a.status || 'pending')}</p><p>PAN/KYC: ${escapeHTML(a.pan || 'Not provided')} · Shop: ${escapeHTML(a.shopName || 'Not provided')}</p></div><div class="flex gap-2"><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','approved')" class="bg-green-700 px-3 py-2 rounded">Approve</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','rejected')" class="bg-red-700 px-3 py-2 rounded">Reject</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','suspended')" class="bg-gray-700 px-3 py-2 rounded">Suspend</button></div></div>`).join('') : '<p>No seller applications yet.</p>';
-                document.getElementById('adminProductsList').innerHTML = filteredProducts.length ? filteredProducts.map(([id,p]) => `<div class="bg-[#133e31] p-3 rounded-lg flex gap-3 items-center"><img src="${escapeHTML(p.img || '')}" class="w-12 h-12 object-cover rounded" onerror="this.style.display='none'"><div class="flex-1"><b>${escapeHTML(p.name || 'Product')}</b><p>₹${Number(p.price||0)} · Stock ${Number(p.stock ?? 0)} · ${escapeHTML(p.sellerName || p.sellerPhone || 'Seller')}</p><p>Status: ${escapeHTML(p.moderationStatus || 'active')}</p></div><div class="flex flex-col gap-1"><button onclick="moderateProduct('${id}','active')" class="bg-green-700 px-2 py-1 rounded">Approve/Show</button><button onclick="moderateProduct('${id}','hidden')" class="bg-yellow-700 px-2 py-1 rounded">Hide</button><button onclick="moderateProduct('${id}','rejected')" class="bg-red-700 px-2 py-1 rounded">Reject</button></div></div>`).join('') : '<p>No products for this selection.</p>';
-                document.getElementById('adminOrdersList').innerHTML = filteredOrders.length ? filteredOrders.slice().reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button onclick="adminSetOrderStatus('${id}','Cancelled')" class="bg-red-800 px-2 py-1 rounded">Cancel</button><button onclick="adminSetOrderStatus('${id}','Return Approved')" class="bg-amber-700 px-2 py-1 rounded">Approve Return</button><button onclick="adminSetOrderStatus('${id}','Refund Pending')" class="bg-blue-700 px-2 py-1 rounded">Mark Refund Pending</button></div></div>`).join('') : '<p>No orders for this selection.</p>';
+                document.getElementById('adminSellersList').innerHTML = filteredSellers.length ? filteredSellers.map(([phone,a]) => { const st=String(a.status||'pending').toLowerCase(); const locked=st!=='pending' && st!==''; const approved=st==='approved'; const rejected=st==='rejected'; const suspended=st==='suspended'; return `<div class="bg-[#133e31] p-3 rounded-lg flex flex-wrap justify-between gap-2"><div><b>${escapeHTML(a.name || 'Seller')}</b><p>${escapeHTML(phone)} · Status: ${escapeHTML(a.status || 'pending')}</p><p>PAN/KYC: ${escapeHTML(a.pan || 'Not provided')} · Shop: ${escapeHTML(a.shopName || 'Not provided')}</p></div><div class="flex gap-2"><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','approved')" class="${approved?'bg-green-500 ring-2 ring-white font-extrabold':'bg-green-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${approved?'✓ Approved':'Approve'}</button><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','rejected')" class="${rejected?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${rejected?'✓ Rejected':'Reject'}</button><button ${locked?'disabled':''} onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','suspended')" class="${suspended?'bg-gray-500 ring-2 ring-white font-extrabold':'bg-gray-700'} px-3 py-2 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${suspended?'✓ Suspended':'Suspend'}</button></div></div>`; }).join('') : '<p>No seller applications yet.</p>';
+                document.getElementById('adminProductsList').innerHTML = filteredProducts.length ? filteredProducts.map(([id,p]) => { const st=String(p.moderationStatus||'active').toLowerCase(); const locked=!!p.adminModerationLocked; return `<div class="bg-[#133e31] p-3 rounded-lg flex gap-3 items-center"><img src="${escapeHTML(p.img || '')}" class="w-12 h-12 object-cover rounded" onerror="this.style.display='none'"><div class="flex-1"><b>${escapeHTML(p.name || 'Product')}</b><p>₹${Number(p.price||0)} · Stock ${Number(p.stock ?? 0)} · ${escapeHTML(p.sellerName || p.sellerPhone || 'Seller')}</p><p>Status: ${escapeHTML(p.moderationStatus || 'active')}</p></div><div class="flex flex-col gap-1"><button ${locked?'disabled':''} onclick="moderateProduct('${id}','active')" class="${st==='active'?'bg-green-500 ring-2 ring-white font-extrabold':'bg-green-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='active'?'✓ Approved/Shown':'Approve/Show'}</button><button ${locked?'disabled':''} onclick="moderateProduct('${id}','hidden')" class="${st==='hidden'?'bg-yellow-500 ring-2 ring-white font-extrabold':'bg-yellow-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='hidden'?'✓ Hidden':'Hide'}</button><button ${locked?'disabled':''} onclick="moderateProduct('${id}','rejected')" class="${st==='rejected'?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">${st==='rejected'?'✓ Rejected':'Reject'}</button></div></div>`; }).join('') : '<p>No products for this selection.</p>';
+                const cancelledOrders = filteredOrders.filter(([id,o]) => String(o.status||'').toLowerCase()==='cancelled'); const activeAdminOrders = filteredOrders.filter(([id,o]) => String(o.status||'').toLowerCase()!=='cancelled'); document.getElementById('adminOrdersList').innerHTML = activeAdminOrders.length ? activeAdminOrders.slice().reverse().map(([id,o]) => { const locked=!!o.adminStatusLocked || ['return approved','refund pending'].includes(String(o.status||'').toLowerCase()); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Cancelled')" class="${String(o.status||'').toLowerCase()==='cancelled'?'bg-red-500 ring-2 ring-white font-extrabold':'bg-red-800'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Cancel</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Return Approved')" class="${String(o.status||'').toLowerCase()==='return approved'?'bg-amber-500 ring-2 ring-white font-extrabold':'bg-amber-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Approve Return</button><button ${locked?'disabled':''} onclick="adminSetOrderStatus('${id}','Refund Pending')" class="${String(o.status||'').toLowerCase()==='refund pending'?'bg-blue-500 ring-2 ring-white font-extrabold':'bg-blue-700'} px-2 py-1 rounded ${locked?'opacity-70 cursor-not-allowed':''}">Mark Refund Pending</button></div></div>`; }).join('') : '<p>No active orders for this selection.</p>'; document.getElementById('adminCancelledOrdersList').innerHTML = cancelledOrders.length ? cancelledOrders.slice().reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: <strong class="text-red-300">Cancelled</strong> · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p></div>`).join('') : '<p>No cancelled orders for this selection.</p>';
                 document.getElementById('adminPayoutsList').innerHTML = filteredPayouts.length ? filteredPayouts.map(([id,r]) => { const st = String(r.status || 'pending').toLowerCase(); const approved = st === 'approved' || st === 'approve'; const paid = st === 'paid' || st === 'completed'; const rejected = st.includes('reject') || st.includes('declin') || st.includes('cancel'); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(r.role || 'Payout')} · ₹${Number(r.requestedAmount || r.amount || r.grossAmount || 0)}</b><p>${escapeHTML(r.phone || r.userPhone || '')} · <strong>${escapeHTML(r.status || 'pending')}</strong></p><div class="flex flex-wrap gap-2 mt-2"><button type="button" onclick="setPayoutStatus('${id}','approved',this)" class="${approved ? 'bg-green-500 ring-2 ring-white font-extrabold' : 'bg-green-700'} px-3 py-1 rounded">${approved ? '✓ Approved' : 'Approve'}</button><button type="button" onclick="setPayoutStatus('${id}','paid',this)" class="${paid ? 'bg-blue-500 ring-2 ring-white font-extrabold' : 'bg-blue-700'} px-3 py-1 rounded">${paid ? '✓ Paid' : 'Mark Paid'}</button><button type="button" onclick="setPayoutStatus('${id}','rejected',this)" class="${rejected ? 'bg-red-500 ring-2 ring-white font-extrabold' : 'bg-red-700'} px-3 py-1 rounded">${rejected ? '✓ Rejected' : 'Reject'}</button></div></div>`; }).join('') : '<p>No payout requests for this selection (or existing requests use another database path).</p>';
             }).catch(err => alert('Admin data load nahi hua: ' + err.message + '. Firebase Rules check karein.'));
+        }
+        function pushUserNotification(phone, title, message, kind) {
+            const target = String(phone || '').trim();
+            if (!target) return Promise.resolve();
+            const ref = db.ref('userNotifications/' + target).push();
+            return ref.set({ title: String(title || 'Update'), message: String(message || ''), kind: String(kind || 'status'), createdAt: new Date().toISOString(), read: false }).catch(error => { console.error('Notification could not be saved; check Firebase Database Rules:', error); return null; });
         }
         function setSellerApplicationStatus(phoneEncoded, status) {
             if (!isAdmin()) return alert('Admin access required.');
             const phone = decodeURIComponent(phoneEncoded);
-            db.ref('sellerApplications/' + phone).update({status, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
-              .then(loadAdminPanel).catch(e => alert('Seller status update nahi hua: ' + e.message));
+            return db.ref('sellerApplications/' + phone).once('value').then(snap => {
+                const current = snap.val() || {};
+                if (String(current.status || 'pending').toLowerCase() !== 'pending') return alert('Is application ka status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                return db.ref('sellerApplications/' + phone).update({status, statusLocked: true, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+                  .then(() => pushUserNotification(phone, 'Seller Application Update', 'Aapki seller application ka status: ' + status + '.', 'seller-application'))
+                  .then(loadAdminPanel).catch(e => alert('Seller status update nahi hua: ' + e.message));
+            }).catch(e => alert('Seller status check nahi hua: ' + e.message));
         }
         function moderateProduct(id, status) {
             if (!isAdmin()) return alert('Admin access required.');
-            db.ref('products/' + id).update({moderationStatus: status, active: status === 'active', reviewedAt: new Date().toISOString()})
-              .then(loadAdminPanel).catch(e => alert('Product update nahi hua: ' + e.message));
+            return db.ref('products/' + id).once('value').then(snap => {
+                const current = snap.val() || {};
+                if (current.adminModerationLocked) return alert('Is product ka moderation status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                return db.ref('products/' + id).update({moderationStatus: status, active: status === 'active', adminModerationLocked: true, reviewedAt: new Date().toISOString()})
+                  .then(() => pushUserNotification(current.sellerPhone, 'Product Moderation Update', (current.name || 'Aapke product') + ' ka status: ' + status + '.', 'product-moderation'))
+                  .then(loadAdminPanel).catch(e => alert('Product update nahi hua: ' + e.message));
+            }).catch(e => alert('Product status check nahi hua: ' + e.message));
         }
         function adminSetOrderStatus(id, status) {
             if (!isAdmin()) return alert('Admin access required.');
-            db.ref('orders/' + id).update({status, adminUpdatedAt: new Date().toISOString()})
-              .then(loadAdminPanel).catch(e => alert('Order update nahi hua: ' + e.message));
+            return db.ref('orders/' + id).once('value').then(snap => {
+                const current = snap.val() || {};
+                if (current.adminStatusLocked) return alert('Is order/return/refund ka status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                const update = {status, adminStatusLocked: true, adminUpdatedAt: new Date().toISOString(), adminUpdatedBy: currentPhone()};
+                return db.ref('orders/' + id).update(update)
+                  .then(() => Promise.all([pushUserNotification(current.customerPhone, 'Order / Return / Refund Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status'), pushUserNotification(current.sellerPhone, 'Order Update', 'Order #' + id + ' ka status: ' + status + '.', 'order-status')]))
+                  .then(loadAdminPanel).catch(e => alert('Order update nahi hua: ' + e.message));
+            }).catch(e => alert('Order status check nahi hua: ' + e.message));
         }
         function setPayoutStatus(id, status, button) {
             if (!isAdmin()) return alert('Admin access required.');
-            if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = 'Saving…'; button.classList.add('opacity-70'); }
-            db.ref('withdrawalRequests/' + id).update({status, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
-              .then(() => loadAdminPanel())
-              .catch(e => { alert('Payout update nahi hua: ' + e.message); if (button) { button.disabled = false; button.textContent = button.dataset.originalText || button.textContent; button.classList.remove('opacity-70'); } });
+            return db.ref('withdrawalRequests/' + id).once('value').then(snap => {
+                const current = snap.val() || {};
+                if (current.statusLocked || (current.reviewedAt && String(current.status || '').toLowerCase() !== 'pending review' && String(current.status || '').toLowerCase() !== 'pending')) return alert('Is payout request ka status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = 'Saving…'; button.classList.add('opacity-70'); }
+                return db.ref('withdrawalRequests/' + id).update({status, statusLocked: true, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+                  .then(() => pushUserNotification(current.userPhone || current.phone, 'Withdrawal Request Update', 'Aapki withdrawal request ka status: ' + status + '.', 'payout'))
+                  .then(() => loadAdminPanel())
+                  .catch(e => { alert('Payout update nahi hua: ' + e.message); if (button) { button.disabled = false; button.textContent = button.dataset.originalText || button.textContent; button.classList.remove('opacity-70'); } });
+            }).catch(e => alert('Payout status check nahi hua: ' + e.message));
         }
         function setTicketStatus(id, status) {
             if (!isAdmin()) return alert('Admin access required.');
-            db.ref('supportTickets/' + id).update({status, updatedAt: new Date().toISOString(), reviewedBy: currentPhone()})
-              .then(loadAdminPanel).catch(e => alert('Ticket status update nahi hua: ' + e.message));
+            return db.ref('supportTickets/' + id).once('value').then(snap => {
+                const current = snap.val() || {};
+                if (current.statusLocked || !['open','pending'].includes(String(current.status || 'open').toLowerCase())) return alert('Is support ticket ka status pehle hi mark ho chuka hai; ab change nahi hoga.');
+                return db.ref('supportTickets/' + id).update({status, statusLocked: true, updatedAt: new Date().toISOString(), reviewedBy: currentPhone()})
+                  .then(() => pushUserNotification(current.customerPhone, 'Support Ticket Update', 'Aapki complaint ka status: ' + status + '.', 'support'))
+                  .then(loadAdminPanel).catch(e => alert('Ticket status update nahi hua: ' + e.message));
+            }).catch(e => alert('Ticket status check nahi hua: ' + e.message));
         }
         function applyMarketplaceSettings() {
             const heading = document.getElementById('mainHeading');
@@ -959,6 +992,16 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         let liveProductRatings = {};
         // Live payout state powers Seller/Delivery bell notifications.
         let liveWithdrawalRequests = {};
+        let liveUserNotifications = {};
+        let activeNotificationPhone = '';
+        function attachUserNotificationListener() {
+            const phone = String(localStorage.getItem('userPhone') || '');
+            if (phone === activeNotificationPhone) return;
+            if (activeNotificationPhone) db.ref('userNotifications/' + activeNotificationPhone).off();
+            activeNotificationPhone = phone; liveUserNotifications = {};
+            if (!phone) { updateBellBadgeCount(); return; }
+            db.ref('userNotifications/' + phone).on('value', snap => { liveUserNotifications = snap.val() || {}; updateBellBadgeCount(); const modal=document.getElementById('notificationsModal'); if (modal && !modal.classList.contains('hidden')) openNotificationsModal(); }, err => console.error('User notifications failed:', err));
+        }
         db.ref('productRatings').on('value', snapshot => {
             liveProductRatings = snapshot.val() || {};
             renderProducts();
@@ -1999,6 +2042,7 @@ function completeVerifiedLogin(role, phone) {
 
         function updateAuthUI() {
             syncHeaderProfileMenuPhoto();
+            attachUserNotificationListener();
             let role = localStorage.getItem('loggedInRole');
             let authSection = document.getElementById('authSection');
             let cartBtnContainer = document.getElementById('headerCartButton');
@@ -2016,7 +2060,7 @@ function completeVerifiedLogin(role, phone) {
                 if (role === 'seller' || role === 'delivery') {
                     cartBtnContainer.classList.add('hidden'); bellIconContainer.classList.remove('hidden'); updateBellBadgeCount();
                 } else {
-                    cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.add('hidden'); updateCartBadge();
+                    cartBtnContainer.classList.remove('hidden'); bellIconContainer.classList.remove('hidden'); updateCartBadge(); updateBellBadgeCount();
                 }
                 document.getElementById('sellerDashboard').classList.toggle('hidden', role !== 'seller');
                 document.getElementById('deliveryDashboard').classList.toggle('hidden', role !== 'delivery');
@@ -2069,6 +2113,7 @@ function updateBellBadgeCount() {
             unreadIds.push('withdrawal:' + id);
         });
     }
+    Object.entries(liveUserNotifications || {}).forEach(([id, n]) => { if (n && !n.read) unreadIds.push('user-notification:' + id); });
     const count = unreadIds.filter(id => !readIds.has(id)).length;
     const badge = document.getElementById('bellBadgeCount');
     if (badge) { badge.innerText = count; badge.classList.toggle('hidden', count === 0); }
@@ -2161,6 +2206,12 @@ function updateBellBadgeCount() {
             });
             html += `</div>`;
         }
+    }
+    const customEntries = Object.entries(liveUserNotifications || {}).filter(([id, n]) => n && !n.read).sort((a,b) => String(b[1].createdAt||'').localeCompare(String(a[1].createdAt||'')));
+    if (customEntries.length) {
+        html += `<div class="border-t border-[#1b4f40] pt-3 mt-3"><h4 class="font-bold text-amber-400 mb-2">Live Status Updates</h4>`;
+        customEntries.forEach(([id, n]) => { html += `<div class="bg-[#133e31] border border-amber-400/20 p-3 rounded-xl text-xs mb-2"><b class="text-amber-300">${escapeHTML(n.title || 'Status Update')}</b><p class="text-gray-200 mt-1">${escapeHTML(n.message || '')}</p><p class="text-gray-400 mt-1">${n.createdAt ? escapeHTML(new Date(n.createdAt).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})) : ''}</p></div>`; openedNotificationIds.push('user-notification:' + id); const phone=String(localStorage.getItem('userPhone')||''); if(phone) db.ref('userNotifications/' + phone + '/' + id).update({read:true, readAt:new Date().toISOString()}).catch(e=>console.error('Notification read mark failed:',e)); });
+        html += `</div>`;
     }
     document.getElementById('newNotificationsList').innerHTML = html;
     document.getElementById('notificationsModal').classList.remove('hidden');
@@ -2770,7 +2821,7 @@ async function updateDeliveryWallet() {
 
     // FIX: Delivered orders will not appear in the active list
     const myProductIds = new Set(getProducts().filter(p => String(p.sellerPhone || '') === String(currentPhone)).map(p => Number(p.id)));
-    const activeOrders = allOrders.filter(o => o.status !== 'Delivered' && (
+    const activeOrders = allOrders.filter(o => !['Delivered','Cancelled'].includes(String(o.status || '')) && (
         Array.isArray(o.items) && o.items.some(item => String(item.sellerPhone || '') === String(currentPhone) || myProductIds.has(Number(item.id)))
     ));
 
@@ -2791,33 +2842,28 @@ async function updateDeliveryWallet() {
                 <p>Payment: ${escapeHTML(o.paymentMethod || 'Unknown')}
                     · ${escapeHTML(o.paymentStatus || 'Not specified')}</p>
 
-                <select
+                ${o.adminStatusLocked ? `<p class="text-amber-300 font-bold">Final status: ${escapeHTML(o.status || 'Updated')}</p>` : `<select
                     onchange="updateOrderStatus(${Number(o.id)}, this.value)"
                     class="bg-[#0b2920] border text-white p-1 rounded">
-
                     <option value="Order Placed" ${o.status === 'Order Placed' ? 'selected' : ''}>Order Placed</option>
                     <option value="Accept Order" ${o.status === 'Accept Order' ? 'selected' : ''}>Accept Order</option>
                     <option value="Packing / Preparing" ${o.status === 'Packing / Preparing' ? 'selected' : ''}>Packing / Preparing</option>
                     <option value="Ready for Delivery" ${o.status === 'Ready for Delivery' ? 'selected' : ''}>Ready for Delivery</option>
-                </select>
+                </select>`}
             </div>
         `;
     });
 
+    const cancelledSellerOrders = allOrders.filter(o => String(o.status || '').toLowerCase() === 'cancelled' && (String(o.sellerPhone || '') === String(currentPhone) || (Array.isArray(o.items) && o.items.some(item => String(item.sellerPhone || '') === String(currentPhone) || myProductIds.has(Number(item.id))))));
     const historyBtnHtml = `
-        <div class="mb-4">
-            <button type="button"
-                onclick="openSellerHistoryModal()"
-                class="bg-amber-400 text-black px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer">
-                <i class="fa-solid fa-history mr-1"></i>
-                View Completed Orders History
-            </button>
+        <div class="mb-4 flex flex-wrap gap-2">
+            <button type="button" onclick="openSellerHistoryModal()" class="bg-amber-400 text-black px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer"><i class="fa-solid fa-history mr-1"></i>View Completed Orders History</button>
+            <button type="button" onclick="document.getElementById('sellerCancelledOrdersBox').classList.toggle('hidden')" class="bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow cursor-pointer">Cancelled Orders (${cancelledSellerOrders.length})</button>
         </div>
+        <div id="sellerCancelledOrdersBox" class="hidden mb-4 bg-[#0b2920] border border-red-500/30 rounded-xl p-3 space-y-2">${cancelledSellerOrders.length ? cancelledSellerOrders.map(o => `<div class="bg-[#133e31] p-3 rounded-lg text-xs"><b>${escapeHTML(o.product || 'Order')}</b><p>Customer: ${escapeHTML(o.customerName || 'Unknown')} (${escapeHTML(o.customerPhone || '')})</p><p class="text-red-300 font-bold">Status: Cancelled</p></div>`).join('') : '<p class="text-xs text-gray-300">No cancelled orders.</p>'}</div>
     `;
 
-    ordersContainer.innerHTML = historyBtnHtml + (
-        html || "<p class='text-xs text-gray-300'>No active orders.</p>"
-    );
+    ordersContainer.innerHTML = historyBtnHtml + (html || "<p class='text-xs text-gray-300'>No active orders.</p>");
     updateSellerWallet();
     loadMyWithdrawalStatuses('seller');
 }
@@ -2913,9 +2959,12 @@ function openSellerHistoryModal() {
 }
 
         function updateOrderStatus(orderId, newStatus) {
-    db.ref('orders/' + orderId).update({
-        status: newStatus
-    }).then(() => {
+    db.ref('orders/' + orderId).once('value').then(snapshot => {
+      const current = snapshot.val() || {};
+      if (current.adminStatusLocked || String(current.status || '').toLowerCase() === 'cancelled') throw new Error('Admin ne is order ka final status mark kar diya hai; ab status change nahi ho sakta.');
+      return db.ref('orders/' + orderId).update({ status: newStatus }).then(() => current);
+    }).then(current => {
+        if (current && current.customerPhone && typeof pushUserNotification === 'function') pushUserNotification(current.customerPhone, 'Order Status Update', 'Aapke order #' + orderId + ' ka status: ' + newStatus + '.', 'order-status').catch(e => console.error('Order notification failed:', e));
         alert("Status updated successfully to: " + newStatus);
 
         // Local orders ko Firebase ke latest data se sync hone do
