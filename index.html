@@ -829,7 +829,7 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
                 document.getElementById('adminSellersList').innerHTML = Object.keys(liveSellerApplications).length ? Object.entries(liveSellerApplications).map(([phone,a]) => `<div class="bg-[#133e31] p-3 rounded-lg flex flex-wrap justify-between gap-2"><div><b>${escapeHTML(a.name || 'Seller')}</b><p>${escapeHTML(phone)} · Status: ${escapeHTML(a.status || 'pending')}</p><p>PAN/KYC: ${escapeHTML(a.pan || 'Not provided')} · Shop: ${escapeHTML(a.shopName || 'Not provided')}</p></div><div class="flex gap-2"><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','approved')" class="bg-green-700 px-3 py-2 rounded">Approve</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','rejected')" class="bg-red-700 px-3 py-2 rounded">Reject</button><button onclick="setSellerApplicationStatus('${encodeURIComponent(phone)}','suspended')" class="bg-gray-700 px-3 py-2 rounded">Suspend</button></div></div>`).join('') : '<p>No seller applications yet.</p>';
                 document.getElementById('adminProductsList').innerHTML = Object.keys(products).length ? Object.entries(products).map(([id,p]) => `<div class="bg-[#133e31] p-3 rounded-lg flex gap-3 items-center"><img src="${escapeHTML(p.img || '')}" class="w-12 h-12 object-cover rounded" onerror="this.style.display='none'"><div class="flex-1"><b>${escapeHTML(p.name || 'Product')}</b><p>₹${Number(p.price||0)} · Stock ${Number(p.stock ?? 0)} · ${escapeHTML(p.sellerName || p.sellerPhone || 'Seller')}</p><p>Status: ${escapeHTML(p.moderationStatus || 'active')}</p></div><div class="flex flex-col gap-1"><button onclick="moderateProduct('${id}','active')" class="bg-green-700 px-2 py-1 rounded">Approve/Show</button><button onclick="moderateProduct('${id}','hidden')" class="bg-yellow-700 px-2 py-1 rounded">Hide</button><button onclick="moderateProduct('${id}','rejected')" class="bg-red-700 px-2 py-1 rounded">Reject</button></div></div>`).join('') : '<p>No products.</p>';
                 document.getElementById('adminOrdersList').innerHTML = Object.keys(orders).length ? Object.entries(orders).reverse().map(([id,o]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>#${escapeHTML(id)} · ${escapeHTML(o.product || 'Order')} · ₹${Number(o.totalAmount||0)}</b><p>Customer: ${escapeHTML(o.customerName||'')} (${escapeHTML(o.customerPhone||'')})</p><p>Status: ${escapeHTML(o.status||'')} · Payment: ${escapeHTML(o.paymentStatus||o.paymentMethod||'')}</p><p>Request: ${escapeHTML(o.returnRequest || o.cancellationRequest || 'None')}</p><div class="flex flex-wrap gap-2 mt-2"><button onclick="adminSetOrderStatus('${id}','Cancelled')" class="bg-red-800 px-2 py-1 rounded">Cancel</button><button onclick="adminSetOrderStatus('${id}','Return Approved')" class="bg-amber-700 px-2 py-1 rounded">Approve Return</button><button onclick="adminSetOrderStatus('${id}','Refund Pending')" class="bg-blue-700 px-2 py-1 rounded">Mark Refund Pending</button></div></div>`).join('') : '<p>No orders.</p>';
-                document.getElementById('adminPayoutsList').innerHTML = Object.keys(livePayoutRequests).length ? Object.entries(livePayoutRequests).map(([id,r]) => `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(r.role || 'Payout')} · ₹${Number(r.requestedAmount || r.amount || r.grossAmount || 0)}</b><p>${escapeHTML(r.phone || r.userPhone || '')} · ${escapeHTML(r.status || 'pending')}</p><div class="flex gap-2 mt-2"><button onclick="setPayoutStatus('${id}','approved')" class="bg-green-700 px-3 py-1 rounded">Approve</button><button onclick="setPayoutStatus('${id}','paid')" class="bg-blue-700 px-3 py-1 rounded">Mark Paid</button><button onclick="setPayoutStatus('${id}','rejected')" class="bg-red-700 px-3 py-1 rounded">Reject</button></div></div>`).join('') : '<p>No payout requests found (or existing requests use another database path).</p>';
+                document.getElementById('adminPayoutsList').innerHTML = Object.keys(livePayoutRequests).length ? Object.entries(livePayoutRequests).map(([id,r]) => { const st = String(r.status || 'pending').toLowerCase(); const approved = st === 'approved' || st === 'approve'; const paid = st === 'paid' || st === 'completed'; const rejected = st.includes('reject') || st.includes('declin') || st.includes('cancel'); return `<div class="bg-[#133e31] p-3 rounded-lg"><b>${escapeHTML(r.role || 'Payout')} · ₹${Number(r.requestedAmount || r.amount || r.grossAmount || 0)}</b><p>${escapeHTML(r.phone || r.userPhone || '')} · <strong>${escapeHTML(r.status || 'pending')}</strong></p><div class="flex flex-wrap gap-2 mt-2"><button type="button" onclick="setPayoutStatus('${id}','approved',this)" class="${approved ? 'bg-green-500 ring-2 ring-white font-extrabold' : 'bg-green-700'} px-3 py-1 rounded">${approved ? '✓ Approved' : 'Approve'}</button><button type="button" onclick="setPayoutStatus('${id}','paid',this)" class="${paid ? 'bg-blue-500 ring-2 ring-white font-extrabold' : 'bg-blue-700'} px-3 py-1 rounded">${paid ? '✓ Paid' : 'Mark Paid'}</button><button type="button" onclick="setPayoutStatus('${id}','rejected',this)" class="${rejected ? 'bg-red-500 ring-2 ring-white font-extrabold' : 'bg-red-700'} px-3 py-1 rounded">${rejected ? '✓ Rejected' : 'Reject'}</button></div></div>`; }).join('') : '<p>No payout requests found (or existing requests use another database path).</p>';
             }).catch(err => alert('Admin data load nahi hua: ' + err.message + '. Firebase Rules check karein.'));
         }
         function setSellerApplicationStatus(phoneEncoded, status) {
@@ -848,10 +848,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
             db.ref('orders/' + id).update({status, adminUpdatedAt: new Date().toISOString()})
               .then(loadAdminPanel).catch(e => alert('Order update nahi hua: ' + e.message));
         }
-        function setPayoutStatus(id, status) {
+        function setPayoutStatus(id, status, button) {
             if (!isAdmin()) return alert('Admin access required.');
+            if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = 'Saving…'; button.classList.add('opacity-70'); }
             db.ref('withdrawalRequests/' + id).update({status, reviewedAt: new Date().toISOString(), reviewedBy: currentPhone()})
-              .then(loadAdminPanel).catch(e => alert('Payout update nahi hua: ' + e.message));
+              .then(() => loadAdminPanel())
+              .catch(e => { alert('Payout update nahi hua: ' + e.message); if (button) { button.disabled = false; button.textContent = button.dataset.originalText || button.textContent; button.classList.remove('opacity-70'); } });
         }
         function setTicketStatus(id, status) {
             if (!isAdmin()) return alert('Admin access required.');
@@ -922,10 +924,21 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
         let pendingLoginRole = null, pendingLoginPhone = null, activeWithdrawRole = null;
         let liveCloudProducts = [];
         let liveProductRatings = {};
+        // Live payout state powers Seller/Delivery bell notifications.
+        let liveWithdrawalRequests = {};
         db.ref('productRatings').on('value', snapshot => {
             liveProductRatings = snapshot.val() || {};
             renderProducts();
         });
+        db.ref('withdrawalRequests').on('value', snapshot => {
+            liveWithdrawalRequests = snapshot.val() || {};
+            updateBellBadgeCount();
+            const modal = document.getElementById('notificationsModal');
+            if (modal && !modal.classList.contains('hidden')) openNotificationsModal();
+            const role = localStorage.getItem('loggedInRole');
+            if (role === 'seller') loadMyWithdrawalStatuses('seller');
+            else if (role === 'delivery') loadMyWithdrawalStatuses('delivery');
+        }, error => console.error('Firebase withdrawal notifications failed:', error));
 
         db.ref('products').on('value', (snapshot) => {
             let data = snapshot.val();
@@ -1996,24 +2009,25 @@ function completeVerifiedLogin(role, phone) {
 
         function updateBellBadgeCount() {
     const role = localStorage.getItem('loggedInRole');
+    const phone = String(localStorage.getItem('userPhone') || '');
     const orders = JSON.parse(localStorage.getItem('myOrders')) || [];
 
     let count = 0;
+    if (role === 'seller') count = orders.filter(o => o.status === 'Order Placed').length;
+    else if (role === 'delivery') count = orders.filter(o => !o.deliveryBoy && o.status === 'Ready for Delivery').length;
 
-    if (role === 'seller') {
-        count = orders.filter(o => o.status === 'Order Placed').length;
-    } else if (role === 'delivery') {
-        count = orders.filter(
-            o => !o.deliveryBoy && o.status === 'Ready for Delivery'
-        ).length;
+    if ((role === 'seller' || role === 'delivery') && phone) {
+        count += Object.values(liveWithdrawalRequests || {}).filter(r => {
+            if (!r || !r.reviewedAt) return false;
+            return String(r.role || '').toLowerCase() === role &&
+                String(r.userPhone || r.phone || '') === phone &&
+                String(r.status || '').toLowerCase() !== 'pending review' &&
+                String(r.status || '').toLowerCase() !== 'pending';
+        }).length;
     }
 
     const badge = document.getElementById('bellBadgeCount');
-
-    if (badge) {
-        badge.innerText = count;
-        badge.classList.toggle('hidden', count === 0);
-    }
+    if (badge) { badge.innerText = count; badge.classList.toggle('hidden', count === 0); }
 }
 
         function openNotificationsModal() {
@@ -2080,6 +2094,28 @@ function completeVerifiedLogin(role, phone) {
         });
     }
 
+    // Withdrawal status updates are shown live in the same bell for the matching role and phone.
+    const phone = String(localStorage.getItem('userPhone') || '');
+    if ((role === 'seller' || role === 'delivery') && phone) {
+        const payoutUpdates = Object.entries(liveWithdrawalRequests || {})
+            .filter(([id, r]) => r && r.reviewedAt &&
+                String(r.role || '').toLowerCase() === role &&
+                String(r.userPhone || r.phone || '') === phone &&
+                !['pending', 'pending review'].includes(String(r.status || '').toLowerCase()))
+            .sort((a, b) => String(b[1].reviewedAt || '').localeCompare(String(a[1].reviewedAt || '')));
+        if (payoutUpdates.length) {
+            html += `<div class="border-t border-[#1b4f40] pt-3 mt-3"><h4 class="font-bold text-amber-400 mb-2"><i class="fa-solid fa-money-bill-transfer mr-1"></i> Withdrawal Request Updates</h4>`;
+            payoutUpdates.forEach(([id, r]) => {
+                const status = String(r.status || 'Updated');
+                const statusLower = status.toLowerCase();
+                const statusColor = statusLower.includes('paid') ? 'text-green-300' : statusLower.includes('approv') ? 'text-blue-300' : statusLower.includes('reject') || statusLower.includes('declin') || statusLower.includes('cancel') ? 'text-red-300' : 'text-amber-300';
+                const amount = Number(r.requestedAmount || r.amount || r.grossAmount || 0);
+                const updatedAt = r.reviewedAt ? new Date(r.reviewedAt).toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'}) : '';
+                html += `<div class="bg-[#133e31] border border-[#1b4f40] p-3 rounded-xl text-xs space-y-1.5 mb-2"><div class="flex justify-between gap-2"><b>Withdrawal · ₹${amount.toFixed(2)}</b><b class="${statusColor}">${escapeHTML(status)}</b></div><p class="text-gray-300">Admin ne aapki withdrawal request ka status update kiya hai.</p><p class="text-gray-400">${escapeHTML(updatedAt)}</p></div>`;
+            });
+            html += `</div>`;
+        }
+    }
     document.getElementById('newNotificationsList').innerHTML = html;
     document.getElementById('notificationsModal').classList.remove('hidden');
 }
