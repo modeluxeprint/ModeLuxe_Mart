@@ -161,17 +161,12 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 /* Header: keep ModeLuxe left and move action buttons to the right */
 @media (min-width: 700px) {
   header > div {
-    width: 100% !important;
-    max-width: none !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
+    justify-content: flex-start !important;
   }
 
   header > div > div:first-child {
-    flex: 0 1 auto !important;
-    margin-right: auto !important;
+    flex: 1 1 auto !important;
+    margin-right: 0 !important;
     min-width: 0 !important;
   }
 
