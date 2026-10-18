@@ -158,6 +158,31 @@ button.ml-cat:focus-visible .ml-cat-icon{outline:3px solid #fff;outline-offset:3
 .ml-header-location-area>.ml-quick-badge span,.ml-header-location-area>.ml-quick-badge strong{display:inline!important;margin:0!important;font-size:13px!important;font-weight:800!important}
 .ml-header-location-area>.ml-quick-badge strong{margin-left:4px!important}
 @media(max-width:430px){.ml-brand-lockup{flex:0 1 220px!important}.ml-admin-shortcut{flex:0 0 108px!important;width:108px!important;margin-left:-20px!important}}
+/* Header: keep ModeLuxe left and move action buttons to the right */
+@media (min-width: 700px) {
+  header > div {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  header > div > div:first-child {
+    flex: 0 1 auto !important;
+    margin-right: auto !important;
+    min-width: 0 !important;
+  }
+
+  header > div > div:nth-child(2) {
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+}
 </style>
 
 </head>
