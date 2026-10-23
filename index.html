@@ -55,7 +55,7 @@
 <body>
 <header class="top"><div class="topinner">
   <div class="logo">ModeLuxe <span>Mart</span></div>
-  <div class="search"><input id="search" type="search" placeholder="प्रोडक्ट खोजें…" aria-label="प्रोडक्ट खोजें"></div>
+  <div class="search"><input id="search" type="search" placeholder="Search products…" aria-label="Search products"></div>
   <button class="secondary" id="cartTop" onclick="showSection('cart')">🛒 <span id="cartCount">0</span></button>
 </div></header>
 <main class="wrap">
@@ -110,7 +110,7 @@
           <option value="RAZORPAY">Online Payment (Razorpay · UPI / Card)</option>
         </select>
       </div>
-      <div class="field full"><button type="submit">ऑर्डर ड्राफ्ट सेव करें</button></div>
+      <div class="field full"><button type="submit">Place Order</button></div>
     </form>
     <div id="orderMsg" aria-live="polite"></div>
   </section>
@@ -122,27 +122,27 @@
       <button class="accounttile" onclick="showSection('myorders')">📦<strong>My Orders</strong><small class="muted">ऑर्डर और ट्रैकिंग</small></button>
     </div>
     <div class="panel" style="margin:12px 0;padding:14px;background:#06271f">
-      <h3 style="margin:0 0 8px">📱 मोबाइल OTP लॉगिन</h3>
-      <div id="authStatus" class="notice">लॉगिन नहीं है। अपने मोबाइल पर असली OTP मँगाएँ।</div>
+      <h3 id="otpLoginTitle" style="margin:0 0 8px">📱 Mobile OTP Login</h3>
+      <div id="authStatus" class="notice">Not logged in. Request an SMS OTP to your mobile.</div>
       <div id="otpLoginFields">
-        <div class="field"><label for="loginPhone">मोबाइल नंबर (भारत)</label><input id="loginPhone" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="10 अंकों का मोबाइल नंबर"></div>
+        <div class="field"><label id="loginPhoneLabel" for="loginPhone">Mobile number (India)</label><input id="loginPhone" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="10-digit mobile number"></div>
         <div id="recaptcha-container" style="margin:12px 0"></div>
-        <button id="sendOtpBtn" type="button" style="width:100%;margin-top:8px" onclick="sendLoginOTP()">OTP भेजें</button>
+        <button id="sendOtpBtn" type="button" style="width:100%;margin-top:8px" onclick="sendLoginOTP()">Send OTP</button>
         <div id="otpVerifyArea" class="hidden" style="margin-top:12px">
-          <div class="field"><label for="loginOtp">SMS से मिला OTP</label><input id="loginOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 अंकों का OTP"></div>
-          <button type="button" style="width:100%;margin-top:8px" id="verifyOtpBtn" onclick="verifyLoginOTP()">OTP सत्यापित करके लॉगिन करें</button>
+          <div class="field"><label id="loginOtpLabel" for="loginOtp">OTP received by SMS</label><input id="loginOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit OTP"></div>
+          <button type="button" style="width:100%;margin-top:8px" id="verifyOtpBtn" onclick="verifyLoginOTP()">Verify OTP & Log In</button>
         </div>
       </div>
-      <button id="logoutBtn" type="button" class="secondary hidden" style="width:100%;margin-top:8px" onclick="logoutPhoneUser()">लॉगआउट</button>
+      <button id="logoutBtn" type="button" class="secondary hidden" style="width:100%;margin-top:8px" onclick="logoutPhoneUser()">Logout</button>
       <div id="authMsg" aria-live="polite"></div>
     </div>
     <div class="panel" style="margin:12px 0;padding:12px;background:#06271f">
-      <label for="languageSelect" style="display:block;margin-bottom:8px">🌐 भाषा / Language</label>
+      <label for="languageSelect" style="display:block;margin-bottom:8px">🌐 Language</label>
       <select id="languageSelect" onchange="setLanguage(this.value)" style="width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#001812;color:white">
         <option value="hi">हिन्दी (Hindi)</option>
         <option value="en">English</option>
       </select>
-      <small class="muted" id="languageHint">अपनी पसंद की भाषा चुनें।</small>
+      <small class="muted" id="languageHint">Choose your preferred language.</small>
     </div>
     <div class="notice" id="accountHint">अपनी प्रोफाइल सेटिंग और ऑर्डर देखने के लिए विकल्प चुनें।</div>
     <div class="contactbox">
@@ -312,12 +312,12 @@ function showAuthState(user){
   const saved=localStorage.getItem("mlm_sms_verified_phone");
   const phone=(user&&user.phoneNumber)||(saved?"+91"+saved:"");
   if(phone){
-    status.className="notice success";status.textContent="लॉगिन है: "+phone;
+    status.className="notice success";status.textContent=(localStorage.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
     const digits=phone.replace(/^\+91/,"").replace(/\D/g,"");
     if(digits.length===10){const p=load("mlm_profile",{name:"",phone:"",address:"",pin:""});p.phone=digits;localStorage.setItem("mlm_profile",JSON.stringify(p));if($("profilePhone"))$("profilePhone").value=digits;}
   }else{
-    status.className="notice";status.textContent="लॉगिन नहीं है। अपने मोबाइल पर असली SMS OTP मँगाएँ।";
+    status.className="notice";status.textContent=localStorage.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
     fields.classList.remove("hidden");logout.classList.add("hidden");
   }
 }
@@ -585,7 +585,7 @@ function setLanguage(lang){
   document.documentElement.lang = lang;
   const en=lang==="en";
   const t=en?{
-    account:"👤 My Account",profile:"My Profile",orders:"My Orders",
+    account:"👤 मेरा अकाउंट",profile:"मेरी प्रोफाइल",orders:"मेरे ऑर्डर",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 मोबाइल OTP लॉगिन",loggedIn:"लॉगिन है:",notLoggedIn:"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।",phoneIndia:"मोबाइल नंबर (भारत)",phonePlaceholder:"10 अंकों का मोबाइल नंबर",sendOtp:"OTP भेजें",otpSms:"SMS से मिला OTP",otpPlaceholder:"6 अंकों का OTP",verifyOtp:"OTP सत्यापित करके लॉगिन करें",logout:"लॉगआउट",languageLabel:"🌐 भाषा / Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
     profileHint:"Name, mobile and address",ordersHint:"Orders and tracking",
     languageHint:"Choose your preferred language.",accountHint:"Choose an option to manage your profile or view orders.",
     profileTitle:"⚙️ My Profile",fullName:"Full name",mobile:"Mobile number",defaultAddress:"Default address",pin:"PIN Code",saveProfile:"Save Profile",
@@ -635,6 +635,13 @@ function setLanguage(lang){
   };
   const setText=(selector,value)=>{const el=document.querySelector(selector);if(el)el.textContent=value};
   setText("#accountSection h2",t.account);
+  const searchInput=document.getElementById("search");if(searchInput){searchInput.placeholder=t.searchPlaceholder;searchInput.setAttribute("aria-label",t.searchPlaceholder.replace("…",""));}
+  setText("#otpLoginTitle",t.otpTitle);setText("#loginPhoneLabel",t.phoneIndia);setText("#sendOtpBtn",t.sendOtp);setText("#loginOtpLabel",t.otpSms);setText("#verifyOtpBtn",t.verifyOtp);setText("#logoutBtn",t.logout);setText('label[for="languageSelect"]',t.languageLabel);
+  const phoneInput=document.getElementById("loginPhone");if(phoneInput)phoneInput.placeholder=t.phonePlaceholder;
+  const otpInput=document.getElementById("loginOtp");if(otpInput)otpInput.placeholder=t.otpPlaceholder;
+  const orderSubmit=document.querySelector('#orderForm button[type="submit"]');if(orderSubmit)orderSubmit.textContent=t.placeOrder;
+  const paymentSelect=document.getElementById("payment");if(paymentSelect&&paymentSelect.options.length>1)paymentSelect.options[1].textContent=t.paymentOption;
+  showAuthState(null);
   const tiles=document.querySelectorAll("#accountSection .accounttile");
   if(tiles[0]){tiles[0].querySelector("strong").textContent=t.profile;tiles[0].querySelector("small").textContent=t.profileHint}
   if(tiles[1]){tiles[1].querySelector("strong").textContent=t.orders;tiles[1].querySelector("small").textContent=t.ordersHint}
