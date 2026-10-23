@@ -87,8 +87,39 @@ auth.onAuthStateChanged(user=>{
     updateUnitChoices();
   }
 });
-async function sendOTP(){const phone=$('phone').value.trim(),password=$('adminPassword').value;if(phone!==ADMIN_PHONE){setMsg('यह Admin मोबाइल नंबर अधिकृत नहीं है।');addNotification('Login blocked','अनधिकृत Admin मोबाइल नंबर से प्रयास हुआ।','error');return;}if(password.length<12){setMsg('Admin Password कम-से-कम 12 अक्षरों का होना चाहिए।');addNotification('Login validation','Admin password 12 अक्षरों से छोटा था।','error');return;}if(ADMIN_WORKER.includes('REPLACE_WITH')){setMsg('पहले Cloudflare पर Admin Worker deploy करें और उसका URL यहाँ डालें।');addNotification('Worker URL missing','Admin Worker URL सेट नहीं है।','error');return;}try{$('sendBtn').disabled=true;setMsg('Password की जाँच और OTP भेजा जा रहा है…');const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password})});const j=await r.json();if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||'OTP send nahi hua');pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');setMsg('Password verified. OTP SMS में चेक करें।');addNotification('OTP request sent','Admin password verify हुआ और OTP request स्वीकार हुई।','success');}catch(e){setMsg('Login error: '+e.message);addNotification('OTP request failed',e.message||'OTP नहीं भेजा जा सका।','error');}finally{$('sendBtn').disabled=false;}}
-async function verifyOTP(){const phone=$('phone').value.trim(),otp=$('otp').value.trim();if(phone!==pendingPhone||!requestId){setMsg('पहले Password सत्यापित करके OTP भेजें।');return;}if(!/^\d{6}$/.test(otp)){setMsg('6 अंकों का OTP डालें।');addNotification('OTP validation failed','छह अंकों का OTP नहीं डाला गया।','error');return;}try{$('verifyBtn').disabled=true;setMsg('OTP सत्यापित हो रहा है…');const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp})});const j=await r.json();if(!r.ok||j.success!==true||j.verified!==true||!j.customToken)throw Error(j.message||'OTP गलत या expire हो गया');await auth.signInWithCustomToken(j.customToken);signedInPhone=phone;$('adminPassword').value='';$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');addNotification('OTP verified','OTP सत्यापित हुआ; device password/passkey check बाकी है।','success');showDeviceLockAfterOtp();}catch(e){setMsg('Login fail: '+e.message);$('loginPanel').classList.remove('hidden');addNotification('OTP verification failed',e.message||'OTP verify नहीं हुआ।','error');}finally{$('verifyBtn').disabled=false;}}
+async function sendOTP(){
+  const phone=$('phone').value.trim(),password=$('adminPassword').value;
+  if(phone!==ADMIN_PHONE){setMsg('यह Admin मोबाइल नंबर अधिकृत नहीं है।');addNotification('Login blocked','अनधिकृत Admin मोबाइल नंबर से प्रयास हुआ।','error');return;}
+  if(password.length<12){setMsg('Admin Password कम-से-कम 12 अक्षरों का होना चाहिए।');addNotification('Login validation','Admin password 12 अक्षरों से छोटा था।','error');return;}
+  if(ADMIN_WORKER.includes('REPLACE_WITH')){setMsg('पहले Cloudflare पर Admin Worker deploy करें और उसका URL यहाँ डालें।');addNotification('Worker URL missing','Admin Worker URL सेट नहीं है।','error');return;}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  try{
+    $('sendBtn').disabled=true;setMsg('Password की जाँच और OTP भेजा जा रहा है…');
+    const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password}),signal:controller.signal});
+    const raw=await r.text();let j={};try{j=JSON.parse(raw)}catch{}
+    if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||('Worker response error (HTTP '+r.status+').'));
+    pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');setMsg('OTP भेज दिया गया है। SMS में मिला नया OTP डालें।');addNotification('OTP request sent','Admin password verify हुआ और OTP request स्वीकार हुई।','success');
+  }catch(e){
+    const msg=e.name==='AbortError'?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया। Worker/OTP provider जाँचें और फिर प्रयास करें।':(e.message||'OTP भेजने में समस्या हुई।');
+    setMsg('Login error: '+msg);addNotification('OTP request failed',msg,'error');
+  }finally{clearTimeout(timer);$('sendBtn').disabled=false;}
+}
+async function verifyOTP(){
+  const phone=$('phone').value.trim(),otp=$('otp').value.trim();
+  if(phone!==pendingPhone||!requestId){setMsg('पहले Password सत्यापित करके नया OTP भेजें।');return;}
+  if(!/^\d{6}$/.test(otp)){setMsg('6 अंकों का OTP डालें।');addNotification('OTP validation failed','छह अंकों का OTP नहीं डाला गया।','error');return;}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  try{
+    $('verifyBtn').disabled=true;setMsg('OTP सत्यापित हो रहा है… 20 सेकंड तक प्रतीक्षा करें।');
+    const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp}),signal:controller.signal});
+    const raw=await r.text();let j={};try{j=JSON.parse(raw)}catch{}
+    if(!r.ok||j.success!==true||j.verified!==true||!j.customToken)throw Error(j.message||('OTP verify response error (HTTP '+r.status+'). OTP expire ho sakta hai; naya OTP bhejein.'));
+    await auth.signInWithCustomToken(j.customToken);signedInPhone=phone;$('adminPassword').value='';$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');addNotification('OTP verified','OTP सत्यापित हुआ; device password/passkey check बाकी है।','success');showDeviceLockAfterOtp();
+  }catch(e){
+    const msg=e.name==='AbortError'?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया। यह सिर्फ UI की समस्या नहीं हो सकती—Worker या OTP provider की जाँच जरूरी है।':'OTP verify नहीं हुआ: '+(e.message||'अज्ञात त्रुटि');
+    setMsg(msg);addNotification('OTP verification failed',msg,'error');
+  }finally{clearTimeout(timer);$('verifyBtn').disabled=false;}
+}
 // Device-local password + Android passkey gate, adapted from the existing ModeLuxe Mart file.
 const DEVICE_LOCK_KEY='modeluxeAdminDeviceLockV1';
 const DEVICE_CRED_KEY='modeluxeAdminPasskeyCredentialIdV1';
