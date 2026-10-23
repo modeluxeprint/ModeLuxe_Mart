@@ -205,6 +205,7 @@ function save(){localStorage.setItem("mlm_products",JSON.stringify(products));lo
 function switchUserData(phone){
   activeUserPhone=String(phone||"").replace(/\D/g,"");
   if(activeUserPhone){
+    startUserOrdersListener(activeUserPhone);
     cart=load(userKey("mlm_cart"),[]);orders=load(userKey("mlm_orders"),[]);
     const pk=userKey("mlm_profile");
     if(!localStorage.getItem(pk)){
@@ -216,7 +217,7 @@ function switchUserData(phone){
       const legacy=load("mlm_orders",[]).filter(o=>String(o.phone||"").replace(/\D/g,"")===activeUserPhone);
       orders=legacy;localStorage.setItem(ok,JSON.stringify(orders));
     }
-  }else{cart=[];orders=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
+  }else{stopUserOrdersListener();cart=[];orders=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
   renderCart();renderMyOrders();renderProfileAvatar(activeUserPhone?load(userKey("mlm_profile"),{name:"",avatar:""}):{name:"",avatar:""});
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -270,7 +271,7 @@ function showSection(s){
   if(s==="cart")renderCart();
   if(s==="checkout"){renderSavedDeliveryAddress();const p=activeUserPhone?load(userKey("mlm_profile"),{}):{};if(p.name&&!$("customerName").value)$("customerName").value=p.name;if(activeUserPhone&&p.phone&&!$("customerPhone").value)$("customerPhone").value=p.phone;if(p.address&&!$("customerAddress").value)$("customerAddress").value=p.address;if(p.pin&&!$("customerPin").value)$("customerPin").value=p.pin;restoreDeliveryLocation();}
   if(s==="account"||s==="profile")loadProfile();
-  if(s==="myorders")renderMyOrders();
+  if(s==="myorders"){renderMyOrders();if(activeUserPhone)startUserOrdersListener(activeUserPhone);}
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function checkArea(){const pin=$("pincode").value.trim();const msg=$("areaMsg");if(!/^[0-9]{6}$/.test(pin)){msg.innerHTML='<div class="notice error">'+(localStorage.getItem("mlm_language")==="en"?"Please enter a valid 6-digit PIN Code.":"कृपया सही 6 अंकों का PIN Code डालें।")+'</div>';return}if(pin==="202126"||pin==="202127"){msg.innerHTML='<div class="notice success">'+(localStorage.getItem("mlm_language")==="en"?"This PIN Code is currently allowed. This does not verify the actual 10 KM distance.":"यह PIN Code अभी अनुमति सूची में है। PIN Code जाँच वास्तविक 10 KM दूरी की पुष्टि नहीं करती।")+'</div>'}else{msg.innerHTML='<div class="notice error">'+(localStorage.getItem("mlm_language")==="en"?"Delivery is not currently available for this PIN Code.":"फिलहाल इस PIN Code पर डिलीवरी उपलब्ध नहीं है।")+'</div>'}}
@@ -314,6 +315,72 @@ if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeAp
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
 let pendingOtpRequestId=null, pendingOtpPhone=null;
+let userOrdersListener=null;
+let firebaseOrdersForUser=[];
+
+function stopUserOrdersListener(){
+  if(db && userOrdersListener) db.ref("orders").off("value",userOrdersListener);
+  userOrdersListener=null;
+  firebaseOrdersForUser=[];
+}
+
+function startUserOrdersListener(phone){
+  stopUserOrdersListener();
+  const digits=String(phone||"").replace(/\D/g,"");
+  if(!db || !digits)return;
+
+  userOrdersListener=snapshot=>{
+    const remote=[];
+    snapshot.forEach(child=>{
+      const raw=child.val()||{};
+      const orderPhone=String(raw.customerPhone||raw.phone||"").replace(/\D/g,"");
+      if(orderPhone!==digits)return;
+      const id=raw.id??child.key;
+      remote.push({
+        id,
+        name:raw.customerName||raw.name||"",
+        phone:raw.customerPhone||raw.phone||digits,
+        address:raw.shippingAddress||raw.address||"",
+        pin:raw.pin||raw.shippingPin||"",
+        latitude:raw.lat||raw.latitude||"",
+        longitude:raw.lng||raw.longitude||"",
+        items:Array.isArray(raw.items)?raw.items:[],
+        total:Number(raw.totalAmount??raw.price??raw.total??0),
+        date:raw.dateTime||raw.date||raw.createdAt||"",
+        createdAt:raw.createdAt||"",
+        status:String(raw.status||"Order Placed"),
+        updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
+        payment:raw.paymentMethod||raw.payment||"",
+        paymentStatus:raw.paymentStatus||"Pending",
+        razorpayPaymentId:raw.razorpayPaymentId||""
+      });
+    });
+    firebaseOrdersForUser=remote;
+    mergeAndRenderUserOrders();
+  };
+
+  db.ref("orders").on("value",userOrdersListener,error=>{
+    console.error("User order status live sync failed:",error);
+    const list=$("myOrdersList");
+    if(list && activeUserPhone===digits){
+      list.insertAdjacentHTML("afterbegin",'<div class="notice error">Order live sync नहीं हो पाया। Firebase Database Rules में इस user को orders पढ़ने की अनुमति जाँचें।</div>');
+    }
+  });
+}
+
+function mergeAndRenderUserOrders(){
+  if(!activeUserPhone)return;
+  const merged=new Map();
+  orders.forEach(o=>merged.set(String(o.id),o));
+  firebaseOrdersForUser.forEach(o=>merged.set(String(o.id),{...(merged.get(String(o.id))||{}),...o}));
+  orders=Array.from(merged.values()).sort((a,b)=>{
+    const ta=Number(a.id)||Date.parse(a.createdAt||"")||0;
+    const tb=Number(b.id)||Date.parse(b.createdAt||"")||0;
+    return tb-ta;
+  });
+  localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));
+  renderMyOrders();
+}
 function authMessage(message,isError=false){
   const el=$("authMsg");
   if(el)el.innerHTML='<div class="notice '+(isError?'error':'success')+'">'+esc(message)+'</div>';
@@ -775,6 +842,44 @@ $("profileForm").addEventListener("submit",e=>{
   $("profileMsg").innerHTML='<div class="notice success">Profile saved on this device.</div>';
   showToast("Profile saved.");
 });
+async function cancelUserOrder(orderId){
+  if(!activeUserPhone){showToast("Order cancel करने के लिए पहले लॉगिन करें।");return;}
+  const order=orders.find(o=>String(o.id)===String(orderId));
+  if(!order){showToast("Order नहीं मिला।");return;}
+  const status=String(order.status||"Order Placed").toLowerCase();
+  if(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>status.includes(x))){
+    showToast(status.includes("cancel")?"यह ऑर्डर पहले से Cancel है।":"Shipped/Delivered ऑर्डर अब यहाँ से Cancel नहीं किया जा सकता।");
+    return;
+  }
+  if(!confirm("क्या आप Order #"+orderId+" को Cancel करना चाहते हैं?"))return;
+  try{
+    if(!db)throw new Error("Firebase कनेक्शन उपलब्ध नहीं है।");
+    const snap=await db.ref("orders/"+orderId).once("value");
+    const remote=snap.val();
+    if(!remote)throw new Error("Firebase में ऑर्डर नहीं मिला।");
+    const remotePhone=String(remote.customerPhone||remote.phone||"").replace(/\D/g,"");
+    if(remotePhone!==String(activeUserPhone).replace(/\D/g,""))throw new Error("इस ऑर्डर को Cancel करने की अनुमति नहीं है।");
+    const remoteStatus=String(remote.status||"Order Placed").toLowerCase();
+    if(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>remoteStatus.includes(x))){
+      throw new Error("ऑर्डर अब Cancel नहीं हो सकता क्योंकि इसका स्टेटस "+remote.status+" है।");
+    }
+    await db.ref("orders/"+orderId).update({
+      status:"Cancelled",
+      adminStatusLocked:true,
+      cancelledBy:"customer",
+      cancelledAt:new Date().toISOString(),
+      adminUpdatedAt:new Date().toISOString()
+    });
+    order.status="Cancelled";
+    order.updatedAt=new Date().toISOString();
+    localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));
+    renderMyOrders();
+    showToast("ऑर्डर Cancel हो गया।");
+  }catch(err){
+    showToast("ऑर्डर Cancel नहीं हुआ: "+(err.message||"कृपया दोबारा प्रयास करें।"));
+  }
+}
+
 function renderMyOrders(){
   const list=$("myOrdersList");
   if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
@@ -786,7 +891,9 @@ function renderMyOrders(){
     let current=0; stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});
     if(raw.includes("cancel"))current=-1;
     const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${raw.includes("cancel")?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`:stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("")}</div>`;
-    return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment: ${esc(o.payment||"—")} · ${esc(o.paymentStatus||"Pending")}</div>${timeline}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
+    const canCancel=!["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x));
+    const paymentMethod=o.payment||o.paymentMethod||"Not available";
+    return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}${canCancel?`<button class="btn danger cancel-user-order" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
   }).join("");
 }
 
