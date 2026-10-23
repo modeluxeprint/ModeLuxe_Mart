@@ -12,7 +12,7 @@
 
 .accountmenu{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
 .accounttile{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left;color:var(--text)}
-.accounttile strong{display:block;margin-top:6px}.profileavatar{width:68px;height:68px;border-radius:50%;background:var(--panel2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+.accounttile strong{display:block;margin-top:6px}.profileavatar{width:68px;height:68px;border-radius:50%;background:var(--panel2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex-shrink:0}.profileavatar img{width:100%;height:100%;object-fit:cover}.avatar-upload{display:block;margin-top:8px;font-size:13px;color:var(--muted)}.avatar-upload input{display:block;width:100%;margin-top:6px;font-size:13px}
 .profilehead{display:flex;align-items:center;gap:14px;margin-bottom:16px}.ordercard{border:1px solid var(--line);background:#06271f;border-radius:12px;padding:13px;margin:10px 0}.orderstatus{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:5px 9px;font-size:12px;color:var(--accent)}.orderproduct{display:flex;gap:10px;align-items:center;margin:9px 0}.orderproduct img{width:54px;height:54px;object-fit:cover;border-radius:8px;background:var(--panel2)}
 
 .contactbox{margin-top:12px;padding:14px;background:#10382f;border:1px solid var(--line);border-radius:12px;line-height:1.8}
@@ -146,7 +146,7 @@
   </section>
   <section id="profileSection" class="panel hidden">
     <h2>⚙️ My Profile</h2>
-    <div class="profilehead"><div class="profileavatar" id="profileAvatar">👤</div><div><strong id="profileDisplayName">Your Profile</strong><div class="muted">अपनी जानकारी अपडेट करें</div></div></div>
+    <div class="profilehead"><div class="profileavatar" id="profileAvatar">👤</div><div><strong id="profileDisplayName">Your Profile</strong><label class="avatar-upload" for="profilePhoto">Upload profile photo<input id="profilePhoto" type="file" accept="image/*"></label></div></div>
     <form id="profileForm" class="formgrid">
       <div class="field full"><label for="profileName">Full name</label><input id="profileName" required autocomplete="name"></div>
       <div class="field full"><label for="profilePhone">Mobile number</label><input id="profilePhone" inputmode="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10 अंकों का नंबर"></div>
@@ -689,21 +689,49 @@ function rateProduct(productId,rating,orderId){
   renderMyOrders();renderProducts();showToast(localStorage.getItem("mlm_language")==="en"?"Your rating has been saved.":"आपकी रेटिंग सेव हो गई");
 }
 
+function renderProfileAvatar(profile){
+  const avatar=$("profileAvatar");
+  if(profile && profile.avatar){avatar.innerHTML=`<img src="${profile.avatar}" alt="Profile photo">`;}
+  else avatar.textContent=(profile?.name||"").trim().charAt(0)||"👤";
+}
 function loadProfile(){
-  const profile=load("mlm_profile",{name:"",phone:"",address:"",pin:""});
+  const profile=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});
   $("profileName").value=profile.name||"";
   $("profilePhone").value=profile.phone||"";
   $("profileAddress").value=profile.address||"";
   $("profilePin").value=profile.pin||"";
   $("profileDisplayName").textContent=profile.name||"Your Profile";
-  $("profileAvatar").textContent=(profile.name||"").trim().charAt(0)||"👤";
+  renderProfileAvatar(profile);
 }
+let pendingProfileAvatar="";
+$("profilePhoto").addEventListener("change",e=>{
+  const file=e.target.files && e.target.files[0]; if(!file)return;
+  if(!file.type.startsWith("image/")){showToast("Please select an image file.");e.target.value="";return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas"),max=320;
+      const scale=Math.min(1,max/Math.max(img.width,img.height));
+      canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+      canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+      pendingProfileAvatar=canvas.toDataURL("image/jpeg",0.78);
+      const profile=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});profile.avatar=pendingProfileAvatar;renderProfileAvatar(profile);
+      $("profileMsg").textContent="Photo selected. Tap Save Profile to save it.";
+    };
+    img.onerror=()=>showToast("Could not load that image. Try another photo.");img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+});
 $("profileForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const profile={name:$("profileName").value.trim(),phone:$("profilePhone").value.trim(),address:$("profileAddress").value.trim(),pin:$("profilePin").value.trim()};
-  localStorage.setItem("mlm_profile",JSON.stringify(profile));
+  const oldProfile=load("mlm_profile",{});
+  const profile={name:$("profileName").value.trim(),phone:$("profilePhone").value.trim(),address:$("profileAddress").value.trim(),pin:$("profilePin").value.trim(),avatar:pendingProfileAvatar||oldProfile.avatar||""};
+  try{localStorage.setItem("mlm_profile",JSON.stringify(profile));}
+  catch(err){showToast("Photo is too large. Please choose a smaller photo.");return;}
+  pendingProfileAvatar="";
   $("profileDisplayName").textContent=profile.name||"Your Profile";
-  $("profileAvatar").textContent=profile.name.charAt(0)||"👤";
+  renderProfileAvatar(profile);
   $("profileMsg").innerHTML='<div class="notice success">Profile saved on this device.</div>';
   showToast("Profile saved.");
 });
