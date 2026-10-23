@@ -191,14 +191,14 @@
   <button class="secondary" onclick="showSection('account')"><span class="nav-avatar" id="bottomProfileAvatar" aria-label="Profile photo">👤</span><span>Account</span></button>
 </nav>
 <script>
-const DEFAULT_PRODUCTS=[
-{id:1,name:"Classic T-Shirt",price:399,category:"Mens Wear",image:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=700&q=80"},
-{id:2,name:"Women's Everyday Wear",price:699,category:"Women Wear",image:"https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=700&q=80"},
-{id:3,name:"Kids Casual Outfit",price:499,category:"Kids Wear",image:"https://images.unsplash.com/photo-1519238263530-99aea6c1f8f5?auto=format&fit=crop&w=700&q=80"},
-{id:4,name:"Fashion Accessories",price:249,category:"Jewellery",image:"https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=700&q=80"}
-];
+const DEFAULT_PRODUCTS=[];
 const $=id=>document.getElementById(id);
-let products=load("mlm_products",DEFAULT_PRODUCTS),cart=load("mlm_cart",[]),orders=[],activeCategory="All",activeUserPhone="";
+// Live catalogue comes from Admin Panel Firebase listings. Remove only old built-in demo products.
+const OLD_DEMO_NAMES=["Classic T-Shirt","Women's Everyday Wear","Kids Casual Outfit","Fashion Accessories"];
+let savedProducts=load("mlm_products",DEFAULT_PRODUCTS);
+if(Array.isArray(savedProducts) && savedProducts.some(p=>OLD_DEMO_NAMES.includes(p.name))){savedProducts=savedProducts.filter(p=>!OLD_DEMO_NAMES.includes(p.name));localStorage.setItem("mlm_products",JSON.stringify(savedProducts));}
+let products=savedProducts,cart=load("mlm_cart",[]),orders=[],activeCategory="All",activeUserPhone="";
+let userProductsListener=null;
 function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):JSON.parse(JSON.stringify(fallback))}catch(e){return JSON.parse(JSON.stringify(fallback))}}
 function userKey(base,phone=activeUserPhone){return phone?base+"_user_"+String(phone).replace(/\D/g,""):base+"_logged_out"}
 function save(){localStorage.setItem("mlm_products",JSON.stringify(products));localStorage.setItem(userKey("mlm_cart"),JSON.stringify(cart));if(activeUserPhone)localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));}
@@ -314,6 +314,18 @@ const firebaseConfig = {
 if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
+// Display only real products created in the Admin Panel catalogue.
+function startUserProductsListener(){
+  if(!db)return;
+  if(userProductsListener)db.ref("sellerProducts").off("value",userProductsListener);
+  userProductsListener=snap=>{
+    const raw=snap.val()||{};
+    products=Object.entries(raw).map(([id,p])=>({id,name:String((p||{}).name||""),price:Number((p||{}).price||0),category:String((p||{}).category||"Other"),image:String((p||{}).imageUrl||(p||{}).image||""),quantity:String((p||{}).quantity||"1"),unit:String((p||{}).unit||"Piece"),stock:Number((p||{}).stock||0),seller:String((p||{}).seller||"")})).filter(p=>p.name && p.stock>0);
+    if(activeCategory!=="All"&&!products.some(p=>p.category===activeCategory))activeCategory="All";
+    categories();renderProducts();
+  };
+  db.ref("sellerProducts").on("value",userProductsListener,err=>console.warn("Product catalogue sync failed:",err&&err.message));
+}
 let pendingOtpRequestId=null, pendingOtpPhone=null;
 let userOrdersListener=null;
 let firebaseOrdersForUser=[];
@@ -897,7 +909,7 @@ function renderMyOrders(){
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
+$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
 </script>
 </body>
 </html>
