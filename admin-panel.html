@@ -175,12 +175,14 @@ function startOrders(){if(orderListener)db.ref('orders').off('value',orderListen
 async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);if(productListener)db.ref('sellerProducts').off('value',productListener);orderListener=null;productListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
 const statuses=['Order Placed','Processing','Packed','Shipped','Out for Delivery','Delivered','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded'];
 function filterOrdersBySummary(filter){
-  $('statusFilter').value=filter==='active'?'all':filter;
   window.__ordersSummaryMode=filter;
+  $('statusFilter').value=(filter==='all'||filter==='active')?'all':filter;
   renderOrders();
   $('ordersList').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;const all=entries.map(([id,o])=>[id,o||{}]);$('totalCount').textContent=all.length;$('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;$('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;$('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;const shown=all.filter(([id,o])=>{const text=[id,o.customerName,o.customerPhone,o.product,o.shippingAddress,o.status].join(' ').toLowerCase();const statusValue=String(o.status||'Order Placed');const mode=window.__ordersSummaryMode||'active';const finalStatus=['Delivered','Cancelled','Refunded'].includes(statusValue);const statusMatch=filter==='all'?(mode==='all'||(mode==='active'?!finalStatus:true)):statusValue===filter;return (!q||text.includes(q))&&statusMatch;});$('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{const locked=!!o.adminStatusLocked;const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):'';return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(o.product||'Order')}</h3><p class="text-sm text-stone-300">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</p></div><div class="text-right"><p class="text-xl font-black gold">₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><p class="small">Payment Method: <b class="text-stone-100">${esc(o.paymentMethod||o.payment||'Not available')}</b></p><p class="small text-stone-300">Payment Status: ${esc(o.paymentStatus||'Unknown')}</p></div></div><div class="grid md:grid-cols-2 gap-2 text-sm mt-3"><p><span class="text-stone-400">Address:</span> ${esc(o.shippingAddress||'Not provided')}</p><p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p><p><span class="text-stone-400">Items:</span> ${esc(items||o.product||'—')}</p><p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p></div><div class="mt-4 space-y-2"><select id="status-${esc(id)}" aria-label="Order status" onchange="updateStatus('${esc(id)}')" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn danger w-full" type="button" onclick="cancelOrder('${esc(id)}')" ${locked?'disabled':''}>Cancel Order</button></div>${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}</article>`;}).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi order nahi mila.</div>';}
+// If the status dropdown is changed manually, use that explicit filter instead of an old summary-card filter.
+$('statusFilter').addEventListener('change',()=>{window.__ordersSummaryMode='dropdown';renderOrders();});
+function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;const all=entries.map(([id,o])=>[id,o||{}]);$('totalCount').textContent=all.length;$('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;$('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;$('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;const shown=all.filter(([id,o])=>{const text=[id,o.customerName,o.customerPhone,o.product,o.shippingAddress,o.status].join(' ').toLowerCase();const statusValue=String(o.status||'Order Placed');const statusLower=statusValue.toLowerCase();const mode=window.__ordersSummaryMode||'active';const finalStatus=['delivered','cancelled','refunded'].includes(statusLower);const statusMatch=mode==='dropdown'?(filter==='all'||statusLower===String(filter).toLowerCase()):(mode==='all'?true:mode==='active'?!finalStatus:statusLower===String(mode).toLowerCase());return (!q||text.includes(q))&&statusMatch;});$('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{const locked=!!o.adminStatusLocked;const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):'';return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(o.product||'Order')}</h3><p class="text-sm text-stone-300">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</p></div><div class="text-right"><p class="text-xl font-black gold">₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><p class="small">Payment Method: <b class="text-stone-100">${esc(o.paymentMethod||o.payment||'Not available')}</b></p><p class="small text-stone-300">Payment Status: ${esc(o.paymentStatus||'Unknown')}</p></div></div><div class="grid md:grid-cols-2 gap-2 text-sm mt-3"><p><span class="text-stone-400">Address:</span> ${esc(o.shippingAddress||'Not provided')}</p><p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p><p><span class="text-stone-400">Items:</span> ${esc(items||o.product||'—')}</p><p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p></div><div class="mt-4 space-y-2"><select id="status-${esc(id)}" aria-label="Order status" onchange="updateStatus('${esc(id)}')" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn danger w-full" type="button" onclick="cancelOrder('${esc(id)}')" ${locked?'disabled':''}>Cancel Order</button></div>${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}</article>`;}).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi order nahi mila.</div>';}
 async function updateStatus(id){
   if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
   const o=ordersData[id];if(!o)return alert('Order nahi mila');
@@ -254,27 +256,46 @@ function previewProductImage(event){const file=event.target.files&&event.target.
 async function saveProduct(event){
   event.preventDefault();
   if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}
-  const id=$('productEditId').value.trim();const name=$('productName').value.trim();const seller=$('productSeller').value.trim();const category=$('productCategory').value;const quantity=$('productQty').value.trim();const unit=$('productUnit').value;const price=Number($('productPrice').value);const stock=Number($('productStock').value);const file=$('productImageFile').files&&$('productImageFile').files[0];
+  const id=$('productEditId').value.trim();
+  const name=$('productName').value.trim(),seller=$('productSeller').value.trim(),category=$('productCategory').value;
+  const quantity=$('productQty').value.trim(),unit=$('productUnit').value,price=Number($('productPrice').value),stock=Number($('productStock').value);
+  const file=$('productImageFile').files&&$('productImageFile').files[0];
   if(!name||!seller||!quantity||!unit||!Number.isFinite(price)||price<0||!Number.isFinite(stock)||stock<0){$('productMsg').textContent='Sabhi required fields aur valid price/stock bharein.';return;}
   if(file&&!file.type.startsWith('image/')){$('productMsg').textContent='Kripya valid image select karein.';return;}
-  const now=new Date().toISOString();const data={seller,name,category,quantity,unit,price,stock,description:$('productDescription').value.trim(),updatedAt:now,updatedBy:signedInPhone};
+  if(file&&file.size>8*1024*1024){$('productMsg').textContent='Image 8 MB se chhoti honi chahiye.';return;}
+  const now=new Date().toISOString();
+  const data={seller,name,category,quantity,unit,price,stock,description:$('productDescription').value.trim(),updatedAt:now,updatedBy:signedInPhone};
+  const saveBtn=$('saveProductBtn');saveBtn.disabled=true;
   try{
     const ref=id?db.ref('sellerProducts/'+id):db.ref('sellerProducts').push();
     let imageUrl=(id&&productsData[id]&&productsData[id].imageUrl)||'';
-    if(file){
-      if(file.size>8*1024*1024)throw Error('Image 8 MB se chhoti honi chahiye.');
-      $('productMsg').textContent='Photo upload ho rahi hai…';
-      const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const storageRef=firebase.storage().ref('sellerProducts/'+ref.key+'/'+Date.now()+'_'+safeName);
-      const upload=await storageRef.put(file);
-      imageUrl=await upload.ref.getDownloadURL();
-    }
-    data.imageUrl=imageUrl;
     if(!id)data.createdAt=now;
+    // Save the product record first, so a Storage/photo problem cannot prevent the listing from appearing.
+    data.imageUrl=imageUrl;
+    $('productMsg').textContent='Product save ho raha hai…';
     await ref.update(data);
+    if(file){
+      $('productMsg').textContent='Product save ho gaya. Photo upload ho rahi hai…';
+      try{
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+        const storageRef=firebase.storage().ref('sellerProducts/'+ref.key+'/'+Date.now()+'_'+safeName);
+        const task=storageRef.put(file);
+        const upload=await Promise.race([task, new Promise((_,reject)=>setTimeout(()=>reject(new Error('Photo upload 30 seconds se zyada le rahi hai. Firebase Storage Rules / internet check karein. Product listing save ho chuki hai; photo baad mein edit karke upload kar sakte hain.')),30000))]);
+        imageUrl=await upload.ref.getDownloadURL();
+        await ref.update({imageUrl,updatedAt:new Date().toISOString()});
+      }catch(photoError){
+        $('productMsg').textContent='Product listing save ho gayi, lekin photo upload nahi hui: '+(photoError.message||'Storage error')+' Listing Products list mein honi chahiye; photo baad mein Edit se add karein.';
+        addNotification('Product saved; photo upload failed',name+' · '+(photoError.message||'Storage error'),'error');
+        resetProductForm();showAdminTab('products');return;
+      }
+    }
     $('productMsg').textContent=id?'Product update ho gaya.':'Product save ho gaya.';
-    addNotification(id?'Product updated':'Product added',name+' · '+quantity+' '+unit+' · ₹'+price,'success');resetProductForm();showAdminTab('products');
-  }catch(e){$('productMsg').textContent='Save/upload fail: '+e.message+' (Firebase Storage Rules check karein)';addNotification('Product save failed',e.message||'Product save nahi hua.','error');}
+    addNotification(id?'Product updated':'Product added',name+' · '+quantity+' '+unit+' · ₹'+price,'success');
+    resetProductForm();showAdminTab('products');renderProducts();
+  }catch(e){
+    $('productMsg').textContent='Product save fail: '+(e.message||'Firebase error')+' (Firebase Database Rules / connection check karein)';
+    addNotification('Product save failed',e.message||'Product save nahi hua.','error');
+  }finally{saveBtn.disabled=false;}
 }
 function editProduct(id){const p=productsData[id];if(!p)return;$('productEditId').value=id;$('productSeller').value=p.seller||'';$('productCategory').value=p.category||'Grocery';$('productName').value=p.name||'';$('productImageFile').value='';$('productImagePreview').src=p.imageUrl||'';$('productImagePreview').classList.toggle('hidden',!p.imageUrl);$('productQty').value=p.quantity||'1';$('productPrice').value=Number(p.price||0);$('productStock').value=Number(p.stock||0);$('productDescription').value=p.description||'';updateUnitChoices();$('productUnit').value=p.unit||'Piece';updateProductPreview();$('saveProductBtn').textContent='Update Product';$('productMsg').textContent='Product edit mode mein hai.';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteProduct(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}const p=productsData[id];if(!p)return;if(!confirm('Product "'+(p.name||id)+'" ko sellerProducts catalogue se delete karna hai?'))return;try{await db.ref('sellerProducts/'+id).remove();addNotification('Product deleted',p.name||id,'error');}catch(e){alert('Delete fail: '+e.message);addNotification('Product delete failed',e.message||'Product delete nahi hua.','error');}}
