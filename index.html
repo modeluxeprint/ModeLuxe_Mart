@@ -503,7 +503,7 @@ function setDeliveryLocation(lat,lng,source){
   preview.classList.remove("hidden");
   preview.innerHTML="📍 <strong>लोकेशन सेव हुई</strong><br>Latitude: "+lat.toFixed(6)+"<br>Longitude: "+lng.toFixed(6)+"<br><a href=\"https://www.google.com/maps?q="+lat+","+lng+"\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--accent)\">मैप पर देखें</a>";
   setLocationStatus(source==="gps"?"आपकी वर्तमान लोकेशन मिल गई। डिलीवरी के लिए पता भी जाँच लें।":"मैप लोकेशन सेव हो गई। डिलीवरी के लिए पता भी जाँच लें।","success");
-  localStorage.setItem("mlm_delivery_location",JSON.stringify({lat,lng}));
+  if(activeUserPhone)localStorage.setItem(userKey("mlm_delivery_location"),JSON.stringify({lat,lng}));
 }
 function getExactLocation(){
   if(!navigator.geolocation){setLocationStatus("इस ब्राउज़र में लोकेशन सपोर्ट उपलब्ध नहीं है।","error");return;}
@@ -522,7 +522,7 @@ function openMapPicker(){
       document.getElementById("mapSelectedCoords").textContent="मैप लोड नहीं हुआ। इंटरनेट कनेक्शन Check।";return;
     }
     if(!inlineMap){
-      const saved=JSON.parse(localStorage.getItem("mlm_delivery_location")||"null");
+      const saved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
       const lat=saved?.lat||28.026382, lng=saved?.lng||78.115068;
       inlineMap=L.map("inlineMap").setView([lat,lng],18);
       const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
@@ -542,6 +542,9 @@ function openMapPicker(){
       else {const c=inlineMap.getCenter();pendingLat=c.lat;pendingLng=c.lng}
       showPendingMapPoint(pendingLat,pendingLng,true);
     }
+    const currentSaved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
+    const targetLat=currentSaved?.lat??28.026382, targetLng=currentSaved?.lng??78.115068;
+    inlineMap.setView([targetLat,targetLng],18);
     inlineMap.invalidateSize();
     const c=inlineMap.getCenter();pendingLat=c.lat;pendingLng=c.lng;
     showPendingMapPoint(c.lat,c.lng,true);
@@ -593,7 +596,9 @@ function closeMapPicker(){document.getElementById("mapPickerOverlay").classList.
 function openGoogleMapsSearch(){openMapPicker()}
 function applyMapLink(){saveInlineMapLocation()}
 function restoreDeliveryLocation(){
-  try{const loc=JSON.parse(localStorage.getItem("mlm_delivery_location")||"null");if(loc)setDeliveryLocation(loc.lat,loc.lng,"map")}catch(e){}
+  const latField=document.getElementById("deliveryLat"),lngField=document.getElementById("deliveryLng");
+  if(!activeUserPhone){if(latField)latField.value="";if(lngField)lngField.value="";const preview=document.getElementById("locationPreview");if(preview)preview.classList.add("hidden");return;}
+  try{const loc=JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null");if(loc)setDeliveryLocation(loc.lat,loc.lng,"map");else{if(latField)latField.value="";if(lngField)lngField.value="";const preview=document.getElementById("locationPreview");if(preview)preview.classList.add("hidden");}}catch(e){if(latField)latField.value="";if(lngField)lngField.value="";}
 }
 
 function setLanguage(lang){
