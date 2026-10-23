@@ -198,16 +198,34 @@ const DEFAULT_PRODUCTS=[
 {id:4,name:"Fashion Accessories",price:249,category:"Jewellery",image:"https://images.unsplash.com/photo-1611652022419-a9419f74343d?auto=format&fit=crop&w=700&q=80"}
 ];
 const $=id=>document.getElementById(id);
-let products=load("mlm_products",DEFAULT_PRODUCTS),cart=load("mlm_cart",[]),orders=load("mlm_orders",[]),activeCategory="All";
+let products=load("mlm_products",DEFAULT_PRODUCTS),cart=load("mlm_cart",[]),orders=[],activeCategory="All",activeUserPhone="";
 function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):JSON.parse(JSON.stringify(fallback))}catch(e){return JSON.parse(JSON.stringify(fallback))}}
-function save(){localStorage.setItem("mlm_products",JSON.stringify(products));localStorage.setItem("mlm_cart",JSON.stringify(cart));localStorage.setItem("mlm_orders",JSON.stringify(orders))}
+function userKey(base,phone=activeUserPhone){return phone?base+"_user_"+String(phone).replace(/\D/g,""):base+"_logged_out"}
+function save(){localStorage.setItem("mlm_products",JSON.stringify(products));localStorage.setItem(userKey("mlm_cart"),JSON.stringify(cart));if(activeUserPhone)localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));}
+function switchUserData(phone){
+  activeUserPhone=String(phone||"").replace(/\D/g,"");
+  if(activeUserPhone){
+    cart=load(userKey("mlm_cart"),[]);orders=load(userKey("mlm_orders"),[]);
+    const pk=userKey("mlm_profile");
+    if(!localStorage.getItem(pk)){
+      const old=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});
+      if(String(old.phone||"").replace(/\D/g,"")===activeUserPhone)localStorage.setItem(pk,JSON.stringify(old));
+    }
+    const ok=userKey("mlm_orders");
+    if(!localStorage.getItem(ok)){
+      const legacy=load("mlm_orders",[]).filter(o=>String(o.phone||"").replace(/\D/g,"")===activeUserPhone);
+      orders=legacy;localStorage.setItem(ok,JSON.stringify(orders));
+    }
+  }else{cart=[];orders=[];}
+  renderCart();renderMyOrders();renderProfileAvatar(activeUserPhone?load(userKey("mlm_profile"),{name:"",avatar:""}):{name:"",avatar:""});
+}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(localStorage.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
 function setCategory(c){activeCategory=c;categories();renderProducts()}
 function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(activeCategory==="All"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));$("listingTitle").textContent=activeCategory==="All"?(localStorage.getItem("mlm_language")==="en"?"All Products":"All Products"):activeCategory;$("products").innerHTML=list.length?list.map(p=>`<article class="product"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'"><div class="pbody"><div class="pname">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button onclick="addCart(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" onclick="buyNow(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
 function showOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.remove("hidden")}function closeOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.add("hidden")}
 let toastTimer;function showToast(message){const t=$("toast");$("toastText").textContent=message;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2300)}
-function getSavedDeliveryAddress(){try{return JSON.parse(localStorage.getItem("mlm_saved_delivery_address")||"null")}catch(e){return null}}
+function getSavedDeliveryAddress(){if(!activeUserPhone)return null;try{return JSON.parse(localStorage.getItem(userKey("mlm_saved_delivery_address"))||"null")}catch(e){return null}}
 function renderSavedDeliveryAddress(){
   const saved=getSavedDeliveryAddress(),card=$("savedAddressCard");
   if(!card)return;
@@ -233,7 +251,7 @@ function newDeliveryAddress(){
   $("customerAddress").focus();
 }
 function rememberDeliveryAddress(order){
-  localStorage.setItem("mlm_saved_delivery_address",JSON.stringify({name:order.name,phone:order.phone,address:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||""}));
+  if(!activeUserPhone)return;localStorage.setItem(userKey("mlm_saved_delivery_address"),JSON.stringify({name:order.name,phone:order.phone,address:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||""}));
 }
 function addCart(id){const p=products.find(x=>x.id===id);if(!p)return;const item=cart.find(x=>x.id===id);if(item){item.qty++;item.image=p.image}else cart.push({id:p.id,name:p.name,price:p.price,image:p.image,qty:1});save();renderCart();showToast("प्रोडक्ट कार्ट में जोड़ दिया गया।")}
 function buyNow(id){addCart(id);showSection("checkout")}
@@ -259,6 +277,7 @@ function checkArea(){const pin=$("pincode").value.trim();const msg=$("areaMsg");
 $("search").addEventListener("input",renderProducts);
 $("orderForm").addEventListener("submit",async e=>{
   e.preventDefault();
+  if(!activeUserPhone){showToast("Please log in with your mobile number before placing an order.");showSection("account");return;}
   if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
   if(pin!=="202126"&&pin!=="202127"){$("orderMsg").innerHTML='<div class="notice error">इस समय केवल PIN 202126 और 202127 अनुमति सूची में हैं। यह वास्तविक 10 KM दूरी की जाँच नहीं है।</div>';return}
@@ -304,13 +323,19 @@ function showAuthState(user){
   const saved=localStorage.getItem("mlm_sms_verified_phone");
   const phone=(user&&user.phoneNumber)||(saved?"+91"+saved:"");
   if(phone){
+    const digits=phone.replace(/^\+91/,"").replace(/\D/g,"");
+    switchUserData(digits);
     status.className="notice success";status.textContent=(localStorage.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
-    const digits=phone.replace(/^\+91/,"").replace(/\D/g,"");
-    if(digits.length===10){const p=load("mlm_profile",{name:"",phone:"",address:"",pin:""});p.phone=digits;localStorage.setItem("mlm_profile",JSON.stringify(p));if($("profilePhone"))$("profilePhone").value=digits;}
+    const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});p.phone=digits;localStorage.setItem(userKey("mlm_profile"),JSON.stringify(p));
+    if($("profilePhone"))$("profilePhone").value=digits;
   }else{
+    switchUserData("");
     status.className="notice";status.textContent=localStorage.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
     fields.classList.remove("hidden");logout.classList.add("hidden");
+    $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
+    renderProfileAvatar({name:"",avatar:""});
+    if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';
   }
 }
 if(auth){auth.onAuthStateChanged(user=>{if(user)showAuthState(user);else showAuthState(null)})}
@@ -356,7 +381,7 @@ async function verifyLoginOTP(){
 async function logoutPhoneUser(){
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
   localStorage.removeItem("mlm_sms_verified_phone");
-  pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);
+  pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);showSection("account");
   authMessage("You have been logged out.");
 }
 
@@ -702,7 +727,8 @@ function renderProfileAvatar(profile){
   }
 }
 function loadProfile(){
-  const profile=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});
+  if(!activeUserPhone){renderProfileAvatar({name:"",avatar:""});$("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";return;}
+  const profile=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
   renderProfileAvatar(profile);
   $("profileName").value=profile.name||"";
   $("profilePhone").value=profile.phone||"";
@@ -724,7 +750,7 @@ $("profilePhoto").addEventListener("change",e=>{
       canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
       canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
       pendingProfileAvatar=canvas.toDataURL("image/jpeg",0.78);
-      const profile=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});profile.avatar=pendingProfileAvatar;renderProfileAvatar(profile);
+      const profile=activeUserPhone?load(userKey("mlm_profile"),{name:"",phone:activeUserPhone,address:"",pin:"",avatar:""}):{name:"",avatar:""};profile.avatar=pendingProfileAvatar;renderProfileAvatar(profile);
       $("profileMsg").textContent="Photo selected. Tap Save Profile to save it.";
     };
     img.onerror=()=>showToast("Could not load that image. Try another photo.");img.src=reader.result;
@@ -733,9 +759,10 @@ $("profilePhoto").addEventListener("change",e=>{
 });
 $("profileForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const oldProfile=load("mlm_profile",{});
+  if(!activeUserPhone){showToast("Please log in before saving your profile.");showSection("account");return;}
+  const oldProfile=load(userKey("mlm_profile"),{});
   const profile={name:$("profileName").value.trim(),phone:$("profilePhone").value.trim(),address:$("profileAddress").value.trim(),pin:$("profilePin").value.trim(),avatar:pendingProfileAvatar||oldProfile.avatar||""};
-  try{localStorage.setItem("mlm_profile",JSON.stringify(profile));}
+  try{localStorage.setItem(userKey("mlm_profile"),JSON.stringify(profile));}
   catch(err){showToast("Photo is too large. Please choose a smaller photo.");return;}
   pendingProfileAvatar="";
   $("profileDisplayName").textContent=profile.name||"Your Profile";
@@ -745,6 +772,7 @@ $("profileForm").addEventListener("submit",e=>{
 });
 function renderMyOrders(){
   const list=$("myOrdersList");
+  if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
   if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return}
   list.innerHTML=orders.map(o=>{
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name)}</strong><div class="muted">₹${Number(i.price).toLocaleString("en-IN")} × ${Number(i.qty||1)}</div></div></div>`).join("");
@@ -757,7 +785,7 @@ function renderMyOrders(){
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();renderCart();localStorage.setItem("mlm_language","en");setLanguage("en");
+$("year").textContent=new Date().getFullYear();categories();renderProducts();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
 </script>
 </body>
 </html>
