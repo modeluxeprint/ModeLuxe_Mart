@@ -60,51 +60,51 @@
 </div></header>
 <main class="wrap">
   <section class="hero">
-    <h1>आपकी पसंद, आपकी दुकान</h1>
-    <p>ModeLuxe Mart पर अपने पसंदीदा प्रोडक्ट खोजें और ऑर्डर तैयार करें।</p>
+    <h1>Your Choice, Your Store</h1>
+    <p>Find your favourite products on ModeLuxe Mart and prepare your order.</p>
   </section>
   <section class="area">
-    <div class="grow"><strong>📍 डिलीवरी उपलब्धता जाँचें</strong><small>डिलीवरी उपलब्धता आपके चुने हुए PIN Code के आधार पर जाँची जाती है।</small></div>
-    <div class="grow"><input id="pincode" inputmode="numeric" maxlength="6" placeholder="अपना 6 अंकों का PIN Code"></div>
-    <button onclick="checkArea()">जाँचें</button>
+    <div class="grow"><strong>📍 Check Delivery Availability</strong><small>Delivery availability is checked using your selected PIN Code.</small></div>
+    <div class="grow"><input id="pincode" inputmode="numeric" maxlength="6" placeholder="Enter your 6-digit PIN Code"></div>
+    <button onclick="checkArea()">Check</button>
   </section>
   <div id="areaMsg" aria-live="polite"></div>
   <nav class="categories" id="categories" aria-label="प्रोडक्ट कैटेगरी"></nav>
   <section id="storeSection">
-    <div class="sectionhead"><h2 id="listingTitle">सभी प्रोडक्ट</h2></div>
+    <div class="sectionhead"><h2 id="listingTitle">All Products</h2></div>
     <div id="products" class="grid"></div>
   </section>
   <section id="cartSection" class="panel hidden">
-    <h2>🛒 आपका कार्ट</h2><div id="cartItems"></div>
-    <div class="rowline"><strong>कुल</strong><strong id="cartTotal">₹0</strong></div>
-    <button style="width:100%;margin-top:12px" onclick="showSection('checkout')">ऑर्डर की जानकारी भरें</button>
-    <button class="secondary" style="width:100%;margin-top:8px" onclick="showSection('store')">खरीदारी जारी रखें</button>
+    <h2>🛒 Your Cart</h2><div id="cartItems"></div>
+    <div class="rowline"><strong>Total</strong><strong id="cartTotal">₹0</strong></div>
+    <button style="width:100%;margin-top:12px" onclick="showSection('checkout')">Enter Order Details</button>
+    <button class="secondary" style="width:100%;margin-top:8px" onclick="showSection('store')">Continue Shopping</button>
   </section>
   <section id="checkoutSection" class="panel hidden">
-    <h2>डिलीवरी और ऑर्डर</h2>
+    <h2>Delivery & Order</h2>
     <div class="notice hidden" id="backendNotice"></div>
     <div id="savedAddressCard" class="notice hidden" style="margin-bottom:14px">
-      <strong>📍 आपका डिलीवरी पता</strong>
+      <strong>📍 Your delivery address</strong>
       <div id="savedAddressText" style="margin:6px 0 10px;white-space:pre-line"></div>
       <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="secondary" style="width:auto;padding:8px 12px;font-size:.9rem" onclick="editSavedAddress()">पता बदलें</button>
-        <button type="button" class="secondary" style="width:auto;padding:8px 12px;font-size:.9rem" onclick="newDeliveryAddress()">+ नया पता</button>
+        <button type="button" class="secondary" style="width:auto;padding:8px 12px;font-size:.9rem" onclick="editSavedAddress()">Change address</button>
+        <button type="button" class="secondary" style="width:auto;padding:8px 12px;font-size:.9rem" onclick="newDeliveryAddress()">+ Add new address</button>
       </div>
     </div>
     <form id="orderForm" class="formgrid">
-      <div class="field" id="customerNameField"><label for="customerName">पूरा नाम</label><input id="customerName" required autocomplete="name"></div>
-      <div class="field" id="customerPhoneField"><label for="customerPhone">मोबाइल नंबर</label><input id="customerPhone" required inputmode="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10 अंकों का नंबर"></div>
-      <div class="field full" id="customerAddressField"><label for="customerAddress">पूरा डिलीवरी पता</label><input id="customerAddress" required autocomplete="street-address" placeholder="मकान नंबर, गली, मोहल्ला">
+      <div class="field" id="customerNameField"><label for="customerName">Full name</label><input id="customerName" required autocomplete="name"></div>
+      <div class="field" id="customerPhoneField"><label for="customerPhone">Mobile number</label><input id="customerPhone" required inputmode="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10 अंकों का नंबर"></div>
+      <div class="field full" id="customerAddressField"><label for="customerAddress">Full delivery address</label><input id="customerAddress" required autocomplete="street-address" placeholder="House number, street, locality">
         <div class="location-tools">
-          <button type="button" onclick="getExactLocation()">📍 मेरी वर्तमान लोकेशन</button>
-          <button type="button" class="secondary" onclick="openMapPicker()">🗺️ मैप पर लोकेशन चुनें</button>
+          <button type="button" onclick="getExactLocation()">📍 My Current Location</button>
+          <button type="button" class="secondary" onclick="openMapPicker()">🗺️ Choose on Map</button>
         </div>
-        <div id="locationStatus" class="location-status" aria-live="polite">डिलीवरी सही जगह पहुँचाने के लिए लोकेशन चुनें।</div>
+        <div id="locationStatus" class="location-status" aria-live="polite">Choose a location to help the delivery reach the right place.</div>
         <div id="locationPreview" class="location-preview hidden"></div>
         <input type="hidden" id="deliveryLat"><input type="hidden" id="deliveryLng">
       </div>
       <div class="field" id="customerPinField"><label for="customerPin">PIN Code</label><input id="customerPin" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6"></div>
-      <div class="field"><label for="payment">भुगतान का तरीका</label>
+      <div class="field"><label for="payment">Payment method</label>
         <select id="payment" required>
           <option value="COD">Cash on Delivery (COD)</option>
           <option value="RAZORPAY">Online Payment (Razorpay · UPI / Card)</option>
@@ -118,8 +118,8 @@
   <section id="accountSection" class="panel hidden">
     <h2>👤 My Account</h2>
     <div class="accountmenu">
-      <button class="accounttile" onclick="showSection('profile')">⚙️<strong>My Profile</strong><small class="muted">नाम, मोबाइल और पता</small></button>
-      <button class="accounttile" onclick="showSection('myorders')">📦<strong>My Orders</strong><small class="muted">ऑर्डर और ट्रैकिंग</small></button>
+      <button class="accounttile" onclick="showSection('profile')">⚙️<strong>My Profile</strong><small class="muted">Name, mobile and address</small></button>
+      <button class="accounttile" onclick="showSection('myorders')">📦<strong>My Orders</strong><small class="muted">Orders and tracking</small></button>
     </div>
     <div class="panel" style="margin:12px 0;padding:14px;background:#06271f">
       <h3 id="otpLoginTitle" style="margin:0 0 8px">📱 Mobile OTP Login</h3>
@@ -136,15 +136,7 @@
       <button id="logoutBtn" type="button" class="secondary hidden" style="width:100%;margin-top:8px" onclick="logoutPhoneUser()">Logout</button>
       <div id="authMsg" aria-live="polite"></div>
     </div>
-    <div class="panel" style="margin:12px 0;padding:12px;background:#06271f">
-      <label for="languageSelect" style="display:block;margin-bottom:8px">🌐 Language</label>
-      <select id="languageSelect" onchange="setLanguage(this.value)" style="width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#001812;color:white">
-        <option value="hi">हिन्दी (Hindi)</option>
-        <option value="en">English</option>
-      </select>
-      <small class="muted" id="languageHint">Choose your preferred language.</small>
-    </div>
-    <div class="notice" id="accountHint">अपनी प्रोफाइल सेटिंग और ऑर्डर देखने के लिए विकल्प चुनें।</div>
+    <div class="notice" id="accountHint">Choose an option to manage your profile or view orders.</div>
     <div class="contactbox">
       <strong>📩 Complaint / Contact Us</strong><br>
       शिकायत या मदद के लिए संपर्क करें:<br>
@@ -154,22 +146,22 @@
   </section>
   <section id="profileSection" class="panel hidden">
     <h2>⚙️ My Profile</h2>
-    <div class="profilehead"><div class="profileavatar" id="profileAvatar">👤</div><div><strong id="profileDisplayName">आपकी प्रोफाइल</strong><div class="muted">अपनी जानकारी अपडेट करें</div></div></div>
+    <div class="profilehead"><div class="profileavatar" id="profileAvatar">👤</div><div><strong id="profileDisplayName">Your Profile</strong><div class="muted">अपनी जानकारी अपडेट करें</div></div></div>
     <form id="profileForm" class="formgrid">
-      <div class="field full"><label for="profileName">पूरा नाम</label><input id="profileName" required autocomplete="name"></div>
-      <div class="field full"><label for="profilePhone">मोबाइल नंबर</label><input id="profilePhone" inputmode="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10 अंकों का नंबर"></div>
-      <div class="field full"><label for="profileAddress">डिफ़ॉल्ट पता</label><input id="profileAddress" autocomplete="street-address" placeholder="मकान नंबर, गली, मोहल्ला"></div>
+      <div class="field full"><label for="profileName">Full name</label><input id="profileName" required autocomplete="name"></div>
+      <div class="field full"><label for="profilePhone">Mobile number</label><input id="profilePhone" inputmode="tel" pattern="[0-9]{10}" maxlength="10" placeholder="10 अंकों का नंबर"></div>
+      <div class="field full"><label for="profileAddress">Default address</label><input id="profileAddress" autocomplete="street-address" placeholder="House number, street, locality"></div>
       <div class="field"><label for="profilePin">PIN Code</label><input id="profilePin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"></div>
-      <div class="field full"><button type="submit">प्रोफाइल सेव करें</button></div>
+      <div class="field full"><button type="submit">Save Profile</button></div>
     </form>
     <button class="secondary" style="width:100%;margin-top:10px" onclick="showSection('account')">← My Account</button>
     <div id="profileMsg" aria-live="polite"></div>
   </section>
   <section id="myordersSection" class="panel hidden">
     <h2>📦 My Orders</h2>
-    <p class="muted">ऑर्डर की स्थिति और प्रोडक्ट यहाँ दिखेंगे।</p>
+    <p class="muted">Your order status and products appear here.</p>
     <div id="myOrdersList"></div>
-    <button class="secondary" style="width:100%;margin-top:10px" onclick="showSection('store')">खरीदारी जारी रखें</button>
+    <button class="secondary" style="width:100%;margin-top:10px" onclick="showSection('store')">Continue Shopping</button>
   </section>
 
 
@@ -180,7 +172,7 @@
       <h3 id="mapPickerTitle">🗺️ डिलीवरी लोकेशन चुनें</h3>
       <p class="map-instructions" id="mapInstructions">पिन बीच में स्थिर रहेगा। मैप को खिसकाएँ ताकि पिन आपके घर/डिलीवरी गेट पर आ जाए। Satellite और Street map दोनों चुन सकते हैं। Satellite तस्वीर की तारीख क्षेत्र और provider पर निर्भर करती है।</p>
       <div id="inlineMap" class="inline-map" aria-label="डिलीवरी लोकेशन मैप"><div class="fixed-map-pin" aria-hidden="true">📍</div></div>
-      <button type="button" onclick="centerMapOnCurrentLocation()" style="width:100%">📍 मेरी वर्तमान लोकेशन पर जाएँ</button>
+      <button type="button" onclick="centerMapOnCurrentLocation()" style="width:100%">📍 My Current Location पर जाएँ</button>
       <div id="mapSelectedCoords" class="location-preview">अभी कोई लोकेशन नहीं चुनी गई।</div>
       <button type="button" style="width:100%;margin-top:10px" onclick="saveInlineMapLocation()">इस लोकेशन को सेव करें</button>
       <button type="button" class="closepay" onclick="closeMapPicker()">बंद करें</button>
@@ -212,7 +204,7 @@ function save(){localStorage.setItem("mlm_products",JSON.stringify(products));lo
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(localStorage.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
 function setCategory(c){activeCategory=c;categories();renderProducts()}
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(activeCategory==="All"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));$("listingTitle").textContent=activeCategory==="All"?(localStorage.getItem("mlm_language")==="en"?"All Products":"सभी प्रोडक्ट"):activeCategory;$("products").innerHTML=list.length?list.map(p=>`<article class="product"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'"><div class="pbody"><div class="pname">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button onclick="addCart(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" onclick="buyNow(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(activeCategory==="All"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));$("listingTitle").textContent=activeCategory==="All"?(localStorage.getItem("mlm_language")==="en"?"All Products":"All Products"):activeCategory;$("products").innerHTML=list.length?list.map(p=>`<article class="product"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onerror="this.style.display='none'"><div class="pbody"><div class="pname">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button onclick="addCart(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" onclick="buyNow(${p.id})">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
 function showOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.remove("hidden")}function closeOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.add("hidden")}
 let toastTimer;function showToast(message){const t=$("toast");$("toastText").textContent=message;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2300)}
 function getSavedDeliveryAddress(){try{return JSON.parse(localStorage.getItem("mlm_saved_delivery_address")||"null")}catch(e){return null}}
@@ -267,7 +259,7 @@ function checkArea(){const pin=$("pincode").value.trim();const msg=$("areaMsg");
 $("search").addEventListener("input",renderProducts);
 $("orderForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">पहले कार्ट में प्रोडक्ट जोड़ें।</div>';return}
+  if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
   if(pin!=="202126"&&pin!=="202127"){$("orderMsg").innerHTML='<div class="notice error">इस समय केवल PIN 202126 और 202127 अनुमति सूची में हैं। यह वास्तविक 10 KM दूरी की जाँच नहीं है।</div>';return}
   const order={
@@ -324,7 +316,7 @@ function showAuthState(user){
 if(auth){auth.onAuthStateChanged(user=>{if(user)showAuthState(user);else showAuthState(null)})}
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
-  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय मोबाइल नंबर डालें।",true);return}
+  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय Mobile number डालें।",true);return}
   try{
     $("sendOtpBtn").disabled=true;authMessage("SMS OTP भेजा जा रहा है…");
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
@@ -337,13 +329,13 @@ async function sendLoginOTP(){
     $("otpVerifyArea").classList.remove("hidden");
     authMessage("OTP SMS से भेज दिया गया है। SMS में आया कोड डालें।");
   }catch(err){
-    authMessage("OTP नहीं भेजा जा सका: "+(err.message||"त्रुटि")+". Worker और StartMessaging सेटिंग जाँचें।",true);
+    authMessage("OTP नहीं भेजा जा सका: "+(err.message||"त्रुटि")+". Worker और StartMessaging सेटिंग Check।",true);
   }finally{$("sendOtpBtn").disabled=false}
 }
 async function verifyLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   const code=$("loginOtp").value.trim();
-  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("पहले इसी मोबाइल नंबर पर OTP भेजें।",true);return}
+  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("पहले इसी Mobile number पर OTP भेजें।",true);return}
   if(!/^\d{4,6}$/.test(code)){authMessage("SMS में आया 4–6 अंकों का OTP डालें।",true);return}
   try{
     $("verifyOtpBtn")&&($("verifyOtpBtn").disabled=true);
@@ -356,7 +348,7 @@ async function verifyLoginOTP(){
     localStorage.setItem("mlm_sms_verified_phone",phone);
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
-    authMessage("मोबाइल OTP सत्यापित हो गया। लॉगिन सफल है।");
+    authMessage("Mobile OTP verified. Login successful.");
     showAuthState(null);
   }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
@@ -365,7 +357,7 @@ async function logoutPhoneUser(){
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
   localStorage.removeItem("mlm_sms_verified_phone");
   pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);
-  authMessage("लॉगआउट हो गया।");
+  authMessage("You have been logged out.");
 }
 
 // Only the public Razorpay Key ID is used in browser code. Never add Key Secret here.
@@ -414,7 +406,7 @@ function startRazorpayPayment(order){
     $("orderMsg").innerHTML='<div class="notice error">Secure Razorpay backend endpoints सेट नहीं हैं।</div>';return Promise.resolve();
   }
   if(typeof Razorpay==="undefined"){
-    $("orderMsg").innerHTML='<div class="notice error">Razorpay Checkout लोड नहीं हुआ। इंटरनेट कनेक्शन जाँचें।</div>';return Promise.resolve();
+    $("orderMsg").innerHTML='<div class="notice error">Razorpay Checkout लोड नहीं हुआ। इंटरनेट कनेक्शन Check।</div>';return Promise.resolve();
   }
   $("orderMsg").innerHTML='<div class="notice">Secure payment तैयार किया जा रहा है…</div>';
   return fetch(RAZORPAY_CREATE_ORDER_URL,{
@@ -502,7 +494,7 @@ function openMapPicker(){
   document.getElementById("mapPickerOverlay").classList.remove("hidden");
   setTimeout(()=>{
     if(typeof L==="undefined"){
-      document.getElementById("mapSelectedCoords").textContent="मैप लोड नहीं हुआ। इंटरनेट कनेक्शन जाँचें।";return;
+      document.getElementById("mapSelectedCoords").textContent="मैप लोड नहीं हुआ। इंटरनेट कनेक्शन Check।";return;
     }
     if(!inlineMap){
       const saved=JSON.parse(localStorage.getItem("mlm_delivery_location")||"null");
@@ -580,12 +572,12 @@ function restoreDeliveryLocation(){
 }
 
 function setLanguage(lang){
-  lang = lang === "en" ? "en" : "hi";
-  localStorage.setItem("mlm_language", lang);
+  lang = "en";
+  localStorage.setItem("mlm_language", "en");
   document.documentElement.lang = lang;
   const en=lang==="en";
   const t=en?{
-    account:"👤 मेरा अकाउंट",profile:"मेरी प्रोफाइल",orders:"मेरे ऑर्डर",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 मोबाइल OTP लॉगिन",loggedIn:"लॉगिन है:",notLoggedIn:"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।",phoneIndia:"मोबाइल नंबर (भारत)",phonePlaceholder:"10 अंकों का मोबाइल नंबर",sendOtp:"OTP भेजें",otpSms:"SMS से मिला OTP",otpPlaceholder:"6 अंकों का OTP",verifyOtp:"OTP सत्यापित करके लॉगिन करें",logout:"लॉगआउट",languageLabel:"🌐 भाषा / Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
+    account:"👤 मेरा अकाउंट",profile:"मेरी प्रोफाइल",orders:"मेरे ऑर्डर",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 मोबाइल OTP लॉगिन",loggedIn:"लॉगिन है:",notLoggedIn:"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।",phoneIndia:"Mobile number (भारत)",phonePlaceholder:"10 अंकों का Mobile number",sendOtp:"OTP भेजें",otpSms:"SMS से मिला OTP",otpPlaceholder:"6 अंकों का OTP",verifyOtp:"OTP सत्यापित करके लॉगिन करें",logout:"लॉगआउट",languageLabel:"🌐 Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
     profileHint:"Name, mobile and address",ordersHint:"Orders and tracking",
     languageHint:"Choose your preferred language.",accountHint:"Choose an option to manage your profile or view orders.",
     profileTitle:"⚙️ My Profile",fullName:"Full name",mobile:"Mobile number",defaultAddress:"Default address",pin:"PIN Code",saveProfile:"Save Profile",
@@ -610,28 +602,28 @@ function setLanguage(lang){
     orderTracking:"Order status:",trackNote:"Your order status will appear here.",locationCurrent:"📍 My Current Location",locationMap:"🗺️ Choose on Map",locationHelp:"Choose a location to help the delivery reach the right place.",mapTitle:"🗺️ Choose Delivery Location",openMap:"📍 Use My Current Location",saveLocation:"Save This Location",closeMap:"Close",locationLabel:"Tap the map to choose a location"
   }:{
     account:"👤 My Account",profile:"My Profile",orders:"My Orders",
-    profileHint:"नाम, मोबाइल और पता",ordersHint:"ऑर्डर और ट्रैकिंग",
-    languageHint:"अपनी पसंद की भाषा चुनें।",accountHint:"अपनी प्रोफाइल सेटिंग और ऑर्डर देखने के लिए विकल्प चुनें।",
-    profileTitle:"⚙️ My Profile",fullName:"पूरा नाम",mobile:"मोबाइल नंबर",defaultAddress:"डिफ़ॉल्ट पता",pin:"PIN Code",saveProfile:"प्रोफाइल सेव करें",
-    ordersTitle:"📦 My Orders",ordersIntro:"ऑर्डर की स्थिति और प्रोडक्ट यहाँ दिखेंगे।",continueShopping:"खरीदारी जारी रखें",
+    profileHint:"Name, mobile and address",ordersHint:"Orders and tracking",
+    languageHint:"अपनी पसंद की भाषा चुनें।",accountHint:"Choose an option to manage your profile or view orders.",
+    profileTitle:"⚙️ My Profile",fullName:"Full name",mobile:"Mobile number",defaultAddress:"Default address",pin:"PIN Code",saveProfile:"Save Profile",
+    ordersTitle:"📦 My Orders",ordersIntro:"Your order status and products appear here.",continueShopping:"Continue Shopping",
     contact:"📩 Complaint / Contact Us",contactText:"शिकायत या मदद के लिए संपर्क करें:",
     noOrders:"अभी कोई ऑर्डर नहीं है। ऑर्डर करने के बाद यहाँ दिखाई देगा।",
     rate:"इस प्रोडक्ट को रेट करें",home:"⌂ Home",cart:"🛒 Cart",navAccount:"👤 Account",
-    heroTitle:"आपकी पसंद, आपकी दुकान",heroText:"ModeLuxe Mart पर अपने पसंदीदा प्रोडक्ट खोजें और ऑर्डर तैयार करें।",
-    deliveryTitle:"📍 डिलीवरी उपलब्धता जाँचें",deliveryText:"डिलीवरी उपलब्धता आपके चुने हुए PIN Code के आधार पर जाँची जाती है।",
-    pinPlaceholder:"अपना 6 अंकों का PIN Code",check:"जाँचें",all:"सभी प्रोडक्ट",allCategory:"सभी",
-    addCart:"कार्ट में जोड़ें",buy:"खरीदें",emptyCart:"आपका कार्ट खाली है।",total:"कुल",
-    checkout:"ऑर्डर की जानकारी भरें",continue:"खरीदारी जारी रखें",checkoutTitle:"डिलीवरी और ऑर्डर",
+    heroTitle:"Your Choice, Your Store",heroText:"Find your favourite products on ModeLuxe Mart and prepare your order.",
+    deliveryTitle:"📍 Check Delivery Availability",deliveryText:"Delivery availability is checked using your selected PIN Code.",
+    pinPlaceholder:"Enter your 6-digit PIN Code",check:"Check",all:"All Products",allCategory:"सभी",
+    addCart:"कार्ट में जोड़ें",buy:"खरीदें",emptyCart:"आपका कार्ट खाली है।",total:"Total",
+    checkout:"Enter Order Details",continue:"Continue Shopping",checkoutTitle:"Delivery & Order",
     backendNotice:"",
-    addressLabel:"पूरा डिलीवरी पता",paymentLabel:"भुगतान का तरीका",cod:"Cash on Delivery (COD)",onlinePayment:"ऑनलाइन भुगतान · Razorpay",paymentModalTitle:"भुगतान का तरीका चुनें",codHint:"डिलीवरी के समय भुगतान करें",onlineHint:"UPI, कार्ड और उपलब्ध ऑनलाइन विकल्प",closePayment:"बंद करें",
-    submitOrder:"ऑर्डर करें",firstAdd:"पहले कार्ट में प्रोडक्ट जोड़ें।",
+    addressLabel:"Full delivery address",paymentLabel:"Payment method",cod:"Cash on Delivery (COD)",onlinePayment:"ऑनलाइन भुगतान · Razorpay",paymentModalTitle:"Payment method चुनें",codHint:"डिलीवरी के समय भुगतान करें",onlineHint:"UPI, कार्ड और उपलब्ध ऑनलाइन विकल्प",closePayment:"बंद करें",
+    submitOrder:"ऑर्डर करें",firstAdd:"Add a product to your cart first.",
     pinUnavailable:"फिलहाल इस PIN Code पर डिलीवरी उपलब्ध नहीं है।",
     pinAllowed:"यह PIN Code अभी अनुमति सूची में है। PIN Code जाँच वास्तविक 10 KM दूरी की पुष्टि नहीं करती।",
     invalidPin:"कृपया सही 6 अंकों का PIN Code डालें।",
-    orderLocal:"आपका ऑर्डर सफलतापूर्वक हो गया है।",
-    profileSaved:"प्रोफाइल इस डिवाइस पर सेव हो गई।",ratingSaved:"आपकी रेटिंग सेव हो गई।",
+    orderLocal:"Your order has been placed successfully.",
+    profileSaved:"Profile saved on this device.",ratingSaved:"आपकी रेटिंग सेव हो गई।",
     contactLine:"शिकायत या मदद के लिए संपर्क करें:",footer:"© 2026 ModeLuxe Mart · Customer Store",
-    orderTracking:"ऑर्डर स्थिति:",trackNote:"आपके ऑर्डर की स्थिति यहाँ दिखाई देगी।",locationCurrent:"📍 मेरी वर्तमान लोकेशन",locationMap:"🗺️ मैप पर लोकेशन चुनें",locationHelp:"डिलीवरी सही जगह पहुँचाने के लिए लोकेशन चुनें।",mapTitle:"🗺️ डिलीवरी लोकेशन चुनें",openMap:"📍 मेरी वर्तमान लोकेशन पर जाएँ",saveLocation:"इस लोकेशन को सेव करें",closeMap:"बंद करें",locationLabel:"मैप पर टैप करके लोकेशन चुनें"
+    orderTracking:"Order status:",trackNote:"आपके ऑर्डर की स्थिति यहाँ दिखाई देगी।",locationCurrent:"📍 My Current Location",locationMap:"🗺️ Choose on Map",locationHelp:"Choose a location to help the delivery reach the right place.",mapTitle:"🗺️ डिलीवरी लोकेशन चुनें",openMap:"📍 My Current Location पर जाएँ",saveLocation:"इस लोकेशन को सेव करें",closeMap:"बंद करें",locationLabel:"मैप पर टैप करके लोकेशन चुनें"
   };
   const setText=(selector,value)=>{const el=document.querySelector(selector);if(el)el.textContent=value};
   setText("#accountSection h2",t.account);
@@ -667,7 +659,7 @@ function setLanguage(lang){
   const checkoutBtn=document.querySelector('#cartSection button[onclick*="checkout"]');if(checkoutBtn)checkoutBtn.textContent=t.checkout;
   const continueCart=document.querySelector('#cartSection button[onclick*="store"]');if(continueCart)continueCart.textContent=t.continue;
   setText("#checkoutSection h2",t.checkoutTitle);const bn=document.getElementById("backendNotice");if(bn)bn.classList.add("hidden");
-  setText('label[for="customerName"]',t.fullName);setText('label[for="customerPhone"]',t.mobile);setText('#savedAddressCard strong',en?"📍 Your delivery address":"📍 आपका डिलीवरी पता");const addressBtns=document.querySelectorAll('#savedAddressCard button');if(addressBtns[0])addressBtns[0].textContent=en?"Change address":"पता बदलें";if(addressBtns[1])addressBtns[1].textContent=en?"+ Add new address":"+ नया पता";
+  setText('label[for="customerName"]',t.fullName);setText('label[for="customerPhone"]',t.mobile);setText('#savedAddressCard strong',en?"📍 Your delivery address":"📍 Your delivery address");const addressBtns=document.querySelectorAll('#savedAddressCard button');if(addressBtns[0])addressBtns[0].textContent=en?"Change address":"Change address";if(addressBtns[1])addressBtns[1].textContent=en?"+ Add new address":"+ Add new address";
   setText('label[for="customerAddress"]',t.addressLabel);setText('label[for="customerPin"]',t.pin);
   setText('label[for="payment"]',t.paymentLabel);setText('#orderForm button[type="submit"]',t.submitOrder);
   const payLabel=document.getElementById("paymentLabel");if(payLabel)payLabel.textContent=document.getElementById("payment").value==="RAZORPAY"?t.onlinePayment:t.cod;
@@ -688,7 +680,7 @@ function getRatingCount(id){return getRatings().filter(r=>r.productId===Number(i
 function getUserRating(id){const a=getRatings().filter(r=>r.productId===Number(id));return a.length?a[a.length-1].rating:0}
 function rateProduct(productId,rating,orderId){
   const order=orders.find(o=>Number(o.id)===Number(orderId));
-  if(!order||!(String(order.status||"").toLowerCase().includes("delivered")||String(order.status||"").toLowerCase().includes("डिलीवर"))){showToast("रेटिंग सिर्फ डिलीवर हुए ऑर्डर पर उपलब्ध है");return}
+  if(!order||!(String(order.status||"").toLowerCase().includes("delivered")||String(order.status||"").toLowerCase().includes("डिलीवर"))){showToast("Ratings are available only for delivered orders.");return}
   let ratings=getRatings();
   const old=ratings.findIndex(r=>r.productId===productId&&r.orderId===orderId);
   const entry={productId,rating,orderId,date:new Date().toISOString()};
@@ -703,28 +695,28 @@ function loadProfile(){
   $("profilePhone").value=profile.phone||"";
   $("profileAddress").value=profile.address||"";
   $("profilePin").value=profile.pin||"";
-  $("profileDisplayName").textContent=profile.name||"आपकी प्रोफाइल";
+  $("profileDisplayName").textContent=profile.name||"Your Profile";
   $("profileAvatar").textContent=(profile.name||"").trim().charAt(0)||"👤";
 }
 $("profileForm").addEventListener("submit",e=>{
   e.preventDefault();
   const profile={name:$("profileName").value.trim(),phone:$("profilePhone").value.trim(),address:$("profileAddress").value.trim(),pin:$("profilePin").value.trim()};
   localStorage.setItem("mlm_profile",JSON.stringify(profile));
-  $("profileDisplayName").textContent=profile.name||"आपकी प्रोफाइल";
+  $("profileDisplayName").textContent=profile.name||"Your Profile";
   $("profileAvatar").textContent=profile.name.charAt(0)||"👤";
-  $("profileMsg").innerHTML='<div class="notice success">प्रोफाइल इस डिवाइस पर सेव हो गई।</div>';
-  showToast("प्रोफाइल सेव हो गई");
+  $("profileMsg").innerHTML='<div class="notice success">Profile saved on this device.</div>';
+  showToast("Profile saved.");
 });
 function renderMyOrders(){
   const list=$("myOrdersList");
   if(!orders.length){list.innerHTML='<div class="empty">'+(localStorage.getItem("mlm_language")==="en"?"You don\'t have any orders yet. Your orders will appear here after ordering.":"अभी कोई ऑर्डर नहीं है। ऑर्डर करने के बाद यहाँ दिखाई देगा।")+'</div>';return}
   list.innerHTML=orders.map(o=>{
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name)}</strong><div class="muted">₹${Number(i.price).toLocaleString("en-IN")} × ${Number(i.qty||1)}</div></div></div>`).join("");
-    const en=localStorage.getItem("mlm_language")==="en";return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>${en?"Total":"कुल राशि"}</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">${en?"Delivery PIN":"डिलीवरी PIN"}: ${esc(o.pin||"—")}</div><div class="notice">${en?"Order status":"ऑर्डर स्थिति"}: ${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}.</div>${String(o.status||"").toLowerCase().includes("delivered")||String(o.status||"").toLowerCase().includes("डिलीवर")?`<div class="ratebox"><strong>${en?"Rate this product":"इस प्रोडक्ट को रेट करें"}</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
+    const en=localStorage.getItem("mlm_language")==="en";return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>${en?"Total":"Total राशि"}</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">${en?"Delivery PIN":"Delivery PIN"}: ${esc(o.pin||"—")}</div><div class="notice">${en?"Order status":"Order status"}: ${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}.</div>${String(o.status||"").toLowerCase().includes("delivered")||String(o.status||"").toLowerCase().includes("डिलीवर")?`<div class="ratebox"><strong>${en?"Rate this product":"इस प्रोडक्ट को रेट करें"}</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();renderCart();const langSelect=document.getElementById("languageSelect");const savedLang=localStorage.getItem("mlm_language")||"hi";if(langSelect)langSelect.value=savedLang;setLanguage(savedLang);
+$("year").textContent=new Date().getFullYear();categories();renderProducts();renderCart();localStorage.setItem("mlm_language","en");setLanguage("en");
 </script>
 </body>
 </html>
