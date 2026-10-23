@@ -216,7 +216,7 @@ function switchUserData(phone){
       const legacy=load("mlm_orders",[]).filter(o=>String(o.phone||"").replace(/\D/g,"")===activeUserPhone);
       orders=legacy;localStorage.setItem(ok,JSON.stringify(orders));
     }
-  }else{cart=[];orders=[];}
+  }else{cart=[];orders=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
   renderCart();renderMyOrders();renderProfileAvatar(activeUserPhone?load(userKey("mlm_profile"),{name:"",avatar:""}):{name:"",avatar:""});
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -268,7 +268,7 @@ function showSection(s){
   $("areaMsg").classList.toggle("hidden",!onStore);
   $("storeFooter").classList.toggle("hidden",!onStore);
   if(s==="cart")renderCart();
-  if(s==="checkout"){renderSavedDeliveryAddress();const p=load("mlm_profile",{});if(p.name&&!$("customerName").value)$("customerName").value=p.name;if(p.phone&&!$("customerPhone").value)$("customerPhone").value=p.phone;if(p.address&&!$("customerAddress").value)$("customerAddress").value=p.address;if(p.pin&&!$("customerPin").value)$("customerPin").value=p.pin;restoreDeliveryLocation();}
+  if(s==="checkout"){renderSavedDeliveryAddress();const p=activeUserPhone?load(userKey("mlm_profile"),{}):{};if(p.name&&!$("customerName").value)$("customerName").value=p.name;if(activeUserPhone&&p.phone&&!$("customerPhone").value)$("customerPhone").value=p.phone;if(p.address&&!$("customerAddress").value)$("customerAddress").value=p.address;if(p.pin&&!$("customerPin").value)$("customerPin").value=p.pin;restoreDeliveryLocation();}
   if(s==="account"||s==="profile")loadProfile();
   if(s==="myorders")renderMyOrders();
   window.scrollTo({top:0,behavior:"smooth"});
