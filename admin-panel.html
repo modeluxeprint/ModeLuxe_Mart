@@ -1,14 +1,40 @@
 <!doctype html>
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ModeLuxe Mart — Admin Panel</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script><style>body{background:#061711;color:#f5f5f4;font-family:system-ui,sans-serif}input,select,textarea{color:#fff;background:#0b2920;border:1px solid #285747;border-radius:10px;padding:10px;width:100%;outline:none}button{transition:.15s}button:disabled{opacity:.5;cursor:not-allowed}.gold{color:#fbbf24}.panel{background:#0b2119;border:1px solid #214b3b;border-radius:16px}.btn{border-radius:10px;padding:10px 13px;font-weight:700}.primary{background:#fbbf24;color:#08150f}.muted{background:#17392c}.danger{background:#7f1d1d}.success{background:#166534}.small{font-size:12px}.order-card{background:#102b20;border:1px solid #27533f;border-radius:14px;padding:14px}</style></head>
 <body><main class="max-w-6xl mx-auto p-4 md:p-6">
 <header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" value="7818995955" autocomplete="tel"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
+<div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="productsTabBtn" class="btn muted" type="button" onclick="showAdminTab('products')">Products / Seller Listing</button></div>
+<div id="ordersTab">
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"><div class="panel p-4"><p class="small text-stone-400">Total Orders</p><b id="totalCount" class="text-2xl gold">0</b></div><div class="panel p-4"><p class="small text-stone-400">Active</p><b id="activeCount" class="text-2xl gold">0</b></div><div class="panel p-4"><p class="small text-stone-400">Delivered</p><b id="deliveredCount" class="text-2xl gold">0</b></div><div class="panel p-4"><p class="small text-stone-400">Cancelled</p><b id="cancelledCount" class="text-2xl gold">0</b></div></div>
 <div class="panel p-4 mb-4"><div class="grid md:grid-cols-[1fr_190px_auto] gap-3"><input id="search" placeholder="Order ID, customer name, phone search karein" oninput="renderOrders()"><select id="statusFilter" onchange="renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Processing</option><option>Packed</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
 <div id="ordersList" class="space-y-3"></div>
+</div>
+<div id="productsTab" class="hidden">
+  <div class="panel p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><div><h2 class="text-xl font-bold gold">Product Listing</h2><p class="small text-stone-400">Admin/Seller product catalogue · existing orders are not changed</p></div><span id="productCount" class="text-sm gold font-bold">0 products</span></div>
+    <form id="productForm" class="grid md:grid-cols-2 gap-3" onsubmit="saveProduct(event)">
+      <input id="productEditId" type="hidden">
+      <div><label class="small block mb-1" for="productSeller">Seller / Shop Name</label><input id="productSeller" placeholder="Seller ya shop ka naam" required></div>
+      <div><label class="small block mb-1" for="productCategory">Category</label><select id="productCategory" required onchange="updateUnitChoices()"><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div>
+      <div><label class="small block mb-1" for="productName">Product Name</label><input id="productName" placeholder="Product ka naam" required></div>
+      <div><label class="small block mb-1" for="productImageFile">Product Photo Upload (optional)</label><input id="productImageFile" type="file" accept="image/*" onchange="previewProductImage(event)"><img id="productImagePreview" class="hidden mt-2 w-24 h-24 object-cover rounded-lg border border-emerald-900" alt="Product photo preview"><p class="small text-stone-400 mt-1">Mobile se photo select karein; URL bharne ki zaroorat nahi.</p></div>
+      <div><label class="small block mb-1" for="productQty">Quantity / Size (left box)</label><input id="productQty" type="text" placeholder="1, 2, 250, S, XL, 6" value="1" required></div>
+      <div><label class="small block mb-1" for="productUnit">Unit (right box)</label><select id="productUnit" required></select></div>
+      <div><label class="small block mb-1" for="productPrice">Price (₹)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="Selling price" required></div>
+      <div><label class="small block mb-1" for="productStock">Stock quantity</label><input id="productStock" type="number" min="0" step="1" value="0" required></div>
+      <div class="md:col-span-2"><label class="small block mb-1" for="productDescription">Description (optional)</label><textarea id="productDescription" rows="2" placeholder="Product details"></textarea></div>
+      <div class="md:col-span-2 rounded-xl border border-emerald-900 p-3"><p class="small text-stone-400">Preview</p><p id="productPreview" class="font-bold gold">1 kg</p><p class="small text-stone-300">Left box में मात्रा या size खुद भरें; right box से unit चुनें. उदाहरण: 2 kg, 250 Gram, 1 Half Plate, 6 Month, 90 cm, XL.</p></div>
+      <div class="md:col-span-2 flex flex-wrap gap-2"><button id="saveProductBtn" class="btn primary" type="submit">Save Product</button><button class="btn muted" type="button" onclick="resetProductForm()">Clear Form</button></div>
+      <p id="productMsg" class="small md:col-span-2" aria-live="polite"></p>
+    </form>
+  </div>
+  <div class="panel p-4 mb-4 grid md:grid-cols-2 gap-3"><input id="productSearch" placeholder="Product ya seller search karein" oninput="renderProducts()"><select id="productFilterCategory" onchange="renderProducts()"><option value="all">All categories</option><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div>
+  <div id="productsSyncMsg" class="small text-stone-400 mb-3">Products Firebase se load ho rahe hain…</div>
+  <div id="productsList" class="space-y-3"></div>
+</div>
 </section><footer class="text-center text-xs text-stone-500 mt-8">ModeLuxe Mart · Admin access requires Worker password + SMS OTP + this device’s password/passkey. Use HTTPS; this device lock is an extra client-side layer, not a replacement for Firebase Rules.</footer></main>
 <div id="adminDeviceLockModal" class="hidden fixed inset-0 bg-black/90 z-[120] p-4 overflow-y-auto items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="adminDeviceLockTitle"><div class="panel max-w-sm w-full mx-auto p-5 my-8"><div class="text-center mb-4"><div class="mx-auto mb-3 w-14 h-14 rounded-2xl bg-amber-400 text-black flex items-center justify-center text-2xl">🔐</div><h2 id="adminDeviceLockTitle" class="text-xl font-bold gold">Admin Device Lock</h2><p id="adminDeviceLockIntro" class="small text-stone-300 mt-2">Password aur is phone ka passkey verify karein.</p></div><label class="small block mb-1" for="devicePassword">Admin Password</label><input id="devicePassword" type="password" autocomplete="current-password" minlength="10" placeholder="Kam se kam 10 characters"><label id="deviceConfirmLabel" class="small block mt-3 mb-1" for="devicePasswordConfirm">Confirm Password</label><input id="devicePasswordConfirm" type="password" autocomplete="new-password" minlength="10" placeholder="Password dobara dalein"><button id="devicePrimaryBtn" class="btn primary w-full mt-3" type="button">Set Password & Register Passkey</button><button id="deviceCancelBtn" class="btn muted w-full mt-2" type="button">Cancel / Logout</button><p id="deviceLockMsg" class="small text-stone-300 mt-3" aria-live="polite"></p><p class="text-[10px] text-amber-200 mt-3">Passkey is an additional device-local lock. Firebase Rules and server authorization are still required for database security.</p></div></div>
 <div id="editModal" class="hidden fixed inset-0 bg-black/80 z-50 p-4 overflow-y-auto"><div class="panel max-w-xl mx-auto p-5 mt-8"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold gold">Edit Order</h2><button onclick="closeEdit()" class="text-2xl">×</button></div><input id="editId" type="hidden"><label class="small">Customer name</label><input id="editName" class="mb-3"><label class="small">Customer phone</label><input id="editPhone" class="mb-3"><label class="small">Shipping address</label><textarea id="editAddress" rows="3" class="mb-3"></textarea><label class="small">Product / order description</label><input id="editProduct" class="mb-3"><label class="small">Total amount (₹)</label><input id="editAmount" type="number" min="0" class="mb-4"><button class="btn primary w-full" onclick="saveEdit()">Save Changes</button><p id="editMsg" class="small mt-2"></p><p class="small text-amber-200 mt-3">Note: editing an order updates the shared Firebase order record and customer My Orders data.</p></div></div>
@@ -26,10 +52,11 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const auth=firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
 const ADMIN_PHONE='7818995955';
 const ADMIN_PHONE_ALLOWLIST=[ADMIN_PHONE];
 const ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
-let pendingPhone='', requestId='', ordersData={}, orderListener=null, signedInPhone='', initialOrdersLoaded=false;
+let pendingPhone='', requestId='', ordersData={}, orderListener=null, productListener=null, productsData={}, signedInPhone='', initialOrdersLoaded=false;
 const NOTIFICATION_KEY='modeluxeAdminNotificationsV1';
 let adminNotifications=loadNotifications();
 const $=id=>document.getElementById(id);
@@ -44,8 +71,92 @@ function markNotificationRead(id){adminNotifications=adminNotifications.map(n=>n
 function clearNotifications(){adminNotifications=[];saveNotifications()}
 document.addEventListener('click',e=>{const d=$('notificationDropdown');if(d&&!d.classList.contains('hidden')&&!e.target.closest('#notificationDropdown')&&!e.target.closest('#bellBtn')){d.classList.add('hidden');$('bellBtn').setAttribute('aria-expanded','false')}});
 renderNotifications();
-async function sendOTP(){const phone=$('phone').value.trim(),password=$('adminPassword').value;if(phone!==ADMIN_PHONE){setMsg('यह Admin मोबाइल नंबर अधिकृत नहीं है।');addNotification('Login blocked','अनधिकृत Admin मोबाइल नंबर से प्रयास हुआ।','error');return;}if(password.length<12){setMsg('Admin Password कम-से-कम 12 अक्षरों का होना चाहिए।');addNotification('Login validation','Admin password 12 अक्षरों से छोटा था।','error');return;}if(ADMIN_WORKER.includes('REPLACE_WITH')){setMsg('पहले Cloudflare पर Admin Worker deploy करें और उसका URL यहाँ डालें।');addNotification('Worker URL missing','Admin Worker URL सेट नहीं है।','error');return;}try{$('sendBtn').disabled=true;setMsg('Password की जाँच और OTP भेजा जा रहा है…');const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password})});const j=await r.json();if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||'OTP send nahi hua');pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');setMsg('Password verified. OTP SMS में चेक करें।');addNotification('OTP request sent','Admin password verify हुआ और OTP request स्वीकार हुई।','success');}catch(e){setMsg('Login error: '+e.message);addNotification('OTP request failed',e.message||'OTP नहीं भेजा जा सका।','error');}finally{$('sendBtn').disabled=false;}}
-async function verifyOTP(){const phone=$('phone').value.trim(),otp=$('otp').value.trim();if(phone!==pendingPhone||!requestId){setMsg('पहले Password सत्यापित करके OTP भेजें।');return;}if(!/^\d{6}$/.test(otp)){setMsg('6 अंकों का OTP डालें।');addNotification('OTP validation failed','छह अंकों का OTP नहीं डाला गया।','error');return;}try{$('verifyBtn').disabled=true;setMsg('OTP सत्यापित हो रहा है…');const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp})});const j=await r.json();if(!r.ok||j.success!==true||j.verified!==true||!j.customToken)throw Error(j.message||'OTP गलत या expire हो गया');await auth.signInWithCustomToken(j.customToken);signedInPhone=phone;$('adminPassword').value='';$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');addNotification('OTP verified','OTP सत्यापित हुआ; device password/passkey check बाकी है।','success');showDeviceLockAfterOtp();}catch(e){setMsg('Login fail: '+e.message);$('loginPanel').classList.remove('hidden');addNotification('OTP verification failed',e.message||'OTP verify नहीं हुआ।','error');}finally{$('verifyBtn').disabled=false;}}
+updateUnitChoices();
+
+// Restore the admin dashboard after refresh instead of showing the login form again.
+auth.onAuthStateChanged(user=>{
+  if(user && localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
+    signedInPhone=ADMIN_PHONE;
+    $('loginPanel').classList.add('hidden');
+    $('logoutBtn').classList.remove('hidden');
+    $('adminDeviceLockModal').classList.add('hidden');
+    $('adminDeviceLockModal').classList.remove('flex');
+    $('dashboard').classList.remove('hidden');
+    startOrders();
+    startProducts();
+    updateUnitChoices();
+  }
+});
+async function sendOTP(){
+  const phone=$('phone').value.trim(),password=$('adminPassword').value;
+  if(phone!==ADMIN_PHONE){setMsg('यह Admin मोबाइल नंबर अधिकृत नहीं है।');addNotification('Login blocked','अनधिकृत Admin मोबाइल नंबर से प्रयास हुआ।','error');return;}
+  if(password.length<12){setMsg('Admin Password कम-से-कम 12 अक्षरों का होना चाहिए।');addNotification('Login validation','Admin password 12 अक्षरों से छोटा था।','error');return;}
+  if(ADMIN_WORKER.includes('REPLACE_WITH')){setMsg('पहले Cloudflare पर Admin Worker deploy करें और उसका URL यहाँ डालें।');addNotification('Worker URL missing','Admin Worker URL सेट नहीं है।','error');return;}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+  try{
+    $('sendBtn').disabled=true;setMsg('Password की जाँच और OTP भेजा जा रहा है…');
+    const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password}),signal:controller.signal});
+    const raw=await r.text();let j={};try{j=JSON.parse(raw)}catch{}
+    if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||('Worker response error (HTTP '+r.status+').'));
+    pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');setMsg('OTP भेज दिया गया है। SMS में मिला नया OTP डालें।');addNotification('OTP request sent','Admin password verify हुआ और OTP request स्वीकार हुई।','success');
+  }catch(e){
+    const msg=e.name==='AbortError'?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया। Worker/OTP provider जाँचें और फिर प्रयास करें।':(e.message||'OTP भेजने में समस्या हुई।');
+    setMsg('Login error: '+msg);addNotification('OTP request failed',msg,'error');
+  }finally{clearTimeout(timer);$('sendBtn').disabled=false;}
+}
+async function verifyOTP(){
+  const phone=$('phone').value.trim(),otp=$('otp').value.trim();
+  if(phone!==pendingPhone||!requestId){setMsg('पहले Password सत्यापित करके नया OTP भेजें।');return;}
+  if(!/^\d{6}$/.test(otp)){setMsg('6 अंकों का OTP डालें।');addNotification('OTP validation failed','छह अंकों का OTP नहीं डाला गया।','error');return;}
+
+  const controller=new AbortController();
+  const fetchTimer=setTimeout(()=>controller.abort(),20000);
+  let stage='Worker से OTP verify response';
+  try{
+    $('verifyBtn').disabled=true;
+    setMsg('चरण 1/2: Cloudflare Worker OTP जाँच रहा है…');
+
+    const r=await fetch(ADMIN_WORKER,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp}),
+      signal:controller.signal
+    });
+    const raw=await r.text();
+    let j={};
+    try{j=JSON.parse(raw)}catch{}
+    if(!r.ok||j.success!==true||j.verified!==true||!j.customToken){
+      const detail=j.message||('HTTP '+r.status+(raw?': '+raw.slice(0,180):''));
+      throw Error('Worker ne OTP accept nahi kiya. '+detail);
+    }
+
+    clearTimeout(fetchTimer);
+    stage='Firebase custom token login';
+    setMsg('चरण 2/2: OTP सही है। Firebase login हो रहा है…');
+
+    // Also time out Firebase sign-in; the previous timeout covered fetch only.
+    await Promise.race([
+      auth.signInWithCustomToken(j.customToken),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase custom-token login ने 20 सेकंड में जवाब नहीं दिया। Firebase Auth configuration/network जाँचें।')),20000))
+    ]);
+
+    signedInPhone=phone;
+    $('adminPassword').value='';
+    $('loginPanel').classList.add('hidden');
+    $('logoutBtn').classList.remove('hidden');
+    addNotification('OTP verified','OTP सत्यापित हुआ; device password/passkey check बाकी है।','success');
+    showDeviceLockAfterOtp();
+  }catch(e){
+    const msg=e.name==='AbortError'
+      ?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया। Worker code/logs और OTP provider जाँचें।'
+      :('अटकने वाला चरण: '+stage+'. '+(e.message||'अज्ञात त्रुटि'));
+    setMsg(msg);
+    addNotification('OTP verification failed',msg,'error');
+  }finally{
+    clearTimeout(fetchTimer);
+    $('verifyBtn').disabled=false;
+  }
+}
 // Device-local password + Android passkey gate, adapted from the existing ModeLuxe Mart file.
 const DEVICE_LOCK_KEY='modeluxeAdminDeviceLockV1';
 const DEVICE_CRED_KEY='modeluxeAdminPasskeyCredentialIdV1';
@@ -54,20 +165,112 @@ function b64url(bytes){let binary='';new Uint8Array(bytes).forEach(b=>binary+=St
 function unb64url(value){const b64=String(value).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64+'='.repeat((4-b64.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
 async function passwordDigest(password,saltB64){const salt=saltB64?unb64url(saltB64):crypto.getRandomValues(new Uint8Array(16));const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},material,256);return {salt:b64url(salt),hash:b64url(bits)};}
 function deviceLockReady(){return !!localStorage.getItem(DEVICE_LOCK_KEY)&&!!localStorage.getItem(DEVICE_CRED_KEY)&&!!window.PublicKeyCredential&&!!navigator.credentials;}
-function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP verify ho gaya, lekin is browser/URL par Passkey supported nahi. HTTPS par supported browser se kholein.');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');auth.signOut().catch(()=>{});return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('deviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
+function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP verify ho gaya, lekin is browser/URL par Passkey supported nahi. HTTPS par supported browser se kholein.');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');auth.signOut().catch(()=>{});return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
 async function registerDevicePasskey(){const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'ModeLuxe Mart Admin',id:location.hostname},user:{id:userId,name:'modeluxe-admin-device',displayName:'ModeLuxe Mart Admin'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000,attestation:'none'}});if(!credential)throw Error('Passkey registration cancel ho gaya.');localStorage.setItem(DEVICE_CRED_KEY,b64url(credential.rawId));}
 async function verifyDevicePasskey(){const id=localStorage.getItem(DEVICE_CRED_KEY);if(!id)throw Error('Is phone ka passkey registered nahi hai.');const challenge=crypto.getRandomValues(new Uint8Array(32));const assertion=await navigator.credentials.get({publicKey:{challenge,rpId:location.hostname,allowCredentials:[{type:'public-key',id:unb64url(id)}],userVerification:'required',timeout:60000}});if(!assertion)throw Error('Passkey verification cancel ho gaya.');}
-async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}sessionStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
+async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startProducts();updateUnitChoices();}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
-$('deviceCancelBtn').addEventListener('click',async()=>{sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
+$('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
-async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);orderListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};sessionStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
+async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);if(productListener)db.ref('sellerProducts').off('value',productListener);orderListener=null;productListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
 const statuses=['Order Placed','Processing','Packed','Shipped','Out for Delivery','Delivered','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded'];
-function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;const all=entries.map(([id,o])=>[id,o||{}]);$('totalCount').textContent=all.length;$('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;$('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;$('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;const shown=all.filter(([id,o])=>{const text=[id,o.customerName,o.customerPhone,o.product,o.shippingAddress,o.status].join(' ').toLowerCase();return (!q||text.includes(q))&&(filter==='all'||String(o.status||'Order Placed')===filter);});$('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{const locked=!!o.adminStatusLocked;const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):'';return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(o.product||'Order')}</h3><p class="text-sm text-stone-300">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</p></div><div class="text-right"><p class="text-xl font-black gold">₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><p class="small">${esc(o.paymentStatus||o.paymentMethod||'Payment status unknown')}</p></div></div><div class="grid md:grid-cols-2 gap-2 text-sm mt-3"><p><span class="text-stone-400">Address:</span> ${esc(o.shippingAddress||'Not provided')}</p><p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p><p><span class="text-stone-400">Items:</span> ${esc(items||o.product||'—')}</p><p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p></div><div class="grid md:grid-cols-[1fr_auto_auto_auto] gap-2 mt-4"><select id="status-${esc(id)}" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn primary" onclick="updateStatus('${esc(id)}')" ${locked?'disabled':''}>Update Status</button><button class="btn muted" onclick="openEdit('${esc(id)}')">Edit Order</button><button class="btn danger" onclick="deleteOrder('${esc(id)}')">Delete</button></div>${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}</article>`;}).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi order nahi mila.</div>';}
-async function updateStatus(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const o=ordersData[id];if(!o)return alert('Order nahi mila');if(o.adminStatusLocked)return alert('Original website ke rules ke mutabik is order ka final status pehle hi lock hai.');const status=$('status-'+id).value;if(!confirm('Order #'+id+' ka status “'+status+'” karna hai? Customer ke My Orders mein bhi update hoga.'))return;try{await db.ref('orders/'+id).update({status,adminStatusLocked:true,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});alert('Status update ho gaya. Original website ke mutabik status final lock kar diya gaya hai.');addNotification('Order status updated','Order #'+id+' का status '+status+' किया गया।','success');}catch(e){alert('Status update fail: '+e.message);addNotification('Status update failed',e.message||'Order status save नहीं हुआ।','error');}}
+function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;const all=entries.map(([id,o])=>[id,o||{}]);$('totalCount').textContent=all.length;$('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;$('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;$('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;const shown=all.filter(([id,o])=>{const text=[id,o.customerName,o.customerPhone,o.product,o.shippingAddress,o.status].join(' ').toLowerCase();return (!q||text.includes(q))&&(filter==='all'||String(o.status||'Order Placed')===filter);});$('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{const locked=!!o.adminStatusLocked;const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):'';return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(o.product||'Order')}</h3><p class="text-sm text-stone-300">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</p></div><div class="text-right"><p class="text-xl font-black gold">₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><p class="small">${esc(o.paymentStatus||o.paymentMethod||'Payment status unknown')}</p></div></div><div class="grid md:grid-cols-2 gap-2 text-sm mt-3"><p><span class="text-stone-400">Address:</span> ${esc(o.shippingAddress||'Not provided')}</p><p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p><p><span class="text-stone-400">Items:</span> ${esc(items||o.product||'—')}</p><p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p></div><div class="mt-4 space-y-2"><select id="status-${esc(id)}" aria-label="Order status" onchange="updateStatus('${esc(id)}')" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn danger w-full" type="button" onclick="cancelOrder('${esc(id)}')" ${locked?'disabled':''}>Cancel Order</button></div>${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}</article>`;}).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi order nahi mila.</div>';}
+async function updateStatus(id){
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+  const o=ordersData[id];if(!o)return alert('Order nahi mila');
+  if(o.adminStatusLocked)return alert('Is order ka final status pehle hi lock ho chuka hai.');
+  const status=$('status-'+id).value;
+  if(['Delivered','Cancelled'].includes(status) && !confirm('Order #'+id+' ko “'+status+'” mark karne par final lock ho jayega. Continue?')){
+    renderOrders();return;
+  }
+  try{
+    const finalStatus=['Delivered','Cancelled'].includes(status);
+    await db.ref('orders/'+id).update({status,adminStatusLocked:finalStatus,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});
+    addNotification(finalStatus?'Order final status locked':'Order status updated','Order #'+id+' का status '+status+' किया गया।'+(finalStatus?' Final lock लग गया।':''),'success');
+  }catch(e){alert('Status update fail: '+e.message);addNotification('Status update failed',e.message||'Order status save नहीं हुआ।','error');}
+}
+async function cancelOrder(id){
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+  const o=ordersData[id];if(!o)return alert('Order nahi mila');
+  if(o.adminStatusLocked)return alert('Is order ka final status pehle hi lock ho chuka hai.');
+  if(!confirm('Order #'+id+' cancel karke final lock karna hai?'))return;
+  try{
+    await db.ref('orders/'+id).update({status:'Cancelled',adminStatusLocked:true,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});
+    addNotification('Order cancelled','Order #'+id+' cancel hua aur final lock ho gaya.','success');
+  }catch(e){alert('Cancel fail: '+e.message);addNotification('Order cancellation failed',e.message||'Order cancel nahi hua.','error');}
+}
 function openEdit(id){const o=ordersData[id];if(!o)return; $('editId').value=id;$('editName').value=o.customerName||'';$('editPhone').value=o.customerPhone||'';$('editAddress').value=o.shippingAddress||'';$('editProduct').value=o.product||'';$('editAmount').value=Number(o.totalAmount||0);$('editMsg').textContent='';$('editModal').classList.remove('hidden');}
 function closeEdit(){$('editModal').classList.add('hidden');}
 async function saveEdit(){const id=$('editId').value;if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const amount=Number($('editAmount').value);if(!Number.isFinite(amount)||amount<0)return $('editMsg').textContent='Amount sahi enter karein.';const patch={customerName:$('editName').value.trim(),customerPhone:$('editPhone').value.trim(),shippingAddress:$('editAddress').value.trim(),product:$('editProduct').value.trim(),totalAmount:amount,adminEditedAt:new Date().toISOString(),adminEditedBy:signedInPhone};try{await db.ref('orders/'+id).update(patch);closeEdit();alert('Order details save ho gayi.');addNotification('Order edited','Order #'+id+' की details save हुईं।','success');}catch(e){$('editMsg').textContent='Save fail: '+e.message;addNotification('Order edit failed',e.message||'Order save नहीं हुआ।','error');}}
 async function deleteOrder(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');if(!confirm('Order #'+id+' ko Firebase se permanently delete karna hai? Ye action undo nahi hoga.'))return;try{await db.ref('orders/'+id).remove();alert('Order delete ho gaya.');addNotification('Order deleted','Order #'+id+' delete किया गया।','error');}catch(e){alert('Delete fail: '+e.message);addNotification('Order delete failed',e.message||'Order delete नहीं हुआ।','error');}}
+const PRODUCT_UNITS = [
+  'kg','Gram','mg','Piece','Pack','Box','Set','Pair','Bottle','Glass','ml','Litre',
+  'Half Plate','Full Plate','Plate','Combo','S','M','L','XL','XXL','XXXL',
+  'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
+];
+function showAdminTab(tab){
+  $('ordersTab').classList.toggle('hidden',tab!=='orders');
+  $('productsTab').classList.toggle('hidden',tab!=='products');
+  $('ordersTabBtn').className='btn '+(tab==='orders'?'primary':'muted');
+  $('productsTabBtn').className='btn '+(tab==='products'?'primary':'muted');
+  if(tab==='products') updateUnitChoices();
+}
+function updateUnitChoices(){
+  const sel=$('productUnit'); if(!sel) return;
+  const old=sel.value; const cat=$('productCategory')?.value||'Grocery';
+  let preferred=['kg','Gram','Piece','Pack','Box','Set','Pair','Bottle','Glass','ml','Litre','mg','Half Plate','Full Plate','Plate','Combo','S','M','L','XL','XXL','XXXL','cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'];
+  if(cat==='Fast Food') preferred=['Half Plate','Full Plate','Plate','Piece','Combo','Bottle','Glass','Pack'];
+  else if(cat==='Drinks') preferred=['Bottle','Glass','ml','Litre','Piece','Pack'];
+  else if(cat==='Fruits'||cat==='Vegetables'||cat==='Grocery') preferred=['kg','Gram','mg','Piece','Pack','Box','Dozen'];
+  else if(cat==='Kids / Baby Wear') preferred=['Month','Months','Year','Years','cm','Inch','S','M','L','XL','Piece','Pack'];
+  else if(cat.includes('Wear')) preferred=['S','M','L','XL','XXL','XXXL','cm','Inch','Month','Months','Year','Years','Piece','Set','Pair'];
+  sel.innerHTML=preferred.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('');
+  if(preferred.includes(old)) sel.value=old;
+  updateProductPreview();
+}
+function updateProductPreview(){const q=$('productQty')?.value?.trim()||'—';const u=$('productUnit')?.value||'';const p=$('productPreview');if(p)p.textContent=(q+' '+u).trim();}
+$('productQty').addEventListener('input',updateProductPreview);
+$('productUnit').addEventListener('change',updateProductPreview);
+function startProducts(){
+  if(productListener)db.ref('sellerProducts').off('value',productListener);
+  productListener=snap=>{productsData=snap.val()||{};$('productsSyncMsg').textContent='Products Firebase se live sync active · '+new Date().toLocaleTimeString();renderProducts();};
+  db.ref('sellerProducts').on('value',productListener,error=>{$('productsSyncMsg').textContent='Product read error: '+error.message+' (Firebase Rules check karein)';addNotification('Product sync error',error.message||'Products load nahi hue.','error');});
+}
+function renderProducts(){
+  const q=($('productSearch')?.value||'').trim().toLowerCase();const cat=$('productFilterCategory')?.value||'all';
+  const all=Object.entries(productsData||{}).map(([id,p])=>({id,...(p||{})})).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  $('productCount').textContent=all.length+' products';
+  const shown=all.filter(p=>(cat==='all'||p.category===cat)&&(!q||[p.name,p.seller,p.category,p.description,p.unit,p.quantity].join(' ').toLowerCase().includes(q)));
+  $('productsList').innerHTML=shown.length?shown.map(p=>`<article class="order-card"><div class="flex gap-3 items-start">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" class="w-20 h-20 object-cover rounded-lg border border-emerald-900" loading="lazy" onerror="this.style.display='none'">`:''}<div class="flex-1 min-w-0"><p class="small gold font-bold">${esc(p.category||'Other')} · ${esc(p.seller||'Seller')}</p><h3 class="font-bold text-lg break-words">${esc(p.name||'Unnamed product')}</h3><p class="text-sm text-stone-300">Unit: ${esc(p.quantity||'1')} ${esc(p.unit||'Piece')} · Stock: ${esc(p.stock??0)}</p><p class="text-xl font-black gold mt-1">₹${Number(p.price||0).toLocaleString('en-IN')}</p>${p.description?`<p class="small text-stone-300 mt-1">${esc(p.description)}</p>`:''}</div></div><div class="flex gap-2 mt-3"><button class="btn muted" type="button" onclick="editProduct('${esc(p.id)}')">Edit</button><button class="btn danger" type="button" onclick="deleteProduct('${esc(p.id)}')">Delete</button></div></article>`).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi product nahi mila.</div>';
+}
+function resetProductForm(){ $('productForm').reset();$('productEditId').value='';$('productQty').value='1';$('productStock').value='0';$('saveProductBtn').textContent='Save Product';$('productMsg').textContent='';$('productImagePreview').src='';$('productImagePreview').classList.add('hidden');updateUnitChoices(); }
+function previewProductImage(event){const file=event.target.files&&event.target.files[0];const img=$('productImagePreview');if(!file){img.src='';img.classList.add('hidden');return;}if(!file.type.startsWith('image/')){alert('Image file select karein.');event.target.value='';return;}img.src=URL.createObjectURL(file);img.classList.remove('hidden');}
+async function saveProduct(event){
+  event.preventDefault();
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}
+  const id=$('productEditId').value.trim();const name=$('productName').value.trim();const seller=$('productSeller').value.trim();const category=$('productCategory').value;const quantity=$('productQty').value.trim();const unit=$('productUnit').value;const price=Number($('productPrice').value);const stock=Number($('productStock').value);const file=$('productImageFile').files&&$('productImageFile').files[0];
+  if(!name||!seller||!quantity||!unit||!Number.isFinite(price)||price<0||!Number.isFinite(stock)||stock<0){$('productMsg').textContent='Sabhi required fields aur valid price/stock bharein.';return;}
+  if(file&&!file.type.startsWith('image/')){$('productMsg').textContent='Kripya valid image select karein.';return;}
+  const now=new Date().toISOString();const data={seller,name,category,quantity,unit,price,stock,description:$('productDescription').value.trim(),updatedAt:now,updatedBy:signedInPhone};
+  try{
+    const ref=id?db.ref('sellerProducts/'+id):db.ref('sellerProducts').push();
+    let imageUrl=(id&&productsData[id]&&productsData[id].imageUrl)||'';
+    if(file){
+      if(file.size>8*1024*1024)throw Error('Image 8 MB se chhoti honi chahiye.');
+      $('productMsg').textContent='Photo upload ho rahi hai…';
+      const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const storageRef=firebase.storage().ref('sellerProducts/'+ref.key+'/'+Date.now()+'_'+safeName);
+      const upload=await storageRef.put(file);
+      imageUrl=await upload.ref.getDownloadURL();
+    }
+    data.imageUrl=imageUrl;
+    if(!id)data.createdAt=now;
+    await ref.update(data);
+    $('productMsg').textContent=id?'Product update ho gaya.':'Product save ho gaya.';
+    addNotification(id?'Product updated':'Product added',name+' · '+quantity+' '+unit+' · ₹'+price,'success');resetProductForm();showAdminTab('products');
+  }catch(e){$('productMsg').textContent='Save/upload fail: '+e.message+' (Firebase Storage Rules check karein)';addNotification('Product save failed',e.message||'Product save nahi hua.','error');}
+}
+function editProduct(id){const p=productsData[id];if(!p)return;$('productEditId').value=id;$('productSeller').value=p.seller||'';$('productCategory').value=p.category||'Grocery';$('productName').value=p.name||'';$('productImageFile').value='';$('productImagePreview').src=p.imageUrl||'';$('productImagePreview').classList.toggle('hidden',!p.imageUrl);$('productQty').value=p.quantity||'1';$('productPrice').value=Number(p.price||0);$('productStock').value=Number(p.stock||0);$('productDescription').value=p.description||'';updateUnitChoices();$('productUnit').value=p.unit||'Piece';updateProductPreview();$('saveProductBtn').textContent='Update Product';$('productMsg').textContent='Product edit mode mein hai.';window.scrollTo({top:0,behavior:'smooth'});}
+async function deleteProduct(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}const p=productsData[id];if(!p)return;if(!confirm('Product "'+(p.name||id)+'" ko sellerProducts catalogue se delete karna hai?'))return;try{await db.ref('sellerProducts/'+id).remove();addNotification('Product deleted',p.name||id,'error');}catch(e){alert('Delete fail: '+e.message);addNotification('Product delete failed',e.message||'Product delete nahi hua.','error');}}
 function exportCSV(){const rows=[['Order ID','Customer','Phone','Address','Product','Total','Payment','Status','Date'],...Object.entries(ordersData).map(([id,o])=>[id,o.customerName||'',o.customerPhone||'',o.shippingAddress||'',o.product||'',o.totalAmount||0,o.paymentStatus||o.paymentMethod||'',o.status||'',o.dateTime||o.createdAt||''])];const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='modeluxe-orders.csv';a.click();URL.revokeObjectURL(a.href);addNotification('Orders exported','Orders की CSV फाइल export की गई।','success');}
 </script></body></html>
