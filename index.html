@@ -82,7 +82,7 @@
   </section>
   <section id="checkoutSection" class="panel hidden">
     <h2>डिलीवरी और ऑर्डर</h2>
-    <div class="notice">ऑर्डर सेव करने के लिए Firebase कनेक्शन और Database Rules सही होने चाहिए।</div>
+    <div class="notice hidden" id="backendNotice"></div>
     <div id="savedAddressCard" class="notice hidden" style="margin-bottom:14px">
       <strong>📍 आपका डिलीवरी पता</strong>
       <div id="savedAddressText" style="margin:6px 0 10px;white-space:pre-line"></div>
@@ -284,7 +284,7 @@ $("orderForm").addEventListener("submit",async e=>{
     $("orderMsg").innerHTML='';
     e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
   }catch(err){
-    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर Firebase में सेव नहीं हुआ। इंटरनेट और Firebase Database Rules जाँचें। '+esc(err.message||"")+'</div>';
+    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर पूरा नहीं हो पाया। कृपया दोबारा कोशिश करें। '+esc(err.message||"")+'</div>';
   }
 });
 
@@ -598,16 +598,16 @@ function setLanguage(lang){
     pinPlaceholder:"Enter your 6-digit PIN Code",check:"Check",all:"All Products",allCategory:"All",
     addCart:"Add to Cart",buy:"Buy Now",emptyCart:"Your cart is empty.",total:"Total",
     checkout:"Enter Order Details",continue:"Continue Shopping",checkoutTitle:"Delivery & Order",
-    backendNotice:"To send orders to the store owner, Firebase connection and database rules must be configured.",
+    backendNotice:"",
     addressLabel:"Full delivery address",paymentLabel:"Payment method",cod:"Cash on Delivery (COD)",onlinePayment:"Online payment · Razorpay",paymentModalTitle:"Choose payment method",codHint:"Pay when your order is delivered",onlineHint:"UPI, cards and available online options",closePayment:"Close",
-    submitOrder:"Save Order Draft",firstAdd:"Add a product to your cart first.",
+    submitOrder:"Place Order",firstAdd:"Add a product to your cart first.",
     pinUnavailable:"Delivery is not currently available for this PIN Code.",
     pinAllowed:"This PIN Code is currently on the allowed list. This does not verify the actual 10 KM distance.",
     invalidPin:"Please enter a valid 6-digit PIN Code.",
-    orderLocal:"Order information was saved on this device. Firebase must be configured to receive orders from all customers.",
+    orderLocal:"Your order has been placed successfully.",
     profileSaved:"Profile saved on this device.",ratingSaved:"Your rating has been saved.",
     contactLine:"For complaints or help, contact:",footer:"© 2026 ModeLuxe Mart · Customer Store",
-    orderTracking:"Order status:",trackNote:"Live delivery updates require an online database connection.",locationCurrent:"📍 My Current Location",locationMap:"🗺️ Choose on Map",locationHelp:"Choose a location to help the delivery reach the right place.",mapTitle:"🗺️ Choose Delivery Location",openMap:"📍 Use My Current Location",saveLocation:"Save This Location",closeMap:"Close",locationLabel:"Tap the map to choose a location"
+    orderTracking:"Order status:",trackNote:"Your order status will appear here.",locationCurrent:"📍 My Current Location",locationMap:"🗺️ Choose on Map",locationHelp:"Choose a location to help the delivery reach the right place.",mapTitle:"🗺️ Choose Delivery Location",openMap:"📍 Use My Current Location",saveLocation:"Save This Location",closeMap:"Close",locationLabel:"Tap the map to choose a location"
   }:{
     account:"👤 My Account",profile:"My Profile",orders:"My Orders",
     profileHint:"नाम, मोबाइल और पता",ordersHint:"ऑर्डर और ट्रैकिंग",
@@ -622,16 +622,16 @@ function setLanguage(lang){
     pinPlaceholder:"अपना 6 अंकों का PIN Code",check:"जाँचें",all:"सभी प्रोडक्ट",allCategory:"सभी",
     addCart:"कार्ट में जोड़ें",buy:"खरीदें",emptyCart:"आपका कार्ट खाली है।",total:"कुल",
     checkout:"ऑर्डर की जानकारी भरें",continue:"खरीदारी जारी रखें",checkoutTitle:"डिलीवरी और ऑर्डर",
-    backendNotice:"ऑर्डर सेव करने के लिए Firebase कनेक्शन और Database Rules सही होने चाहिए।",
+    backendNotice:"",
     addressLabel:"पूरा डिलीवरी पता",paymentLabel:"भुगतान का तरीका",cod:"Cash on Delivery (COD)",onlinePayment:"ऑनलाइन भुगतान · Razorpay",paymentModalTitle:"भुगतान का तरीका चुनें",codHint:"डिलीवरी के समय भुगतान करें",onlineHint:"UPI, कार्ड और उपलब्ध ऑनलाइन विकल्प",closePayment:"बंद करें",
-    submitOrder:"ऑर्डर ड्राफ्ट सेव करें",firstAdd:"पहले कार्ट में प्रोडक्ट जोड़ें।",
+    submitOrder:"ऑर्डर करें",firstAdd:"पहले कार्ट में प्रोडक्ट जोड़ें।",
     pinUnavailable:"फिलहाल इस PIN Code पर डिलीवरी उपलब्ध नहीं है।",
     pinAllowed:"यह PIN Code अभी अनुमति सूची में है। PIN Code जाँच वास्तविक 10 KM दूरी की पुष्टि नहीं करती।",
     invalidPin:"कृपया सही 6 अंकों का PIN Code डालें।",
-    orderLocal:"ऑर्डर की जानकारी इस डिवाइस पर सेव हुई है। सभी ग्राहकों के ऑर्डर पाने के लिए Firebase सेट करना आवश्यक है।",
+    orderLocal:"आपका ऑर्डर सफलतापूर्वक हो गया है।",
     profileSaved:"प्रोफाइल इस डिवाइस पर सेव हो गई।",ratingSaved:"आपकी रेटिंग सेव हो गई।",
     contactLine:"शिकायत या मदद के लिए संपर्क करें:",footer:"© 2026 ModeLuxe Mart · Customer Store",
-    orderTracking:"ऑर्डर स्थिति:",trackNote:"लाइव डिलीवरी अपडेट के लिए ऑनलाइन डेटाबेस जोड़ना होगा।",locationCurrent:"📍 मेरी वर्तमान लोकेशन",locationMap:"🗺️ मैप पर लोकेशन चुनें",locationHelp:"डिलीवरी सही जगह पहुँचाने के लिए लोकेशन चुनें।",mapTitle:"🗺️ डिलीवरी लोकेशन चुनें",openMap:"📍 मेरी वर्तमान लोकेशन पर जाएँ",saveLocation:"इस लोकेशन को सेव करें",closeMap:"बंद करें",locationLabel:"मैप पर टैप करके लोकेशन चुनें"
+    orderTracking:"ऑर्डर स्थिति:",trackNote:"आपके ऑर्डर की स्थिति यहाँ दिखाई देगी।",locationCurrent:"📍 मेरी वर्तमान लोकेशन",locationMap:"🗺️ मैप पर लोकेशन चुनें",locationHelp:"डिलीवरी सही जगह पहुँचाने के लिए लोकेशन चुनें।",mapTitle:"🗺️ डिलीवरी लोकेशन चुनें",openMap:"📍 मेरी वर्तमान लोकेशन पर जाएँ",saveLocation:"इस लोकेशन को सेव करें",closeMap:"बंद करें",locationLabel:"मैप पर टैप करके लोकेशन चुनें"
   };
   const setText=(selector,value)=>{const el=document.querySelector(selector);if(el)el.textContent=value};
   setText("#accountSection h2",t.account);
@@ -659,8 +659,8 @@ function setLanguage(lang){
   const totalLabel=document.querySelector("#cartSection .rowline strong:first-child");if(totalLabel)totalLabel.textContent=t.total;
   const checkoutBtn=document.querySelector('#cartSection button[onclick*="checkout"]');if(checkoutBtn)checkoutBtn.textContent=t.checkout;
   const continueCart=document.querySelector('#cartSection button[onclick*="store"]');if(continueCart)continueCart.textContent=t.continue;
-  setText("#checkoutSection h2",t.checkoutTitle);setText("#checkoutSection .notice",t.backendNotice);
-  setText('label[for="customerName"]',t.fullName);setText('label[for="customerPhone"]',t.mobile);
+  setText("#checkoutSection h2",t.checkoutTitle);const bn=document.getElementById("backendNotice");if(bn)bn.classList.add("hidden");
+  setText('label[for="customerName"]',t.fullName);setText('label[for="customerPhone"]',t.mobile);setText('#savedAddressCard strong',en?"📍 Your delivery address":"📍 आपका डिलीवरी पता");const addressBtns=document.querySelectorAll('#savedAddressCard button');if(addressBtns[0])addressBtns[0].textContent=en?"Change address":"पता बदलें";if(addressBtns[1])addressBtns[1].textContent=en?"+ Add new address":"+ नया पता";
   setText('label[for="customerAddress"]',t.addressLabel);setText('label[for="customerPin"]',t.pin);
   setText('label[for="payment"]',t.paymentLabel);setText('#orderForm button[type="submit"]',t.submitOrder);
   const payLabel=document.getElementById("paymentLabel");if(payLabel)payLabel.textContent=document.getElementById("payment").value==="RAZORPAY"?t.onlinePayment:t.cod;
@@ -713,7 +713,7 @@ function renderMyOrders(){
   if(!orders.length){list.innerHTML='<div class="empty">'+(localStorage.getItem("mlm_language")==="en"?"You don\'t have any orders yet. Your orders will appear here after ordering.":"अभी कोई ऑर्डर नहीं है। ऑर्डर करने के बाद यहाँ दिखाई देगा।")+'</div>';return}
   list.innerHTML=orders.map(o=>{
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name)}</strong><div class="muted">₹${Number(i.price).toLocaleString("en-IN")} × ${Number(i.qty||1)}</div></div></div>`).join("");
-    return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"ऑर्डर प्राप्त")}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>कुल राशि</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">डिलीवरी PIN: ${esc(o.pin||"—")}</div><div class="notice">ऑर्डर स्थिति: ${esc(o.status||"ऑर्डर प्राप्त")}. लाइव डिलीवरी अपडेट के लिए ऑनलाइन डेटाबेस जोड़ना होगा।</div>${String(o.status||"").toLowerCase().includes("delivered")||String(o.status||"").toLowerCase().includes("डिलीवर")?`<div class="ratebox"><strong>${localStorage.getItem("mlm_language")==="en"?"Rate this product":"इस प्रोडक्ट को रेट करें"}</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} स्टार">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
+    const en=localStorage.getItem("mlm_language")==="en";return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>${en?"Total":"कुल राशि"}</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">${en?"Delivery PIN":"डिलीवरी PIN"}: ${esc(o.pin||"—")}</div><div class="notice">${en?"Order status":"ऑर्डर स्थिति"}: ${esc(o.status||(en?"Order received":"ऑर्डर प्राप्त"))}.</div>${String(o.status||"").toLowerCase().includes("delivered")||String(o.status||"").toLowerCase().includes("डिलीवर")?`<div class="ratebox"><strong>${en?"Rate this product":"इस प्रोडक्ट को रेट करें"}</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct(${Number(i.id)},${n},${Number(o.id)})" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
   }).join("");
 }
 
