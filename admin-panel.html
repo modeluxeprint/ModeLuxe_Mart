@@ -24,7 +24,8 @@
       <div><label class="small block mb-1" for="productQty">Quantity / Size (left box)</label><input id="productQty" type="text" placeholder="1, 2, 250, S, XL, 6" value="1" required></div>
       <div><label class="small block mb-1" for="productUnit">Unit (right box)</label><select id="productUnit" required></select></div>
       <div><label class="small block mb-1" for="productPrice">Price (₹)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="Selling price" required></div>
-      <div><label class="small block mb-1" for="productStock">Stock quantity</label><input id="productStock" type="number" min="0" step="1" value="0" required></div>
+      <div><label class="small block mb-1" for="productStock">Stock quantity (number)</label><input id="productStock" type="number" min="0" step="0.01" value="0" required></div>
+      <div><label class="small block mb-1" for="productStockUnit">Stock unit</label><select id="productStockUnit" required><option value="kg">Kilogram (kg)</option><option value="Gram">Gram</option><option value="Quintal">Quintal</option><option value="Ton">Ton</option><option value="Piece">Piece</option><option value="Dozen">Dozen</option><option value="Pack">Pack</option><option value="Box">Box</option><option value="Plate">Plate</option><option value="Bottle">Bottle</option><option value="Litre">Litre</option><option value="ml">ml</option><option value="Set">Set</option><option value="Pair">Pair</option></select><p class="small text-stone-400 mt-1">उदाहरण: 600 + kg, 2 + Quintal या 1 + Ton.</p></div>
       <div class="md:col-span-2"><label class="small block mb-1" for="productDescription">Description (optional)</label><textarea id="productDescription" rows="2" placeholder="Product details"></textarea></div>
       <div class="md:col-span-2 rounded-xl border border-emerald-900 p-3"><p class="small text-stone-400">Preview</p><p id="productPreview" class="font-bold gold">1 kg</p><p class="small text-stone-300">Left box में मात्रा या size खुद भरें; right box से unit चुनें. उदाहरण: 2 kg, 250 Gram, 1 Half Plate, 6 Month, 90 cm, XL.</p></div>
       <div class="md:col-span-2 flex flex-wrap gap-2"><button id="saveProductBtn" class="btn primary" type="submit">Save Product</button><button class="btn muted" type="button" onclick="resetProductForm()">Clear Form</button></div>
@@ -175,8 +176,16 @@ function startOrders(){if(orderListener)db.ref('orders').off('value',orderListen
 async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);if(productListener)db.ref('sellerProducts').off('value',productListener);orderListener=null;productListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
 const statuses=['Order Placed','Processing','Packed','Shipped','Out for Delivery','Delivered','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded'];
 function filterOrdersBySummary(filter){
-  window.__ordersSummaryMode=filter;
-  $('statusFilter').value=(filter==='all'||filter==='active')?'all':filter;
+  // Tap the same summary box again to clear its filter and show all orders.
+  const currentMode=window.__ordersSummaryMode||'active';
+  const sameFilter=currentMode===filter;
+  if(sameFilter){
+    window.__ordersSummaryMode='all';
+    $('statusFilter').value='all';
+  }else{
+    window.__ordersSummaryMode=filter;
+    $('statusFilter').value=(filter==='all'||filter==='active')?'all':filter;
+  }
   renderOrders();
   $('ordersList').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -249,55 +258,44 @@ function renderProducts(){
   const all=Object.entries(productsData||{}).map(([id,p])=>({id,...(p||{})})).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   $('productCount').textContent=all.length+' products';
   const shown=all.filter(p=>(cat==='all'||p.category===cat)&&(!q||[p.name,p.seller,p.category,p.description,p.unit,p.quantity].join(' ').toLowerCase().includes(q)));
-  $('productsList').innerHTML=shown.length?shown.map(p=>`<article class="order-card"><div class="flex gap-3 items-start">${p.imageUrl?`<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" class="w-20 h-20 object-cover rounded-lg border border-emerald-900" loading="lazy" onerror="this.style.display='none'">`:''}<div class="flex-1 min-w-0"><p class="small gold font-bold">${esc(p.category||'Other')} · ${esc(p.seller||'Seller')}</p><h3 class="font-bold text-lg break-words">${esc(p.name||'Unnamed product')}</h3><p class="text-sm text-stone-300">Unit: ${esc(p.quantity||'1')} ${esc(p.unit||'Piece')} · Stock: ${esc(p.stock??0)}</p><p class="text-xl font-black gold mt-1">₹${Number(p.price||0).toLocaleString('en-IN')}</p>${p.description?`<p class="small text-stone-300 mt-1">${esc(p.description)}</p>`:''}</div></div><div class="flex gap-2 mt-3"><button class="btn muted" type="button" onclick="editProduct('${esc(p.id)}')">Edit</button><button class="btn danger" type="button" onclick="deleteProduct('${esc(p.id)}')">Delete</button></div></article>`).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi product nahi mila.</div>';
+  $('productsList').innerHTML=shown.length?shown.map(p=>`<article class="order-card"><div class="flex gap-3 items-start">${(p.imageUrl||p.image||p.img)?`<img src="${esc(p.imageUrl||p.image||p.img)}" alt="${esc(p.name)}" class="w-20 h-20 object-cover rounded-lg border border-emerald-900" loading="lazy" onerror="this.style.display='none'">`:''}<div class="flex-1 min-w-0"><p class="small gold font-bold">${esc(p.category||'Other')} · ${esc(p.seller||'Seller')}</p><h3 class="font-bold text-lg break-words">${esc(p.name||'Unnamed product')}</h3><p class="text-sm text-stone-300">Selling unit: ${esc(p.quantity||'1')} ${esc(p.unit||'Piece')} · Available stock: ${esc(p.stock??0)} ${esc(p.stockUnit||p.unit||'Piece')}</p><p class="text-xl font-black gold mt-1">₹${Number(p.price||0).toLocaleString('en-IN')}</p>${p.description?`<p class="small text-stone-300 mt-1">${esc(p.description)}</p>`:''}</div></div><div class="flex gap-2 mt-3"><button class="btn muted" type="button" onclick="editProduct('${esc(p.id)}')">Edit</button><button class="btn danger" type="button" onclick="deleteProduct('${esc(p.id)}')">Delete</button></div></article>`).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi product nahi mila.</div>';
 }
-function resetProductForm(){ $('productForm').reset();$('productEditId').value='';$('productQty').value='1';$('productStock').value='0';$('saveProductBtn').textContent='Save Product';$('productMsg').textContent='';$('productImagePreview').src='';$('productImagePreview').classList.add('hidden');updateUnitChoices(); }
+function resetProductForm(){ $('productForm').reset();$('productEditId').value='';$('productQty').value='1';$('productStock').value='0';$('productStockUnit').value='kg';$('saveProductBtn').textContent='Save Product';$('productMsg').textContent='';$('productImagePreview').src='';$('productImagePreview').classList.add('hidden');updateUnitChoices(); }
 function previewProductImage(event){const file=event.target.files&&event.target.files[0];const img=$('productImagePreview');if(!file){img.src='';img.classList.add('hidden');return;}if(!file.type.startsWith('image/')){alert('Image file select karein.');event.target.value='';return;}img.src=URL.createObjectURL(file);img.classList.remove('hidden');}
 async function saveProduct(event){
   event.preventDefault();
   if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}
   const id=$('productEditId').value.trim();
   const name=$('productName').value.trim(),seller=$('productSeller').value.trim(),category=$('productCategory').value;
-  const quantity=$('productQty').value.trim(),unit=$('productUnit').value,price=Number($('productPrice').value),stock=Number($('productStock').value);
+  const quantity=$('productQty').value.trim(),unit=$('productUnit').value,price=Number($('productPrice').value),stock=Number($('productStock').value),stockUnit=$('productStockUnit').value;
   const file=$('productImageFile').files&&$('productImageFile').files[0];
-  if(!name||!seller||!quantity||!unit||!Number.isFinite(price)||price<0||!Number.isFinite(stock)||stock<0){$('productMsg').textContent='Sabhi required fields aur valid price/stock bharein.';return;}
+  if(!name||!seller||!quantity||!unit||!stockUnit||!Number.isFinite(price)||price<0||!Number.isFinite(stock)||stock<0){$('productMsg').textContent='Sabhi required fields aur valid price/stock bharein.';return;}
   if(file&&!file.type.startsWith('image/')){$('productMsg').textContent='Kripya valid image select karein.';return;}
-  if(file&&file.size>8*1024*1024){$('productMsg').textContent='Image 8 MB se chhoti honi chahiye.';return;}
-  const now=new Date().toISOString();
-  const data={seller,name,category,quantity,unit,price,stock,description:$('productDescription').value.trim(),updatedAt:now,updatedBy:signedInPhone};
+  // Base64/Data URL follows the proven older listing flow; keep images small enough for Realtime Database.
+  if(file&&file.size>5*1024*1024){$('productMsg').textContent='Photo 5 MB se chhoti rakhein, phir dobara select karein.';return;}
   const saveBtn=$('saveProductBtn');saveBtn.disabled=true;
   try{
     const ref=id?db.ref('sellerProducts/'+id):db.ref('sellerProducts').push();
-    let imageUrl=(id&&productsData[id]&&productsData[id].imageUrl)||'';
-    if(!id)data.createdAt=now;
-    // Save the product record first, so a Storage/photo problem cannot prevent the listing from appearing.
-    data.imageUrl=imageUrl;
-    $('productMsg').textContent='Product save ho raha hai…';
-    await ref.update(data);
+    const previous=id?(productsData[id]||{}):{};
+    let imageUrl=previous.imageUrl||previous.image||previous.img||'';
     if(file){
-      $('productMsg').textContent='Product save ho gaya. Photo upload ho rahi hai…';
-      try{
-        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-        const storageRef=firebase.storage().ref('sellerProducts/'+ref.key+'/'+Date.now()+'_'+safeName);
-        const task=storageRef.put(file);
-        const upload=await Promise.race([task, new Promise((_,reject)=>setTimeout(()=>reject(new Error('Photo upload 30 seconds se zyada le rahi hai. Firebase Storage Rules / internet check karein. Product listing save ho chuki hai; photo baad mein edit karke upload kar sakte hain.')),30000))]);
-        imageUrl=await upload.ref.getDownloadURL();
-        await ref.update({imageUrl,updatedAt:new Date().toISOString()});
-      }catch(photoError){
-        $('productMsg').textContent='Product listing save ho gayi, lekin photo upload nahi hui: '+(photoError.message||'Storage error')+' Listing Products list mein honi chahiye; photo baad mein Edit se add karein.';
-        addNotification('Product saved; photo upload failed',name+' · '+(photoError.message||'Storage error'),'error');
-        resetProductForm();showAdminTab('products');return;
-      }
+      $('productMsg').textContent='Photo prepare ho rahi hai…';
+      imageUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('Photo read nahi ho paayi. Dobara select karein.'));reader.readAsDataURL(file);});
     }
+    const now=new Date().toISOString();
+    const data={seller,name,category,quantity,unit,price,stock,stockUnit,description:$('productDescription').value.trim(),imageUrl,updatedAt:now,updatedBy:signedInPhone};
+    if(!id)data.createdAt=now;
+    $('productMsg').textContent='Product aur photo Firebase mein save ho rahe hain…';
+    await ref.update(data);
     $('productMsg').textContent=id?'Product update ho gaya.':'Product save ho gaya.';
-    addNotification(id?'Product updated':'Product added',name+' · '+quantity+' '+unit+' · ₹'+price,'success');
+    addNotification(id?'Product updated':'Product added',name+' · '+quantity+' '+unit+' · Stock '+stock+' '+stockUnit+' · ₹'+price,'success');
     resetProductForm();showAdminTab('products');renderProducts();
   }catch(e){
-    $('productMsg').textContent='Product save fail: '+(e.message||'Firebase error')+' (Firebase Database Rules / connection check karein)';
+    $('productMsg').textContent='Product/photo save fail: '+(e.message||'Firebase error')+' (Database Rules, internet, aur image size check karein)';
     addNotification('Product save failed',e.message||'Product save nahi hua.','error');
   }finally{saveBtn.disabled=false;}
 }
-function editProduct(id){const p=productsData[id];if(!p)return;$('productEditId').value=id;$('productSeller').value=p.seller||'';$('productCategory').value=p.category||'Grocery';$('productName').value=p.name||'';$('productImageFile').value='';$('productImagePreview').src=p.imageUrl||'';$('productImagePreview').classList.toggle('hidden',!p.imageUrl);$('productQty').value=p.quantity||'1';$('productPrice').value=Number(p.price||0);$('productStock').value=Number(p.stock||0);$('productDescription').value=p.description||'';updateUnitChoices();$('productUnit').value=p.unit||'Piece';updateProductPreview();$('saveProductBtn').textContent='Update Product';$('productMsg').textContent='Product edit mode mein hai.';window.scrollTo({top:0,behavior:'smooth'});}
+function editProduct(id){const p=productsData[id];if(!p)return;$('productEditId').value=id;$('productSeller').value=p.seller||'';$('productCategory').value=p.category||'Grocery';$('productName').value=p.name||'';$('productImageFile').value='';$('productImagePreview').src=p.imageUrl||'';$('productImagePreview').classList.toggle('hidden',!p.imageUrl);$('productQty').value=p.quantity||'1';$('productPrice').value=Number(p.price||0);$('productStock').value=Number(p.stock||0);$('productStockUnit').value=p.stockUnit||((['Fruits','Vegetables'].includes(p.category))?'kg':'Piece');$('productDescription').value=p.description||'';updateUnitChoices();$('productUnit').value=p.unit||'Piece';updateProductPreview();$('saveProductBtn').textContent='Update Product';$('productMsg').textContent='Product edit mode mein hai.';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteProduct(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}const p=productsData[id];if(!p)return;if(!confirm('Product "'+(p.name||id)+'" ko sellerProducts catalogue se delete karna hai?'))return;try{await db.ref('sellerProducts/'+id).remove();addNotification('Product deleted',p.name||id,'error');}catch(e){alert('Delete fail: '+e.message);addNotification('Product delete failed',e.message||'Product delete nahi hua.','error');}}
 function exportCSV(){const rows=[['Order ID','Customer','Phone','Address','Product','Total','Payment','Status','Date'],...Object.entries(ordersData).map(([id,o])=>[id,o.customerName||'',o.customerPhone||'',o.shippingAddress||'',o.product||'',o.totalAmount||0,o.paymentStatus||o.paymentMethod||'',o.status||'',o.dateTime||o.createdAt||''])];const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='modeluxe-orders.csv';a.click();URL.revokeObjectURL(a.href);addNotification('Orders exported','Orders की CSV फाइल export की गई।','success');}
 </script></body></html>
