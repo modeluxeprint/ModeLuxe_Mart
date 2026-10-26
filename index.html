@@ -523,7 +523,7 @@ async function logoutPhoneUser(){
 
 // Only the public Razorpay Key ID is used in browser code. Never add Key Secret here.
 const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
-  const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
+const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
@@ -607,7 +607,10 @@ function startRazorpayPayment(order){
             $("orderForm").reset();$("payment").value="COD";$("paymentLabel").textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
             showSection("store");showOrderSuccess();
           }catch(err){
-            $("orderMsg").innerHTML='<div class="notice error">भुगतान के बाद पुष्टि या ऑर्डर सेव नहीं हो पाया। कृपया दोबारा भुगतान न करें; Payment ID: '+esc(response.razorpay_payment_id||"")+'. सहायता से संपर्क करें।</div>';
+            const paymentId=String(response.razorpay_payment_id||"");
+            const errorDetail=String(err&&err.message||"Unknown error");
+            console.error("Razorpay paid but order confirmation/save failed",{paymentId,error:errorDetail,orderId:order.id});
+            $("orderMsg").innerHTML='<div class="notice error"><strong>Payment received, but order confirmation failed.</strong><br>Please do not pay again. Payment ID: '+esc(paymentId)+'<br>Order reference: '+esc(order.id)+'<br>Error: '+esc(errorDetail)+'<br>Please share these details with support.</div>';
           }
           resolve();
         },
