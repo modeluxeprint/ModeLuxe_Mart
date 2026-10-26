@@ -253,19 +253,32 @@ async function downloadInvoice(id){
     holder.style.cssText='position:fixed;left:0;top:0;width:794px;z-index:-1;pointer-events:none;background:#ffffff;color:#17231d;';
     const style=document.createElement('style');style.textContent=sourceStyle.textContent;holder.appendChild(style);
     const target=document.importNode(invoice,true);
-    target.style.backgroundColor='#ffffff';target.style.color='#17231d';target.style.width='738px';target.style.maxWidth='738px';target.style.margin='0';target.style.boxSizing='border-box';
+    target.style.backgroundColor='#ffffff';target.style.color='#17231d';target.style.width='738px';target.style.maxWidth='738px';target.style.margin='0';target.style.boxSizing='border-box';target.style.padding='12px';target.style.fontSize='11px';
+    // Compact invoice layout so the complete bill and delivery QR fit on one A4 page.
+    target.querySelector('.head')?.style.setProperty('padding-bottom','8px');
+    target.querySelector('.brand')?.style.setProperty('font-size','19px');
+    target.querySelector('.meta')?.style.setProperty('margin','10px 0');
+    target.querySelectorAll('.box').forEach(el=>el.style.setProperty('padding','8px'));
+    target.querySelector('table')?.style.setProperty('margin-top','8px');
+    target.querySelectorAll('th,td').forEach(el=>el.style.setProperty('padding','5px 6px'));
+    target.querySelector('.totals')?.style.setProperty('margin-top','8px');
+    target.querySelector('.delivery-qr')?.style.setProperty('margin','10px auto 4px');
+    target.querySelector('.delivery-qr')?.style.setProperty('padding','8px');
+    const qrImage=target.querySelector('.delivery-qr img');if(qrImage){qrImage.style.width='100px';qrImage.style.height='100px';}
+    target.querySelector('.foot')?.style.setProperty('margin-top','12px');
     holder.appendChild(target);document.body.appendChild(holder);
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     const qr=target.querySelector('.delivery-qr img');
     if(qr&&!qr.complete)await new Promise(resolve=>{qr.onload=resolve;qr.onerror=resolve;setTimeout(resolve,1800);});
     await window.html2pdf().set({
-      margin:8,
+      margin:4,
       filename:'ModeLuxe-Invoice-'+safeId+'.pdf',
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css','legacy']}
-    }).from(target).save();
+      pagebreak:{mode:['avoid-all','css','legacy']},
+      enableLinks:true
+    }).from(target).toPdf().get('pdf').then(pdf=>{if(pdf.internal.getNumberOfPages()>1){pdf.deletePage(2);}}).save();
     addNotification('Invoice PDF downloaded','Order #'+id+' का invoice PDF download किया गया।','success');
   }catch(e){
     alert('PDF download नहीं हो पाया। इंटरनेट कनेक्शन और download permission जाँचें। Details: '+(e.message||'PDF generation failed'));
