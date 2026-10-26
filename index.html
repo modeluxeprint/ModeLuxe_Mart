@@ -74,6 +74,7 @@
     <div class="grow"><input id="pincode" inputmode="numeric" maxlength="6" placeholder="Enter your 6-digit PIN Code"></div>
     <button onclick="checkArea()">Check</button>
   </section>
+  <p id="deliveryThresholdNotice" class="muted" style="margin:-4px 0 16px;padding:0 2px">Delivery charges apply to purchases below ₹199.</p>
   <div id="areaMsg" aria-live="polite"></div>
   <nav class="categories" id="categories" aria-label="प्रोडक्ट कैटेगरी"></nav>
   <section id="storeSection">
@@ -251,7 +252,7 @@ function openProductDetails(id){
  const description=p.description||p.details||p.productDescription||"";
  const seller=p.seller||p.sellerName||"";
  const content=$("productDetailContent");
- content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" onclick="addCart('${esc(p.id)}');closeProductDetails()">${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" onclick="closeProductDetails();buyNow('${esc(p.id)}')">${en?"Buy Now":"अभी खरीदें"}</button></div>`;
+ content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="muted" id="productDeliveryChargeNotice" style="margin:0 0 8px;color:var(--muted)">${en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" onclick="addCart('${esc(p.id)}');closeProductDetails()">${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" onclick="closeProductDetails();buyNow('${esc(p.id)}')">${en?"Buy Now":"अभी खरीदें"}</button></div>`;
  $("productDetailOverlay").classList.remove("hidden");document.body.style.overflow="hidden";
 }
 function closeProductDetails(){$("productDetailOverlay").classList.add("hidden");document.body.style.overflow=""}
@@ -366,8 +367,10 @@ let deliverySettings={freeAbove:199,charge:49};
 let deliverySettingsListener=null;
 function getCartSubtotal(){return cart.reduce((n,x)=>n+Number(x.price||0)*Number(x.qty||0),0)}
 function getDeliveryFee(subtotal=getCartSubtotal()){return subtotal < Number(deliverySettings.freeAbove??199) ? Math.max(0,Number(deliverySettings.charge??49)) : 0}
-function startDeliverySettingsListener(){if(!db)return;if(deliverySettingsListener)db.ref("deliverySettings").off("value",deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};renderCart()};db.ref("deliverySettings").on("value",deliverySettingsListener,err=>console.warn("Delivery settings sync failed",err&&err.message));}
+function renderDeliveryThresholdNotice(){const el=$("deliveryThresholdNotice");if(el)el.textContent=`Delivery charges of ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} apply to purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`;const detail=$("productDeliveryChargeNotice");if(detail){const en=localStorage.getItem("mlm_language")==="en";detail.textContent=en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`;}}
+function startDeliverySettingsListener(){if(!db)return;if(deliverySettingsListener)db.ref("deliverySettings").off("value",deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};renderCart();renderDeliveryThresholdNotice()};db.ref("deliverySettings").on("value",deliverySettingsListener,err=>console.warn("Delivery settings sync failed",err&&err.message));}
 startDeliverySettingsListener();
+renderDeliveryThresholdNotice();
 // Display only real products created in the Admin Panel catalogue.
 function startUserProductsListener(){
   if(!db)return;
@@ -520,7 +523,7 @@ async function logoutPhoneUser(){
 
 // Only the public Razorpay Key ID is used in browser code. Never add Key Secret here.
 const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
-const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
+  const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
