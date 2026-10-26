@@ -225,6 +225,7 @@ function switchUserData(phone){
   activeUserPhone=String(phone||"").replace(/\D/g,"");
   if(activeUserPhone){
     startUserOrdersListener(activeUserPhone);
+    startSharedProfileListener(activeUserPhone);
     cart=load(userKey("mlm_cart"),[]);orders=load(userKey("mlm_orders"),[]);
     const pk=userKey("mlm_profile");
     if(!localStorage.getItem(pk)){
@@ -365,6 +366,8 @@ const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() 
 // Delivery fee settings are shared with Admin Panel through Firebase.
 let deliverySettings={freeAbove:199,charge:49};
 let deliverySettingsListener=null;
+let sharedProfileListener=null;
+let sharedProfileLoadedPhone="";
 function getCartSubtotal(){return cart.reduce((n,x)=>n+Number(x.price||0)*Number(x.qty||0),0)}
 function getDeliveryFee(subtotal=getCartSubtotal()){return subtotal < Number(deliverySettings.freeAbove??199) ? Math.max(0,Number(deliverySettings.charge??49)) : 0}
 function renderDeliveryThresholdNotice(){const el=$("deliveryThresholdNotice");if(el)el.textContent=`Delivery charges of ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} apply to purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`;const detail=$("productDeliveryChargeNotice");if(detail){const en=localStorage.getItem("mlm_language")==="en";detail.textContent=en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`;}}
@@ -899,6 +902,27 @@ function rateProduct(productId,rating,orderId){
   renderMyOrders();renderProducts();showToast(localStorage.getItem("mlm_language")==="en"?"Your rating has been saved.":"आपकी रेटिंग सेव हो गई");
 }
 
+function startSharedProfileListener(phone){
+  if(!db||!phone)return;
+  const digits=String(phone).replace(/\D/g,"");
+  if(sharedProfileListener && sharedProfileLoadedPhone){db.ref("userProfiles/"+sharedProfileLoadedPhone).off("value",sharedProfileListener);}
+  sharedProfileLoadedPhone=digits;
+  sharedProfileListener=snap=>{
+    if(activeUserPhone!==digits)return;
+    const remote=snap.val();
+    if(!remote)return;
+    const local=load(userKey("mlm_profile"),{});
+    const profile={...local,...remote};
+    try{localStorage.setItem(userKey("mlm_profile"),JSON.stringify(profile));}catch(e){}
+    renderProfileAvatar(profile);
+    if($("profileName") && document.activeElement!==$("profileName"))$("profileName").value=profile.name||"";
+    if($("profilePhone") && document.activeElement!==$("profilePhone"))$("profilePhone").value=profile.phone||digits;
+    if($("profileAddress") && document.activeElement!==$("profileAddress"))$("profileAddress").value=profile.address||"";
+    if($("profilePin") && document.activeElement!==$("profilePin"))$("profilePin").value=profile.pin||"";
+    if($("profileDisplayName"))$("profileDisplayName").textContent=profile.name||"Your Profile";
+  };
+  db.ref("userProfiles/"+digits).on("value",sharedProfileListener,err=>console.warn("Shared profile sync failed",err&&err.message));
+}
 function renderProfileAvatar(profile){
   const avatar=$("profileAvatar");
   const bottomAvatar=$("bottomProfileAvatar");
@@ -952,8 +976,11 @@ $("profileForm").addEventListener("submit",e=>{
   pendingProfileAvatar="";
   $("profileDisplayName").textContent=profile.name||"Your Profile";
   renderProfileAvatar(profile);
-  $("profileMsg").innerHTML='<div class="notice success">Profile saved on this device.</div>';
-  showToast("Profile saved.");
+  if(db){
+    db.ref("userProfiles/"+String(activeUserPhone).replace(/\D/g,"")).update({...profile,phone:activeUserPhone,updatedAt:new Date().toISOString()})
+      .then(()=>{$("profileMsg").innerHTML='<div class="notice success">Profile saved and synced to your other devices.</div>';showToast("Profile saved on all devices.");})
+      .catch(err=>{$("profileMsg").innerHTML='<div class="notice error">Profile इस डिवाइस पर सेव है, लेकिन दूसरे डिवाइस से sync नहीं हुआ। Firebase Rules जाँचें।</div>';console.warn("Shared profile save failed",err);});
+  }else{$("profileMsg").innerHTML='<div class="notice success">Profile saved on this device.</div>';showToast("Profile saved.");}
 });
 async function cancelUserOrder(orderId){
   if(!activeUserPhone){showToast("Order cancel करने के लिए पहले लॉगिन करें।");return;}
@@ -993,20 +1020,33 @@ async function cancelUserOrder(orderId){
   }
 }
 
+function downloadUserInvoice(orderId){
+  const o=orders.find(x=>String(x.id)===String(orderId));
+  if(!o){showToast("Order नहीं मिला।");return;}
+  const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const items=Array.isArray(o.items)&&o.items.length?o.items:[{name:o.product||"Order item",qty:1,price:Number(o.total||0)}];
+  const subtotal=Number(o.subtotal??items.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||i.quantity||1),0));
+  const delivery=Number(o.deliveryFee||0),total=Number(o.total??o.totalAmount??subtotal+delivery);
+  const rows=items.map((i,n)=>`<tr><td>${n+1}</td><td>${invoiceSafe(i.name||i.productName||i.product||"Item")}</td><td>${Number(i.qty||i.quantity||1)}</td><td>${money(i.price||i.sellingPrice||0)}</td><td>${money(Number(i.price||i.sellingPrice||0)*Number(i.qty||i.quantity||1))}</td></tr>`).join("");
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ModeLuxe Mart Invoice ${invoiceSafe(o.id)}</title><style>body{font-family:Arial,sans-serif;color:#17231d;margin:0;padding:18px}.invoice{max-width:800px;margin:auto;border:1px solid #cbd5cf;padding:20px}.brand{font-size:22px;font-weight:bold;color:#174b39}.head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #174b39;padding-bottom:12px}.muted{color:#58665e}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #ccd6d0;padding:8px;text-align:left}th{background:#174b39;color:#fff}.totals{margin:16px 0 0 auto;max-width:320px}.row{display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #ddd}.total{font-size:18px;font-weight:bold}@media(max-width:520px){body{padding:8px}.invoice{padding:10px}.head{display:block}th,td{font-size:12px;padding:5px}}</style></head><body><main class="invoice"><div class="head"><div><div class="brand">ModeLuxe Mart</div><div>Customer Invoice / Bill</div></div><div><b>Invoice No:</b> ${invoiceSafe(o.id)}<br><b>Date:</b> ${invoiceSafe(o.date||o.createdAt||"")}<br><b>Status:</b> ${invoiceSafe(o.status||"Order Placed")}</div></div><p><b>Bill To:</b> ${invoiceSafe(o.name||o.customerName||"")}<br><b>Mobile:</b> ${invoiceSafe(o.phone||o.customerPhone||"")}<br><b>Address:</b> ${invoiceSafe(o.address||o.shippingAddress||"")}<br><b>PIN Code:</b> ${invoiceSafe(o.pin||"")}</p><p><b>Payment:</b> ${invoiceSafe(o.payment||o.paymentMethod||"Not available")} · ${invoiceSafe(o.paymentStatus||"Pending")}</p><table><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div class="row"><span>Product Subtotal</span><b>${money(subtotal)}</b></div><div class="row"><span>Delivery Charges</span><b>${money(delivery)}</b></div><div class="row total"><span>Total</span><b>${money(total)}</b></div></div><p class="muted" style="text-align:center;margin-top:24px">Thank you for shopping with ModeLuxe Mart!</p><button onclick="window.print()">Print / Save as PDF</button></main></body></html>`;
+  const blob=new Blob([html],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="ModeLuxe-Invoice-"+String(o.id).replace(/[^a-zA-Z0-9_-]/g,"")+".html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);showToast("Invoice downloaded. Open it and choose Print / Save as PDF if needed.");
+}
+function invoiceSafe(value){return String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function toggleOrderDetails(id){const el=$("orderDetails-"+String(id).replace(/[^a-zA-Z0-9_-]/g,""));if(el)el.classList.toggle("hidden");}
 function renderMyOrders(){
   const list=$("myOrdersList");
   if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
-  if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return}
+  if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return;}
   list.innerHTML=orders.map(o=>{
-    const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name)}</strong><div class="muted">₹${Number(i.price).toLocaleString("en-IN")} × ${Number(i.qty||1)}</div></div></div>`).join("");
+    const safeId=String(o.id).replace(/[^a-zA-Z0-9_-]/g,"");
+    const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name||i.productName||i.product||"Item")}</strong><div class="muted">₹${Number(i.price||0).toLocaleString("en-IN")} × ${Number(i.qty||i.quantity||1)}</div></div></div>`).join("");
     const raw=String(o.status||"Order Placed").toLowerCase();
     const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"picked",label:"Picked Up by Delivery Partner",match:["picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
-    let current=0; stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});
-    if(raw.includes("cancel"))current=-1;
+    let current=0;stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});if(raw.includes("cancel"))current=-1;
     const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${raw.includes("cancel")?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`:stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("")}</div>`;
-    const canCancel=!["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x));
+    const canCancel=!(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x)));
     const paymentMethod=o.payment||o.paymentMethod||"Not available";
-    return `<article class="ordercard"><div class="rowline"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted">${esc(o.date||"")}</div>${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total||0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}${canCancel?`<button class="btn danger cancel-user-order" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name)}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</article>`
+    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="hidden" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
 }
 
