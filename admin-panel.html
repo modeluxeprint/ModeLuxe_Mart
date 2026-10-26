@@ -232,38 +232,45 @@ function buildInvoiceHtml(id){
 async function downloadInvoice(id){
   const html=buildInvoiceHtml(id);if(!html)return;
   const safeId=String(id).replace(/[^a-zA-Z0-9_-]/g,'');
+  let frame=null;
   try{
-    // Load html2pdf in the current admin page (not inside a popup, where WebViews
-    // can miss the load event) and render the invoice DOM to a real PDF download.
-    if(typeof window.html2pdf!=='function'){
-      await new Promise((resolve,reject)=>{
-        const existing=document.querySelector('script[data-modeluxe-html2pdf]');
-        if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
-        const script=document.createElement('script');script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';script.dataset.modeluxeHtml2pdf='1';script.onload=resolve;script.onerror=()=>reject(new Error('PDF library load nahi hui'));document.head.appendChild(script);
-      });
-    }
-    if(typeof window.html2pdf!=='function')throw new Error('PDF library available nahi hai');
-    const frame=document.createElement('iframe');
-    frame.style.cssText='position:fixed;left:-10000px;top:0;width:900px;height:1200px;border:0;';
+    // Render the invoice inside its own document so its CSS is included in the PDF.
+    frame=document.createElement('iframe');
+    frame.style.cssText='position:fixed;left:-12000px;top:0;width:900px;height:1300px;border:0;background:#fff;';
     document.body.appendChild(frame);
     const doc=frame.contentDocument;
     doc.open();doc.write(html);doc.close();
-    await new Promise(resolve=>setTimeout(resolve,500));
+    await new Promise((resolve,reject)=>{
+      let done=false;const finish=()=>{if(!done){done=true;resolve();}};
+      frame.onload=finish;setTimeout(finish,700);
+      setTimeout(()=>{if(!done){done=true;reject(new Error('Invoice render timeout'));}},5000);
+    });
+    const win=frame.contentWindow;
+    if(typeof win.html2pdf!=='function'){
+      await new Promise((resolve,reject)=>{
+        const script=doc.createElement('script');
+        script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload=resolve;script.onerror=()=>reject(new Error('PDF library load nahi hui'));doc.head.appendChild(script);
+      });
+    }
+    if(typeof win.html2pdf!=='function')throw new Error('PDF library available nahi hai');
     const target=doc.querySelector('.invoice');
-    if(!target){frame.remove();throw new Error('Invoice content nahi mila');}
-    await window.html2pdf().set({
-      margin:8,
+    if(!target)throw new Error('Invoice content nahi mila');
+    // Wait for the QR image before creating the PDF.
+    const qr=target.querySelector('.delivery-qr img');
+    if(qr&&!qr.complete)await new Promise(resolve=>{qr.onload=resolve;qr.onerror=resolve;setTimeout(resolve,2500);});
+    await win.html2pdf().set({
+      margin:[8,8,8,8],
       filename:'ModeLuxe-Invoice-'+safeId+'.pdf',
       image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,allowTaint:false,scrollY:0},
+      html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',scrollY:0,windowWidth:900},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
       pagebreak:{mode:['css','legacy']}
     }).from(target).save();
-    frame.remove();
     addNotification('Invoice PDF downloaded','Order #'+id+' का invoice PDF download किया गया।','success');
   }catch(e){
-    alert('PDF download नहीं हो पाया। इंटरनेट कनेक्शन और pop-up/download permission जाँचें, फिर दोबारा कोशिश करें। Details: '+(e.message||'PDF generation failed'));
-  }
+    alert('PDF download नहीं हो पाया। इंटरनेट कनेक्शन और download permission जाँचें, फिर दोबारा कोशिश करें। Details: '+(e.message||'PDF generation failed'));
+  }finally{if(frame)frame.remove();}
 }
 function printInvoice(id){const html=buildInvoiceHtml(id);if(!html)return;const w=window.open('','_blank');if(!w){alert('Print window blocked. Browser settings में pop-ups allow करें, फिर दोबारा कोशिश करें।');return;}w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(()=>{try{w.print();}catch(e){}},500);addNotification('Invoice opened for print','Order #'+id+' का invoice print के लिए खोला गया।','success');}
 
