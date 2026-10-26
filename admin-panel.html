@@ -232,42 +232,44 @@ function buildInvoiceHtml(id){
 async function downloadInvoice(id){
   const html=buildInvoiceHtml(id);if(!html)return;
   const safeId=String(id).replace(/[^a-zA-Z0-9_-]/g,'');
-  let frame=null;
+  let holder=null;
   try{
-    // Load html2pdf in the main page (more reliable in mobile browsers than loading it inside an iframe).
     if(typeof window.html2pdf!=='function'){
       await new Promise((resolve,reject)=>{
-        const existing=document.querySelector('script[data-modeluxe-html2pdf="1"]');
-        if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(new Error('PDF library load nahi hui')),{once:true});if(typeof window.html2pdf==='function')resolve();return;}
-        const script=document.createElement('script');script.dataset.modeluxeHtml2pdf='1';
+        const script=document.createElement('script');
         script.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.onload=resolve;script.onerror=()=>reject(new Error('PDF library load nahi hui; internet check karein'));document.head.appendChild(script);
+        script.onload=resolve;script.onerror=()=>reject(new Error('PDF library load nahi hui; internet check karein'));
+        document.head.appendChild(script);
       });
     }
     if(typeof window.html2pdf!=='function')throw new Error('PDF library available nahi hai');
-    frame=document.createElement('iframe');
-    frame.setAttribute('aria-hidden','true');
-    frame.style.cssText='position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;background:#ffffff;';
-    document.body.appendChild(frame);
-    const doc=frame.contentDocument;
-    doc.open();doc.write(html);doc.close();
-    await new Promise(resolve=>setTimeout(resolve,900));
-    const target=doc.querySelector('.invoice');
-    if(!target)throw new Error('Invoice content nahi mila');
+    // Render invoice in the same document: html2canvas can produce a blank PDF
+    // when the target lives inside a hidden/off-screen iframe on mobile browsers.
+    const parsed=new DOMParser().parseFromString(html,'text/html');
+    const invoice=parsed.querySelector('.invoice');
+    const sourceStyle=parsed.querySelector('style');
+    if(!invoice||!sourceStyle)throw new Error('Invoice content nahi mila');
+    holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:0;top:0;width:794px;z-index:-1;pointer-events:none;background:#ffffff;color:#17231d;';
+    const style=document.createElement('style');style.textContent=sourceStyle.textContent;holder.appendChild(style);
+    const target=document.importNode(invoice,true);
+    target.style.backgroundColor='#ffffff';target.style.color='#17231d';target.style.width='738px';target.style.maxWidth='738px';target.style.margin='0';target.style.boxSizing='border-box';
+    holder.appendChild(target);document.body.appendChild(holder);
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     const qr=target.querySelector('.delivery-qr img');
-    if(qr&&!qr.complete)await new Promise(resolve=>{qr.onload=resolve;qr.onerror=resolve;setTimeout(resolve,2000);});
+    if(qr&&!qr.complete)await new Promise(resolve=>{qr.onload=resolve;qr.onerror=resolve;setTimeout(resolve,1800);});
     await window.html2pdf().set({
-      margin:[8,8,8,8],
+      margin:8,
       filename:'ModeLuxe-Invoice-'+safeId+'.pdf',
       image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',scrollY:0,windowWidth:794},
+      html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0},
       jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
       pagebreak:{mode:['css','legacy']}
     }).from(target).save();
     addNotification('Invoice PDF downloaded','Order #'+id+' का invoice PDF download किया गया।','success');
   }catch(e){
-    alert('PDF download नहीं हो पाया। इंटरनेट कनेक्शन और download permission जाँचें, फिर दोबारा कोशिश करें। Details: '+(e.message||'PDF generation failed'));
-  }finally{if(frame)frame.remove();}
+    alert('PDF download नहीं हो पाया। इंटरनेट कनेक्शन और download permission जाँचें। Details: '+(e.message||'PDF generation failed'));
+  }finally{if(holder)holder.remove();}
 }
 function printInvoice(id){const html=buildInvoiceHtml(id);if(!html)return;const w=window.open('','_blank');if(!w){alert('Print window blocked. Browser settings में pop-ups allow करें, फिर दोबारा कोशिश करें।');return;}w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(()=>{try{w.print();}catch(e){}},500);addNotification('Invoice opened for print','Order #'+id+' का invoice print के लिए खोला गया।','success');}
 
