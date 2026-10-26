@@ -601,7 +601,7 @@ function startRazorpayPayment(order){
             orders=orders.filter(o=>String(o.id)!==String(order.id));
             orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
             $("orderMsg").innerHTML='<div class="notice success">Payment received. Your order is placed. Payment verification is being completed.</div>';
-            $("orderForm").reset();$("payment").value="COD";$("paymentLabel").textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
+            $("orderForm").reset();$("payment").value="COD";const paymentLabelEl=document.getElementById("paymentLabel");if(paymentLabelEl)paymentLabelEl.textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
             showSection("store");showOrderSuccess();
           }catch(saveErr){
             $("orderMsg").innerHTML='<div class="notice error">Payment received, but the order could not be saved yet. Do not pay again. Firebase error: '+esc(saveErr.message||String(saveErr))+'. Payment ID: '+esc(response.razorpay_payment_id||"")+'<br><button type="button" onclick="retryPendingPaidOrder()">Retry Save Order</button></div>';
