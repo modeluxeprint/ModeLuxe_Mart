@@ -589,28 +589,38 @@ function startRazorpayPayment(order){
         notes:{order_reference:String(order.id),delivery_pin:order.pin},
         theme:{color:"#001F18"},
         handler:async function(response){
-          $("orderMsg").innerHTML='<div class="notice">भुगतान की पुष्टि की जा रही है…</div>';
+          // Razorpay has returned a successful checkout response. Persist the order first
+          // with a pending verification status, using the same order ID for safe retries.
+          const pending={order, response, savedAt:new Date().toISOString()};
+          try{localStorage.setItem("mlm_pending_paid_order",JSON.stringify(pending));}catch(storageErr){}
+          order.razorpayPaymentId=response.razorpay_payment_id||"";
+          order.payment="Razorpay ("+(response.razorpay_payment_id||"")+")";
+          order.paymentStatus="Verification Pending";
+          try{
+            await saveOrderToFirebase(order,order.payment,"Verification Pending",response.razorpay_payment_id||"");
+            orders=orders.filter(o=>String(o.id)!==String(order.id));
+            orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
+            $("orderMsg").innerHTML='<div class="notice success">Payment received. Your order is placed. Payment verification is being completed.</div>';
+            $("orderForm").reset();$("payment").value="COD";$("paymentLabel").textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
+            showSection("store");showOrderSuccess();
+          }catch(saveErr){
+            $("orderMsg").innerHTML='<div class="notice error">Payment received, but the order could not be saved yet. Do not pay again. Tap Retry Save Order below. Payment ID: '+esc(response.razorpay_payment_id||"")+'<br><button type="button" onclick="retryPendingPaidOrder()">Retry Save Order</button></div>';
+            resolve();return;
+          }
+          // Verify server-side after the order has been persisted. Failure leaves the order
+          // visible as Verification Pending and must never ask the customer to pay again.
           try{
             const verifyResponse=await fetch(RAZORPAY_VERIFY_PAYMENT_URL,{
               method:"POST",headers:{"Content-Type":"application/json"},
-              body:JSON.stringify({
-                razorpay_order_id:response.razorpay_order_id,
-                razorpay_payment_id:response.razorpay_payment_id,
-                razorpay_signature:response.razorpay_signature
-              })
+              body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})
             });
             const verification=await verifyResponse.json().catch(()=>({}));
-            if(!verifyResponse.ok||verification.verified!==true)throw new Error("Payment verification failed");
-            await saveOrderToFirebase(order,"Razorpay ("+response.razorpay_payment_id+")","Verified",response.razorpay_payment_id);
-            orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
-            $("orderMsg").innerHTML='';
-            $("orderForm").reset();$("payment").value="COD";$("paymentLabel").textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
-            showSection("store");showOrderSuccess();
-          }catch(err){
-            const paymentId=String(response.razorpay_payment_id||"");
-            const errorDetail=String(err&&err.message||"Unknown error");
-            console.error("Razorpay paid but order confirmation/save failed",{paymentId,error:errorDetail,orderId:order.id});
-            $("orderMsg").innerHTML='<div class="notice error"><strong>Payment received, but order confirmation failed.</strong><br>Please do not pay again. Payment ID: '+esc(paymentId)+'<br>Order reference: '+esc(order.id)+'<br>Error: '+esc(errorDetail)+'<br>Please share these details with support.</div>';
+            if(!verifyResponse.ok||verification.verified!==true)throw new Error(verification.message||"Payment verification pending");
+            await db.ref("orders/"+order.id).update({paymentStatus:"Verified",paymentMethod:order.payment,razorpayPaymentId:response.razorpay_payment_id});
+            order.paymentStatus="Verified";save();renderMyOrders();
+            try{localStorage.removeItem("mlm_pending_paid_order");}catch(storageErr){}
+          }catch(verifyErr){
+            $("orderMsg").innerHTML='<div class="notice">Your order is placed. Payment verification is pending; do not pay again. Payment ID: '+esc(response.razorpay_payment_id||"")+'.</div>';
           }
           resolve();
         },
@@ -625,6 +635,36 @@ function startRazorpayPayment(order){
   }).catch(err=>{
     $("orderMsg").innerHTML='<div class="notice error">ऑनलाइन भुगतान शुरू नहीं हो पाया: '+esc(err.message||"")+'</div>';
   });
+}
+
+
+async function retryPendingPaidOrder(){
+  let pending;
+  try{pending=JSON.parse(localStorage.getItem("mlm_pending_paid_order")||"null");}catch(e){pending=null;}
+  if(!pending||!pending.order||!pending.response){
+    $("orderMsg").innerHTML='<div class="notice error">कोई pending payment order इस device पर नहीं मिला। Payment ID से सहायता लें; दोबारा भुगतान न करें।</div>';
+    return;
+  }
+  const order=pending.order,response=pending.response;
+  try{
+    $("orderMsg").innerHTML='<div class="notice">Saving your paid order…</div>';
+    const ref=db.ref("orders/"+order.id);
+    const existing=await ref.once("value");
+    if(!existing.exists()){
+      await saveOrderToFirebase(order,"Razorpay ("+(response.razorpay_payment_id||"")+")","Verification Pending",response.razorpay_payment_id||"");
+    }else{
+      await ref.update({razorpayPaymentId:response.razorpay_payment_id||"",paymentMethod:"Razorpay ("+(response.razorpay_payment_id||"")+")",paymentStatus:existing.val().paymentStatus||"Verification Pending"});
+    }
+    orders=orders.filter(o=>String(o.id)!==String(order.id));orders.unshift({...order,paymentStatus:"Verification Pending",razorpayPaymentId:response.razorpay_payment_id||""});save();renderMyOrders();
+    try{
+      const vr=await fetch(RAZORPAY_VERIFY_PAYMENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
+      const result=await vr.json().catch(()=>({}));
+      if(vr.ok&&result.verified===true){await ref.update({paymentStatus:"Verified"});try{localStorage.removeItem("mlm_pending_paid_order");}catch(e){} $("orderMsg").innerHTML='<div class="notice success">Order saved. Payment verified successfully.</div>';return;}
+    }catch(e){}
+    $("orderMsg").innerHTML='<div class="notice success">Order saved and placed. Payment verification is still pending. Do not pay again.</div>';
+  }catch(err){
+    $("orderMsg").innerHTML='<div class="notice error">Order अभी save नहीं हो पाया। इंटरनेट/Firebase permission जाँचकर Retry Save Order दबाएँ। Payment ID: '+esc((pending.response&&pending.response.razorpay_payment_id)||"")+'<br><button type="button" onclick="retryPendingPaidOrder()">Retry Save Order</button></div>';
+  }
 }
 
 
