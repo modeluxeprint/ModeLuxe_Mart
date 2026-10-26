@@ -44,6 +44,13 @@
 .inline-map{height:260px;width:100%;border-radius:12px;border:1px solid var(--line);overflow:hidden;margin:10px 0;background:#10382f;position:relative}.fixed-map-pin{position:absolute;z-index:500;left:50%;top:50%;transform:translate(-50%,-100%);pointer-events:none;font-size:34px;filter:drop-shadow(0 2px 2px #0008)}
 .map-instructions{font-size:13px;line-height:1.5;color:var(--muted);margin:8px 0}
 
+
+.product img,.product .pname{cursor:pointer}.product img:active{filter:brightness(.92)}
+.product-detail-overlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:14px}
+.product-detail-overlay.hidden{display:none!important}.product-detail-card{width:min(100%,520px);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 55px #0009;padding:16px;position:relative}
+.product-detail-close{position:sticky;top:0;float:right;z-index:2;padding:7px 12px;margin:-3px -3px 6px 8px;background:var(--panel2);color:var(--text);border:1px solid var(--line);box-shadow:none}
+.product-detail-image{width:100%;max-height:280px;object-fit:contain;background:#10382f;border-radius:12px;display:block;clear:both}.product-detail-title{font-size:23px;font-weight:800;margin:12px 0 4px}.product-detail-price{font-size:24px;font-weight:800;color:var(--accent);margin:8px 0}.product-detail-info{padding:11px 0;border-bottom:1px solid var(--line);line-height:1.5;overflow-wrap:anywhere}.product-detail-info:last-of-type{border-bottom:0}.product-detail-actions{display:flex;gap:10px;margin-top:15px}.product-detail-actions button{flex:1;min-height:48px}.product-detail-description{white-space:pre-wrap;color:var(--muted)}
+
 </style>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -75,12 +82,18 @@
   </section>
   <section id="cartSection" class="panel hidden">
     <h2>🛒 Your Cart</h2><div id="cartItems"></div>
-    <div class="rowline"><strong>Total</strong><strong id="cartTotal">₹0</strong></div>
+    <div class="rowline"><span>Product subtotal</span><strong id="cartSubtotal">₹0</strong></div><div class="rowline"><span id="deliveryFeeLabel">Delivery charges</span><strong id="cartDeliveryFee">₹0</strong></div><div class="rowline"><strong>Total</strong><strong id="cartTotal">₹0</strong></div><p id="deliveryChargeNote" class="muted">₹199 या उससे अधिक के ऑर्डर पर फ्री डिलीवरी।</p>
     <button style="width:100%;margin-top:12px" onclick="showSection('checkout')">Enter Order Details</button>
     <button class="secondary" style="width:100%;margin-top:8px" onclick="showSection('store')">Continue Shopping</button>
   </section>
   <section id="checkoutSection" class="panel hidden">
     <h2>Delivery & Order</h2>
+    <div class="notice" id="checkoutPriceSummary" style="margin-bottom:14px">
+      <div class="rowline"><span>Product subtotal</span><strong id="checkoutSubtotal">₹0</strong></div>
+      <div class="rowline"><span>Delivery charges</span><strong id="checkoutDeliveryFee">₹0</strong></div>
+      <div class="rowline"><strong>Order total</strong><strong id="checkoutTotal">₹0</strong></div>
+      <p class="muted" id="checkoutDeliveryNote" style="margin:8px 0 0">₹199 या उससे अधिक के ऑर्डर पर फ्री डिलीवरी।</p>
+    </div>
     <div class="notice hidden" id="backendNotice"></div>
     <div id="savedAddressCard" class="notice hidden" style="margin-bottom:14px">
       <strong>📍 Your delivery address</strong>
@@ -183,6 +196,12 @@
 <div id="orderSuccessOverlay" class="order-success-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="orderSuccessTitle">
   <div class="order-success-card"><div class="order-success-check">✅</div><h2 id="orderSuccessTitle">ऑर्डर प्लेस हो गया!</h2><p>आपका ऑर्डर सफलतापूर्वक दर्ज हो गया है।</p><button type="button" onclick="closeOrderSuccess()">ठीक है</button></div>
 </div>
+<div id="productDetailOverlay" class="product-detail-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="productDetailName" onclick="if(event.target===this)closeProductDetails()">
+  <div class="product-detail-card">
+    <button type="button" class="product-detail-close" aria-label="Close product details" onclick="closeProductDetails()">✕ Close</button>
+    <div id="productDetailContent"></div>
+  </div>
+</div>
 <div id="toast" class="toast" role="status" aria-live="polite"><span class="toastIcon">✓</span><span id="toastText">हो गया</span></div>
 <nav class="bottom" aria-label="मुख्य मेनू">
   <button class="secondary" onclick="showSection('store')">⌂ Home</button>
@@ -223,7 +242,20 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",
 function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(localStorage.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
 function setCategory(c){activeCategory=c;categories();renderProducts()}
 function handleProductImageError(img){img.onerror=null;img.style.display="none";const fallback=document.createElement("div");fallback.className="image-fallback";fallback.textContent="📦 Photo not available";img.insertAdjacentElement("afterend",fallback)}
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(activeCategory==="All"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));$("listingTitle").textContent=activeCategory==="All"?(localStorage.getItem("mlm_language")==="en"?"All Products":"All Products"):activeCategory;$("products").innerHTML=list.length?list.map(p=>`<article class="product"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onerror="handleProductImageError(this)"><div class="pbody"><div class="pname">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button onclick="addCart('${esc(p.id)}')">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" onclick="buyNow('${esc(p.id)}')">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(activeCategory==="All"||p.category===activeCategory)&&p.name.toLowerCase().includes(q));$("listingTitle").textContent=activeCategory==="All"?(localStorage.getItem("mlm_language")==="en"?"All Products":"All Products"):activeCategory;$("products").innerHTML=list.length?list.map(p=>`<article class="product"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button onclick="addCart('${esc(p.id)}')">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" onclick="buyNow('${esc(p.id)}')">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function openProductDetails(id){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ const en=localStorage.getItem("mlm_language")==="en";
+ const image=p.image||"";const quantity=p.quantity||p.weight||"1";const unit=p.unit||"Piece";const stock=Number(p.stock||0);const stockUnit=p.stockUnit||unit;
+ const size=p.size||p.sizes||p.variant||p.variants||p.productSize||"";
+ const description=p.description||p.details||p.productDescription||"";
+ const seller=p.seller||p.sellerName||"";
+ const content=$("productDetailContent");
+ content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" onclick="addCart('${esc(p.id)}');closeProductDetails()">${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" onclick="closeProductDetails();buyNow('${esc(p.id)}')">${en?"Buy Now":"अभी खरीदें"}</button></div>`;
+ $("productDetailOverlay").classList.remove("hidden");document.body.style.overflow="hidden";
+}
+function closeProductDetails(){$("productDetailOverlay").classList.add("hidden");document.body.style.overflow=""}
+
 function showOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.remove("hidden")}function closeOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.add("hidden")}
 let toastTimer;function showToast(message){const t=$("toast");$("toastText").textContent=message;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2300)}
 function getSavedDeliveryAddress(){if(!activeUserPhone)return null;try{return JSON.parse(localStorage.getItem(userKey("mlm_saved_delivery_address"))||"null")}catch(e){return null}}
@@ -256,7 +288,22 @@ function rememberDeliveryAddress(order){
 }
 function addCart(id){const p=products.find(x=>x.id===id);if(!p)return;const item=cart.find(x=>x.id===id);if(item){item.qty++;item.image=p.image}else cart.push({id:p.id,name:p.name,price:p.price,image:p.image,qty:1});save();renderCart();showToast("प्रोडक्ट कार्ट में जोड़ दिया गया।")}
 function buyNow(id){addCart(id);showSection("checkout")}
-function renderCart(){$("cartCount").textContent=cart.reduce((n,x)=>n+x.qty,0);cart=cart.map(x=>({...x,image:x.image||(products.find(p=>p.id===x.id)||{}).image||""}));$("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility=\'hidden\'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${localStorage.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;save();$("cartTotal").textContent="₹"+cart.reduce((n,x)=>n+x.price*x.qty,0).toLocaleString("en-IN")}
+function renderCart(){
+  $("cartCount").textContent=cart.reduce((n,x)=>n+x.qty,0);
+  cart=cart.map(x=>({...x,image:x.image||(products.find(p=>p.id===x.id)||{}).image||""}));
+  $("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility='hidden'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${localStorage.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;
+  save();const subtotal=getCartSubtotal(),fee=getDeliveryFee(subtotal),total=subtotal+fee;
+  if($("cartSubtotal"))$("cartSubtotal").textContent="₹"+subtotal.toLocaleString("en-IN");
+  if($("cartDeliveryFee"))$("cartDeliveryFee").textContent="₹"+fee.toLocaleString("en-IN");
+  $("cartTotal").textContent="₹"+total.toLocaleString("en-IN");
+  if($("deliveryFeeLabel"))$("deliveryFeeLabel").textContent=fee?"Delivery charges":"Delivery charges (Free)";
+  const feeNote=fee?`₹${Number(deliverySettings.freeAbove).toLocaleString("en-IN")} से कम के ऑर्डर पर ₹${fee} डिलीवरी चार्ज लागू है।`:`₹${Number(deliverySettings.freeAbove).toLocaleString("en-IN")} या उससे अधिक के ऑर्डर पर फ्री डिलीवरी।`;
+  if($("deliveryChargeNote"))$("deliveryChargeNote").textContent=feeNote;
+  if($("checkoutSubtotal"))$("checkoutSubtotal").textContent="₹"+subtotal.toLocaleString("en-IN");
+  if($("checkoutDeliveryFee"))$("checkoutDeliveryFee").textContent="₹"+fee.toLocaleString("en-IN");
+  if($("checkoutTotal"))$("checkoutTotal").textContent="₹"+total.toLocaleString("en-IN");
+  if($("checkoutDeliveryNote"))$("checkoutDeliveryNote").textContent=feeNote;
+}
 function changeQty(id,d){const x=cart.find(y=>y.id===id);if(!x)return;x.qty+=d;if(x.qty<=0)cart=cart.filter(y=>y.id!==id);save();renderCart()}
 function showSection(s){
   const sections=["store","cart","checkout","account","profile","myorders"];
@@ -286,7 +333,7 @@ $("orderForm").addEventListener("submit",async e=>{
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
     address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
     pin,payment:$("payment").value,items:cart.map(x=>({...x})),
-    total:cart.reduce((n,x)=>n+x.price*x.qty,0),date:new Date().toLocaleString("hi-IN"),
+    subtotal:getCartSubtotal(),deliveryFee:getDeliveryFee(getCartSubtotal()),total:getCartSubtotal()+getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
     createdAt:new Date().toISOString(),status:"Order Placed",paymentStatus:$("payment").value==="COD"?"Pending":"Payment Pending"
   };
   if(order.payment==="RAZORPAY"){await startRazorpayPayment(order);return}
@@ -313,14 +360,21 @@ const firebaseConfig = {
 };
 if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
-  const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
+const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
+// Delivery fee settings are shared with Admin Panel through Firebase.
+let deliverySettings={freeAbove:199,charge:49};
+let deliverySettingsListener=null;
+function getCartSubtotal(){return cart.reduce((n,x)=>n+Number(x.price||0)*Number(x.qty||0),0)}
+function getDeliveryFee(subtotal=getCartSubtotal()){return subtotal < Number(deliverySettings.freeAbove??199) ? Math.max(0,Number(deliverySettings.charge??49)) : 0}
+function startDeliverySettingsListener(){if(!db)return;if(deliverySettingsListener)db.ref("deliverySettings").off("value",deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};renderCart()};db.ref("deliverySettings").on("value",deliverySettingsListener,err=>console.warn("Delivery settings sync failed",err&&err.message));}
+startDeliverySettingsListener();
 // Display only real products created in the Admin Panel catalogue.
 function startUserProductsListener(){
   if(!db)return;
   if(userProductsListener)db.ref("sellerProducts").off("value",userProductsListener);
   userProductsListener=snap=>{
     const raw=snap.val()||{};
-    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),seller:String(p.seller||p.sellerName||"")};}).filter(p=>p.name && p.stock>0);
+    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||"")};}).filter(p=>p.name && p.stock>0);
     if(activeCategory!=="All"&&!products.some(p=>p.category===activeCategory))activeCategory="All";
     categories();renderProducts();
   };
@@ -476,7 +530,8 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     product:(order.items||[]).map(i=>i.name).join(", "),
     items:order.items||[],
     price:Number(order.total||0),
-    deliveryFee:0,
+    subtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
+    deliveryFee:Number(order.deliveryFee||0),
     totalAmount:Number(order.total||0),
     paymentMethod:paymentMethod,
     paymentStatus:paymentStatus,
