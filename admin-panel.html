@@ -250,7 +250,7 @@ async function downloadInvoice(id){
     const sourceStyle=parsed.querySelector('style');
     if(!invoice||!sourceStyle)throw new Error('Invoice content nahi mila');
     holder=document.createElement('div');
-    holder.style.cssText='position:fixed;left:0;top:0;width:794px;z-index:-1;pointer-events:none;background:#ffffff;color:#17231d;';
+    holder.style.cssText='position:absolute;left:-10000px;top:0;width:794px;z-index:0;pointer-events:none;background:#ffffff;color:#17231d;overflow:visible;';
     const style=document.createElement('style');style.textContent=sourceStyle.textContent;holder.appendChild(style);
     const target=document.importNode(invoice,true);
     target.style.backgroundColor='#ffffff';target.style.color='#17231d';target.style.width='738px';target.style.maxWidth='738px';target.style.margin='0';target.style.boxSizing='border-box';target.style.padding='12px';target.style.fontSize='11px';
