@@ -260,7 +260,7 @@ async function downloadInvoice(id){
     const qr=target.querySelector('.delivery-qr img');
     if(qr&&!qr.complete)await new Promise(resolve=>{qr.onload=resolve;qr.onerror=resolve;setTimeout(resolve,2500);});
     await win.html2pdf().set({
-      margin:[8,8,8,8],
+      margin:8,
       filename:'ModeLuxe-Invoice-'+safeId+'.pdf',
       image:{type:'jpeg',quality:0.98},
       html2canvas:{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',scrollY:0,windowWidth:900},
