@@ -642,13 +642,29 @@ function addCart(id){
   return true;
 }
 function buyNow(id){
-  const key=String(id);
-  const p=products.find(x=>String(x.id)===key);
-  if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return;}
-  if(addCart(key)){
-    showSection("checkout");
-    window.scrollTo({top:0,behavior:"smooth"});
+  const key = String(id);
+  const p = products.find(x => String(x.id) === key);
+
+  if (!p) {
+    showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");
+    return;
   }
+
+  // Buy Now के लिए सिर्फ चुना हुआ प्रोडक्ट Checkout में दिखाएँ।
+  const previousCart = cart;
+
+  cart = [{
+    id: String(p.id),
+    name: p.name,
+    price: Number(p.price || 0),
+    image: p.image || "",
+    qty: 1
+  }];
+
+  save();
+  renderCart();
+  showSection("checkout");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 // Register product-button clicks BEFORE startup/Firebase initialization so an initialization issue cannot disable them.
 document.addEventListener("click",function(event){
