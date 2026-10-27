@@ -663,6 +663,11 @@ function buyNow(id){
 
   save();
   renderCart();
+  // Close the product-details popup first so Checkout/address page is not left behind it.
+  if (typeof closeProductDetails === "function") closeProductDetails();
+  const detailOverlay = document.getElementById("productDetailOverlay");
+  if (detailOverlay) detailOverlay.classList.add("hidden");
+  document.body.style.overflow = "";
   showSection("checkout");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
