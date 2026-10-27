@@ -701,7 +701,11 @@ function renderCart(){
 function changeQty(id,d){const key=String(id);const x=cart.find(y=>String(y.id)===key);if(!x)return;x.qty=Number(x.qty||0)+d;if(x.qty<=0)cart=cart.filter(y=>String(y.id)!==key);save();renderCart()}
 function bottomNavClick(target,button){
   document.querySelectorAll('.mainnav button').forEach(b=>b.classList.remove('navactive'));
-  if(target==='store'){const b=document.querySelector('.mainnav button:nth-child(2)');if(b)b.classList.add('navactive');}
+  if(target==='store'){
+    wishlistOnly=false;
+    const b=document.querySelector('.mainnav button:nth-child(2)');if(b)b.classList.add('navactive');
+    renderProducts();
+  }
   if(target==='categories'){const b=document.querySelector('.mainnav button:first-child');if(b)b.classList.add('navactive');}
   document.querySelectorAll('.bottom button').forEach(b=>b.classList.remove('nav-selected'));
   if(button)button.classList.add('nav-selected');
@@ -738,7 +742,7 @@ function mainNavClick(target,button){
 function showSection(s){
   if(s!=="store")wishlistOnly=false;
   const navButtons=document.querySelectorAll(".bottom button");navButtons.forEach(b=>b.classList.remove("nav-selected"));
-  const navIndex=(s==="account"||s==="profile"||s==="myorders"?3:(s==="categories"?1:(s==="store"?0:-1)));if(navIndex>=0&&navButtons[navIndex])navButtons[navIndex].classList.add("nav-selected");
+  const navIndex=(s==="account"||s==="profile"||s==="myorders"?3:(s==="categories"?1:(s==="store"?(wishlistOnly?2:0):-1)));if(navIndex>=0&&navButtons[navIndex])navButtons[navIndex].classList.add("nav-selected");
   const sections=["store","cart","checkout","account","profile","myorders","about","contact"];
   sections.forEach(x=>$(x+"Section")?.classList.toggle("hidden",x!==s));
   const onStore=s==="store";
