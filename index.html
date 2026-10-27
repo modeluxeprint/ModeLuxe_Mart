@@ -1482,7 +1482,7 @@ function downloadUserInvoice(orderId){
   const subtotal=Number(o.subtotal??items.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||i.quantity||1),0));
   const delivery=Number(o.deliveryFee||0),total=Number(o.total??o.totalAmount??subtotal+delivery);
   const rows=items.map((i,n)=>`<tr><td>${n+1}</td><td>${invoiceSafe(i.name||i.productName||i.product||"Item")}</td><td>${Number(i.qty||i.quantity||1)}</td><td>${money(i.price||i.sellingPrice||0)}</td><td>${money(Number(i.price||i.sellingPrice||0)*Number(i.qty||i.quantity||1))}</td></tr>`).join("");
-  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ModeLuxe Mart Invoice ${invoiceSafe(o.id)}</title><style>body{font-family:Arial,sans-serif;color:#17231d;margin:0;padding:18px}.invoice{max-width:800px;margin:auto;border:1px solid #cbd5cf;padding:20px}.brand{font-size:22px;font-weight:bold;color:#174b39}.head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #174b39;padding-bottom:12px}.muted{color:#58665e}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #ccd6d0;padding:8px;text-align:left}th{background:#174b39;color:#fff}.totals{margin:16px 0 0 auto;max-width:320px}.row{display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #ddd}.total{font-size:18px;font-weight:bold}@media(max-width:520px){body{padding:8px}.invoice{padding:10px}.head{display:block}th,td{font-size:12px;padding:5px}}</style></head><body><main class="invoice"><div class="head"><div><div class="brand">ModeLuxe Mart</div><div>Customer Invoice / Bill</div></div><div><b>Invoice No:</b> ${invoiceSafe(o.id)}<br><b>Date:</b> ${invoiceSafe(o.date||o.createdAt||"")}<br><b>Status:</b> ${invoiceSafe(o.status||"Order Placed")}</div></div><p><b>Bill To:</b> ${invoiceSafe(o.name||o.customerName||"")}<br><b>Mobile:</b> ${invoiceSafe(o.phone||o.customerPhone||"")}<br><b>Address:</b> ${invoiceSafe(o.address||o.shippingAddress||"")}<br><b>PIN Code:</b> ${invoiceSafe(o.pin||"")}</p><p><b>Payment:</b> ${invoiceSafe(o.payment||o.paymentMethod||"Not available")} · ${invoiceSafe(o.paymentStatus||"Pending")}</p><table><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div class="row"><span>Product Subtotal</span><b>${money(subtotal)}</b></div><div class="row"><span>Delivery Charges</span><b>${money(delivery)}</b></div><div class="row total"><span>Total</span><b>${money(total)}</b></div></div><p class="muted" style="text-align:center;margin-top:24px">Thank you for shopping with ModeLuxe Mart!</p><button onclick="window.print()">Print / Save as PDF</button></main>
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ModeLuxe Mart Invoice ${invoiceSafe(o.id)}</title><style>body{font-family:Arial,sans-serif;color:#172033;margin:0;padding:18px;background:#f4f8ff}.invoice{max-width:800px;margin:auto;border:1px solid #cbdcf4;padding:20px;background:#fff}.brand{font-size:22px;font-weight:bold;color:#075fc4}.head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #075fc4;padding-bottom:12px}.muted{color:#64748b}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #cbdcf4;padding:8px;text-align:left}th{background:#075fc4;color:#fff}.totals{margin:16px 0 0 auto;max-width:320px}.row{display:flex;justify-content:space-between;padding:6px;border-bottom:1px solid #ddd}.total{font-size:18px;font-weight:bold}@media(max-width:520px){body{padding:8px}.invoice{padding:10px}.head{display:block}th,td{font-size:12px;padding:5px}}</style></head><body><main class="invoice"><div class="head"><div><div class="brand">ModeLuxe Mart</div><div>Customer Invoice / Bill</div></div><div><b>Invoice No:</b> ${invoiceSafe(o.id)}<br><b>Date:</b> ${invoiceSafe(o.date||o.createdAt||"")}<br><b>Status:</b> ${invoiceSafe(o.status||"Order Placed")}</div></div><p><b>Bill To:</b> ${invoiceSafe(o.name||o.customerName||"")}<br><b>Mobile:</b> ${invoiceSafe(o.phone||o.customerPhone||"")}<br><b>Address:</b> ${invoiceSafe(o.address||o.shippingAddress||"")}<br><b>PIN Code:</b> ${invoiceSafe(o.pin||"")}</p><p><b>Payment:</b> ${invoiceSafe(o.payment||o.paymentMethod||"Not available")} · ${invoiceSafe(o.paymentStatus||"Pending")}</p><table><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div class="row"><span>Product Subtotal</span><b>${money(subtotal)}</b></div><div class="row"><span>Delivery Charges</span><b>${money(delivery)}</b></div><div class="row total"><span>Total</span><b>${money(total)}</b></div></div><p class="muted" style="text-align:center;margin-top:24px">Thank you for shopping with ModeLuxe Mart!</p><button class="print-btn" onclick="window.print()">Save / Print PDF</button></main>
 <style id="final-wishlist-heart-count-visible-fix">
 /* Final override: keep search as a visible white input and show one live wishlist badge on the heart. */
 .topinner.banner-inner{position:relative!important;overflow:visible!important;}
@@ -1514,7 +1514,14 @@ function downloadUserInvoice(orderId){
 @media(max-width:600px){.banner-search{left:54.5%!important;width:34%!important;height:45%!important}.banner-search input{padding-left:20%!important;padding-right:3%!important;font-size:clamp(10px,2.3vw,16px)!important;border-radius:999px!important}.banner-search::before{left:5%!important;width:clamp(13px,3.5vw,22px)!important;height:clamp(13px,3.5vw,22px)!important;border-width:2px!important}.banner-search::after{left:calc(5% + clamp(13px,3.5vw,22px) - 1px)!important;top:calc(50% + clamp(5px,1.3vw,8px))!important;width:clamp(6px,1.6vw,10px)!important;height:2px!important}.banner-wishlist{right:.7%!important;width:8.5%!important}.banner-wishlist::before{font-size:clamp(32px,7vw,43px)!important}.banner-wishlist i#wishlistCount{top:0!important;right:0!important;}}
 </style>
 </body></html>`;
-  const blob=new Blob([html],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="ModeLuxe-Invoice-"+String(o.id).replace(/[^a-zA-Z0-9_-]/g,"")+".html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);showToast("Invoice downloaded. Open it and choose Print / Save as PDF if needed.");
+  const w=window.open("", "_blank");
+  if(!w){showToast("Invoice PDF window blocked. Browser pop-ups allow karke dobara try karein.");return;}
+  w.document.open();w.document.write(html);w.document.close();
+  const style=w.document.createElement("style");
+  style.textContent=".print-btn{display:block;margin:18px auto 0;padding:10px 18px;border:0;border-radius:8px;background:#075fc4;color:#fff;font-weight:700;cursor:pointer}@page{size:A4;margin:12mm}@media print{body{background:#fff!important;padding:0!important}.invoice{border:0!important;max-width:none!important;padding:0!important}.print-btn{display:none!important}th{print-color-adjust:exact;-webkit-print-color-adjust:exact}}";
+  w.document.head.appendChild(style);w.focus();
+  setTimeout(()=>{try{w.print();}catch(e){}},500);
+  showToast("Invoice print window opened. Choose Save as PDF to save it as a PDF file.");
 }
 function invoiceSafe(value){return String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function toggleOrderDetails(id){const el=$("orderDetails-"+String(id).replace(/[^a-zA-Z0-9_-]/g,""));if(el)el.classList.toggle("hidden");}
@@ -1625,57 +1632,3 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
   border-radius: 12px !important;
 }
 </style>
-
-
-<style id="pc-header-height-and-cart-counter-position-fix">
-/* PC only: reduce the tall gold banner without changing the mobile layout. */
-@media (min-width: 601px) {
-  .top.header-banner > .topinner.banner-inner {
-    height: clamp(112px, 12vw, 160px) !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: hidden !important;
-  }
-  .top.header-banner > .topinner.banner-inner > .header-banner-image {
-    width: 100% !important;
-    height: 100% !important;
-    aspect-ratio: auto !important;
-    object-fit: fill !important;
-  }
-  .topinner.banner-inner .banner-search {
-    height: 44% !important;
-  }
-  .topinner.banner-inner .banner-search input {
-    border-radius: 999px !important;
-  }
-}
-/* Keep the cart counter its normal size; move it beside the cart icon instead of shrinking it. */
-header.header-banner .banner-wishlist i#cartTopCount {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: absolute !important;
-  top: 76% !important;
-  right: 0 !important;
-  z-index: 50 !important;
-  font-size: 14px !important;
-  font-style: normal !important;
-  font-weight: 700 !important;
-  min-width: 22px !important;
-  width: auto !important;
-  height: 22px !important;
-  line-height: 22px !important;
-  padding: 0 5px !important;
-  border-radius: 50% !important;
-  background: #ff3030 !important;
-  color: #fff !important;
-  text-align: center !important;
-  box-shadow: 0 2px 5px #0003 !important;
-}
-@media (max-width: 600px) {
-  header.header-banner .banner-wishlist i#cartTopCount {
-    top: 76% !important;
-  }
-}
-</style>
-
