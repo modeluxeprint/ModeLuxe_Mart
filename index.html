@@ -1481,73 +1481,77 @@ function downloadUserInvoice(orderId){
     showToast("PDF tool load नहीं हुआ। Internet check करके page reload करें।");
     return;
   }
-
   const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
   const items=Array.isArray(o.items)&&o.items.length?o.items:[{name:o.product||"Order item",qty:1,price:Number(o.total||0)}];
-  const subtotal=Number(o.subtotal??items.reduce((sum,i)=>sum+Number(i.price||i.sellingPrice||0)*Number(i.qty||i.quantity||1),0));
-  const delivery=Number(o.deliveryFee||o.deliveryCharges||0);
+  const subtotal=Number(o.subtotal??items.reduce((sum,i)=>sum+Number(i.price||i.sellingPrice||i.unitPrice||0)*Number(i.qty||i.quantity||1),0));
+  const delivery=Number(o.deliveryFee||o.deliveryCharges||o.shippingCharge||0);
   const total=Number(o.total??o.totalAmount??(subtotal+delivery));
   const rows=items.map((i,n)=>{
     const qty=Number(i.qty||i.quantity||1);
-    const price=Number(i.price||i.sellingPrice||0);
-    return `<tr><td>${n+1}</td><td>${invoiceSafe(i.name||i.productName||i.product||"Item")}</td><td>${qty}</td><td>${money(price)}</td><td>${money(price*qty)}</td></tr>`;
+    const price=Number(i.price||i.sellingPrice||i.unitPrice||0);
+    return `<tr>
+      <td style="border:1px solid #bfd2eb;padding:12px 10px;font-size:14px;color:#172033;">${n+1}</td>
+      <td style="border:1px solid #bfd2eb;padding:12px 10px;font-size:14px;color:#172033;">${invoiceSafe(i.name||i.productName||i.product||"Item")}</td>
+      <td style="border:1px solid #bfd2eb;padding:12px 10px;font-size:14px;color:#172033;text-align:center;">${qty}</td>
+      <td style="border:1px solid #bfd2eb;padding:12px 10px;font-size:14px;color:#172033;text-align:right;">${money(price)}</td>
+      <td style="border:1px solid #bfd2eb;padding:12px 10px;font-size:14px;color:#172033;text-align:right;">${money(price*qty)}</td>
+    </tr>`;
   }).join("");
-
-  /* Build only the invoice content. Do not put the entire storefront HTML/CSS
-     inside the PDF capture element; that caused the downloaded PDF to be blank. */
   const holder=document.createElement("div");
   holder.id="mlm-pdf-export-holder";
-  holder.style.cssText="position:fixed;left:0;top:0;width:800px;background:#ffffff;z-index:2147483647;padding:0;margin:0;box-sizing:border-box;";
+  holder.setAttribute("style","position:fixed;left:0;top:0;width:794px;max-width:none;background:#ffffff;z-index:2147483647;padding:0;margin:0;display:block;visibility:visible;opacity:1;overflow:visible;box-sizing:border-box;");
   holder.innerHTML=`
-    <style>
-      #mlm-pdf-export-holder *{box-sizing:border-box}
-      #mlm-pdf-export-holder .mlm-invoice{width:800px;padding:28px;background:#fff;color:#172033;font:14px Arial,Helvetica,sans-serif;border:1px solid #cbdcf4}
-      #mlm-pdf-export-holder .mlm-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:3px solid #075fc4;padding-bottom:15px}
-      #mlm-pdf-export-holder .mlm-brand{font-size:27px;font-weight:800;color:#075fc4;margin-bottom:5px}
-      #mlm-pdf-export-holder .mlm-muted{color:#64748b}
-      #mlm-pdf-export-holder .mlm-details{line-height:1.75;margin:18px 0}
-      #mlm-pdf-export-holder table{width:100%;border-collapse:collapse;margin-top:18px}
-      #mlm-pdf-export-holder th{background:#075fc4;color:#fff;font-weight:700}
-      #mlm-pdf-export-holder th,#mlm-pdf-export-holder td{border:1px solid #cbdcf4;padding:10px;text-align:left;font-size:13px}
-      #mlm-pdf-export-holder .mlm-totals{width:330px;margin:18px 0 0 auto}
-      #mlm-pdf-export-holder .mlm-row{display:flex;justify-content:space-between;gap:16px;padding:9px 4px;border-bottom:1px solid #d7e1ee}
-      #mlm-pdf-export-holder .mlm-total{font-size:19px;font-weight:800;color:#075fc4;border-top:2px solid #075fc4}
-      #mlm-pdf-export-holder .mlm-footer{text-align:center;color:#64748b;margin-top:28px;padding-top:14px;border-top:1px solid #d7e1ee}
-    </style>
-    <main class="mlm-invoice">
-      <div class="mlm-head">
-        <div><div class="mlm-brand">ModeLuxe Mart</div><div>Customer Invoice / Bill</div></div>
-        <div><b>Invoice No:</b> ${invoiceSafe(o.id)}<br><b>Date:</b> ${invoiceSafe(o.date||o.createdAt||"")}<br><b>Order Status:</b> ${invoiceSafe(o.status||"Order Placed")}</div>
-      </div>
-      <div class="mlm-details">
-        <b>Bill To:</b> ${invoiceSafe(o.name||o.customerName||"")}<br>
+    <main style="display:block;width:794px;min-height:900px;padding:36px;background:#ffffff;color:#172033;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;box-sizing:border-box;border:1px solid #cbdcf4;">
+      <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:0 0 20px;margin:0 0 22px;border-bottom:4px solid #075fc4;">
+        <div style="display:block;flex:1;">
+          <div style="font-size:30px;line-height:1.2;font-weight:800;color:#075fc4;margin:0 0 8px;">ModeLuxe Mart</div>
+          <div style="font-size:18px;color:#334155;">Customer Invoice / Bill</div>
+        </div>
+        <div style="display:block;width:290px;font-size:13px;line-height:1.8;color:#172033;">
+          <b>Invoice No:</b> ${invoiceSafe(o.id)}<br>
+          <b>Date:</b> ${invoiceSafe(o.date||o.createdAt||o.orderDate||"")}<br>
+          <b>Order Status:</b> ${invoiceSafe(o.status||"Order Placed")}
+        </div>
+      </header>
+      <section style="display:block;padding:18px 20px;margin:0 0 24px;background:#f1f6fd;border:1px solid #d6e5f7;border-radius:6px;line-height:1.85;color:#172033;font-size:14px;">
+        <div style="font-size:16px;font-weight:700;color:#075fc4;margin-bottom:6px;">Customer Details</div>
+        <b>Bill To:</b> ${invoiceSafe(o.name||o.customerName||o.customer||"")}<br>
         <b>Mobile:</b> ${invoiceSafe(o.phone||o.customerPhone||"")}<br>
         <b>Address:</b> ${invoiceSafe(o.address||o.shippingAddress||"")}<br>
-        <b>PIN Code:</b> ${invoiceSafe(o.pin||"")}<br>
+        <b>PIN Code:</b> ${invoiceSafe(o.pin||o.pincode||"")}<br>
         <b>Payment:</b> ${invoiceSafe(o.payment||o.paymentMethod||"Not available")}<br>
         <b>Payment Status:</b> ${invoiceSafe(o.paymentStatus||"Pending")}
-      </div>
-      <table><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="mlm-totals">
-        <div class="mlm-row"><span>Product Subtotal</span><b>${money(subtotal)}</b></div>
-        <div class="mlm-row"><span>Delivery Charges</span><b>${money(delivery)}</b></div>
-        <div class="mlm-row mlm-total"><span>Total</span><b>${money(total)}</b></div>
-      </div>
-      <div class="mlm-footer">Thank you for shopping with ModeLuxe Mart!</div>
+      </section>
+      <table style="display:table;width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 24px;background:#ffffff;">
+        <thead><tr>
+          <th style="background:#075fc4;color:#ffffff;border:1px solid #075fc4;padding:12px 10px;text-align:left;font-size:14px;width:38px;">#</th>
+          <th style="background:#075fc4;color:#ffffff;border:1px solid #075fc4;padding:12px 10px;text-align:left;font-size:14px;">Product</th>
+          <th style="background:#075fc4;color:#ffffff;border:1px solid #075fc4;padding:12px 10px;text-align:center;font-size:14px;width:65px;">Qty</th>
+          <th style="background:#075fc4;color:#ffffff;border:1px solid #075fc4;padding:12px 10px;text-align:right;font-size:14px;width:115px;">Unit Price</th>
+          <th style="background:#075fc4;color:#ffffff;border:1px solid #075fc4;padding:12px 10px;text-align:right;font-size:14px;width:125px;">Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <section style="display:block;width:360px;margin:0 0 0 auto;color:#172033;font-size:15px;">
+        <div style="display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid #d5dfec;"><span>Product Subtotal</span><b>${money(subtotal)}</b></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid #d5dfec;"><span>Delivery Charges</span><b>${money(delivery)}</b></div>
+        <div style="display:flex;justify-content:space-between;padding:14px 4px;border-top:3px solid #075fc4;color:#075fc4;font-size:20px;font-weight:800;"><span>Total</span><b>${money(total)}</b></div>
+      </section>
+      <footer style="display:block;text-align:center;color:#64748b;font-size:14px;margin:48px 0 0;padding:18px 0 0;border-top:1px solid #d5dfec;">
+        Thank you for shopping with ModeLuxe Mart!
+      </footer>
     </main>`;
   document.body.appendChild(holder);
-  const invoice=holder.querySelector(".mlm-invoice");
   const filename="ModeLuxe-Invoice-"+String(o.id).replace(/[^a-zA-Z0-9_-]/g,"")+".pdf";
-
   try{
     window.html2pdf().set({
       margin:[8,8,8,8],
-      filename,
+      filename:filename,
       image:{type:"jpeg",quality:0.98},
-      html2canvas:{scale:2,backgroundColor:"#ffffff",logging:false,scrollX:0,scrollY:0,useCORS:true},
+      html2canvas:{scale:2,backgroundColor:"#ffffff",logging:false,scrollX:0,scrollY:0,width:794,windowWidth:794,useCORS:true},
       jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
-      pagebreak:{mode:["css","legacy"]}
-    }).from(invoice).save().then(()=>{
+      pagebreak:{mode:["avoid-all","css","legacy"]}
+    }).from(holder.querySelector("main")).save().then(()=>{
       holder.remove();
       showToast("Invoice PDF download हो गया।");
     }).catch(err=>{
