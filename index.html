@@ -373,6 +373,29 @@ body.search-mode #storeSection{display:block!important;margin-top:18px}
 body.search-mode #products{scroll-margin-top:115px}
 </style>
 
+
+<style id="modeluxe-festive-star-garlands">
+/* Festive hero styling inspired by the approved reference; store functionality remains unchanged. */
+.hero{background:radial-gradient(ellipse at 50% 48%,#063b79 0%,#05295a 58%,#031a36 100%)!important;color:#fff!important;min-height:310px!important;padding-top:82px!important;padding-bottom:32px!important;isolation:isolate;overflow:hidden!important;border-radius:0 0 22px 22px;}
+.hero:after{z-index:1!important;opacity:.18!important;border-color:#ffca55!important;box-shadow:0 -14px 0 -12px #ffd166,0 -30px 0 -28px #ffb703!important;}
+.hero h2{color:#ffc943!important;text-transform:uppercase;letter-spacing:2px;font-weight:800!important;font-size:clamp(16px,2.2vw,27px)!important;}
+.hero h1{color:#fff!important;text-shadow:0 2px 0 #6c4210,0 0 18px #ffc84a66!important;font-family:Georgia,'Times New Roman',serif!important;font-size:clamp(30px,5vw,64px)!important;line-height:1.12!important;}
+.hero h1 span{background:linear-gradient(180deg,#fff9dc 0%,#ffd66c 55%,#ffad28 100%)!important;background-clip:text!important;-webkit-background-clip:text!important;color:transparent!important;}
+.hero p{color:#f5e7c2!important;}
+.hero .hero-sparkler-canvas{z-index:2!important;}
+.hero .hero-festive-lights{display:none!important;}
+.hero-hanging-garland{position:absolute;z-index:3;inset:0 0 auto;height:clamp(66px,12vw,118px);pointer-events:none;overflow:hidden;}
+.hero-hanging-garland .garland-wire{position:absolute;left:-2%;right:-2%;top:-26px;height:54px;border-bottom:2px solid #f9d77b;border-radius:0 0 50% 50%;filter:drop-shadow(0 0 4px #ffd166);}
+.hero-hanging-garland .garland-star{position:absolute;top:var(--drop,24px);left:var(--x);color:#ffe8a3;font-size:var(--size,24px);line-height:1;text-shadow:0 0 5px #fff2bd,0 0 12px #ffc43d,0 0 22px #ffad22;animation:garlandTwinkle var(--speed,2s) ease-in-out infinite alternate;}
+.hero-hanging-garland .garland-star:before{content:"";position:absolute;left:50%;bottom:78%;height:var(--wire,36px);border-left:1px solid #ffdfa0;transform:translateX(-50%);opacity:.9;}
+.hero-hanging-garland .garland-bulb{position:absolute;top:var(--drop,28px);left:var(--x);width:7px;height:7px;border-radius:50%;background:var(--bulb,#ffd166);box-shadow:0 0 5px 2px var(--bulb,#ffd166),0 0 14px 4px var(--bulb,#ffd166);animation:garlandTwinkle var(--speed,1.8s) ease-in-out infinite alternate;}
+@keyframes garlandTwinkle{from{opacity:.58;filter:brightness(.85)}to{opacity:1;filter:brightness(1.45)}}
+.top{position:sticky!important;}
+.top:after{content:"☆  ✦  ☆  ✦  ☆  ✦  ☆  ✦  ☆  ✦  ☆  ✦  ☆";position:absolute;z-index:8;left:0;right:0;top:0;height:20px;overflow:hidden;white-space:nowrap;text-align:justify;letter-spacing:clamp(4px,2vw,25px);font-size:clamp(15px,2vw,25px);line-height:20px;color:#ffe6a0;text-shadow:0 0 5px #fff,0 0 12px #ffbd36;pointer-events:none;}
+@media(max-width:600px){.hero{min-height:235px!important;padding-top:65px!important;padding-bottom:24px!important;}.hero-hanging-garland{height:75px}.hero-hanging-garland .garland-star{font-size:var(--mobile-size,18px)}.top:after{font-size:14px;letter-spacing:5px;height:16px;line-height:16px}.hero h1{font-size:clamp(27px,7vw,40px)!important}}
+@media(prefers-reduced-motion:reduce){.hero-hanging-garland .garland-star,.hero-hanging-garland .garland-bulb{animation:none!important}}
+</style>
+
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
@@ -1678,6 +1701,52 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script id="modeluxe-create-star-garland">
+(function(){
+ function addGarland(){
+  const hero=document.querySelector('.hero'); if(!hero || hero.querySelector('.hero-hanging-garland')) return;
+  const wrap=document.createElement('div'); wrap.className='hero-hanging-garland'; wrap.setAttribute('aria-hidden','true');
+  const wire=document.createElement('div'); wire.className='garland-wire'; wrap.appendChild(wire);
+  const colors=['#ffd166','#ff6b6b','#70e1ff','#c4a1ff','#f7f7b5','#ff9acb'];
+  for(let i=0;i<23;i++){
+   const star=document.createElement('span'); star.className=(i%3===0?'garland-star':'garland-bulb');
+   star.style.setProperty('--x',(2+i*4.35)+'%');
+   star.style.setProperty('--drop',(18+((i*17)%57))+'px');
+   star.style.setProperty('--wire',(15+((i*13)%44))+'px');
+   star.style.setProperty('--size',(16+((i*7)%19))+'px');
+   star.style.setProperty('--mobile-size',(13+((i*5)%11))+'px');
+   star.style.setProperty('--speed',(1.2+(i%5)*.35)+'s');
+   star.style.setProperty('--bulb',colors[i%colors.length]);
+   if(i%3===0) star.textContent='★';
+   wrap.appendChild(star);
+  }
+  hero.prepend(wrap);
+ }
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addGarland,{once:true}); else addGarland();
+})();
+</script>
+
+
+<style id="modeluxe-hero-unified-garland-final">
+/* Final hero polish: one continuous Diwali night-sky, hanging star garland without the horizontal wire. */
+.hero{
+  background:#031a36 !important;
+  background-image:radial-gradient(ellipse at 50% 42%, #07366b 0%, #05264f 52%, #031a36 100%) !important;
+  color:#fff !important;
+  position:relative !important;
+  overflow:hidden !important;
+}
+.hero:after{display:none !important;content:none !important;}
+.hero-hanging-garland{z-index:1 !important;height:clamp(85px,16vw,145px) !important;}
+.hero-hanging-garland .garland-wire{display:none !important;}
+.hero-hanging-garland .garland-star:before{height:var(--wire,36px) !important;border-left:1px solid rgba(255,224,160,.9) !important;}
+.hero .hero-festive-lights{display:none !important;}
+.hero .hero-sparkler-canvas{z-index:0 !important;}
+.hero>h1,.hero>h2,.hero>p,.hero>button,.hero .hero-content,.hero .hero-inner{position:relative !important;z-index:4 !important;}
+@media(max-width:600px){.hero{background:#031a36 !important;background-image:radial-gradient(ellipse at 50% 42%, #07366b 0%, #05264f 52%, #031a36 100%) !important;}.hero-hanging-garland{height:90px !important;}}
+</style>
+
 </body>
 </html>
 
@@ -1715,3 +1784,78 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
   border-radius: 12px !important;
 }
 </style>
+
+<style id="modeluxe-diwali-sparkler-only">
+/* Transparent Diwali sparkler animation only: keep the existing hero design and wording intact. */
+.hero{isolation:isolate!important;}
+.hero .hero-sparkler-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none!important;display:block;}
+.hero .hero-festive-lights{position:absolute;z-index:1;left:0;right:0;top:0;height:35px;pointer-events:none;background-image:radial-gradient(circle at 10px 17px,#ff4d6d 0 3px,transparent 4px),radial-gradient(circle at 30px 20px,#ffd166 0 3px,transparent 4px),radial-gradient(circle at 50px 16px,#55e6ff 0 3px,transparent 4px),radial-gradient(circle at 70px 22px,#a7f432 0 3px,transparent 4px),radial-gradient(circle at 90px 17px,#c084fc 0 3px,transparent 4px);background-size:100px 35px;background-repeat:repeat-x;filter:drop-shadow(0 0 4px #ffd166aa);}
+.hero .hero-festive-lights:before{content:"";position:absolute;left:0;right:0;top:3px;height:20px;border-top:2px solid #d6dce8;border-radius:50% 50% 0 0;opacity:.85;}
+.hero>h1,.hero>h2,.hero>p,.hero>button{position:relative;z-index:2;}
+@media(prefers-reduced-motion:reduce){.hero .hero-sparkler-canvas{opacity:.65}}
+</style>
+
+<script id="modeluxe-diwali-sparkler-animation">
+(function(){
+  function startRocketFireworks(){
+    const hero=document.querySelector('.hero');
+    if(!hero || hero.querySelector('.hero-sparkler-canvas')) return;
+    const canvas=document.createElement('canvas');
+    canvas.className='hero-sparkler-canvas';
+    canvas.setAttribute('aria-hidden','true');
+    hero.prepend(canvas);
+    const lights=document.createElement('div');
+    lights.className='hero-festive-lights';
+    lights.setAttribute('aria-hidden','true');
+    hero.appendChild(lights);
+    const ctx=canvas.getContext('2d'); if(!ctx) return;
+    let w=0,h=0,dpr=1,particles=[],rockets=[],lastLaunch=0;
+    const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function resize(){
+      const r=hero.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1,2);
+      w=Math.max(1,r.width); h=Math.max(1,r.height);
+      canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    function burst(x,y,color,count){
+      for(let i=0;i<count;i++){
+        const a=Math.random()*Math.PI*2, speed=1.1+Math.random()*3.9;
+        const life=38+Math.random()*38;
+        particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life,max:life,size:.8+Math.random()*1.6,color});
+      }
+    }
+    function launch(){
+      const x=w*(.12+Math.random()*.76);
+      const targetY=h*(.08+Math.random()*.30);
+      const colors=['#ffd166','#ffb703','#ff6b6b','#ffffff','#7dd3fc','#f9a8d4'];
+      rockets.push({x,y:h+5,vx:(Math.random()-.5)*.7,vy:-(4.2+Math.random()*2.4),targetY,color:colors[Math.floor(Math.random()*colors.length)],trail:[]});
+    }
+    function frame(now){
+      ctx.clearRect(0,0,w,h);
+      if(!reduce && now-lastLaunch>430+Math.random()*420){lastLaunch=now;launch();}
+      for(let i=rockets.length-1;i>=0;i--){
+        const r=rockets[i]; r.trail.push({x:r.x,y:r.y}); if(r.trail.length>24)r.trail.shift();
+        r.x+=r.vx;r.y+=r.vy;r.vy+=.018;
+        ctx.globalAlpha=.7;ctx.strokeStyle=r.color;ctx.lineWidth=2;ctx.beginPath();
+        r.trail.forEach((t,j)=>{if(j===0)ctx.moveTo(t.x,t.y);else ctx.lineTo(t.x,t.y)});ctx.stroke();
+        ctx.globalAlpha=1;ctx.fillStyle='#fff8d6';ctx.beginPath();ctx.arc(r.x,r.y,2.2,0,Math.PI*2);ctx.fill();
+        if(r.y<=r.targetY || r.vy>=0){burst(r.x,r.y,r.color,65+Math.floor(Math.random()*46));rockets.splice(i,1);}
+      }
+      for(let i=particles.length-1;i>=0;i--){
+        const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy=p.vy*.985+.035;p.life--;
+        if(p.life<=0){particles.splice(i,1);continue;}
+        ctx.globalAlpha=Math.min(1,p.life/10)*Math.min(1,p.life/p.max*1.6);
+        ctx.strokeStyle=p.color;ctx.lineWidth=p.size;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-p.vx*2,p.y-p.vy*2);ctx.stroke();
+        ctx.fillStyle='#fff8dc';ctx.beginPath();ctx.arc(p.x,p.y,p.size*.45,0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      if(!reduce)requestAnimationFrame(frame);
+    }
+    resize();window.addEventListener('resize',resize,{passive:true});
+    if(reduce){burst(w*.16,h*.35,'#ffd166',16);frame(0);}else requestAnimationFrame(frame);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startRocketFireworks,{once:true});
+  else startRocketFireworks();
+})();
+</script>
+
