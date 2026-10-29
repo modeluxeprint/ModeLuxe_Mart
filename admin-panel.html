@@ -77,6 +77,7 @@ header{color:#111827}
   <form id="deliverySettingsForm" class="grid md:grid-cols-2 gap-3">
     <div><label class="small block mb-1" for="freeDeliveryAbove">Free delivery threshold (₹)</label><input id="freeDeliveryAbove" type="number" min="0" step="1" value="199" required><p class="small text-stone-400 mt-1">इस राशि से कम पर delivery charge लगेगा।</p></div>
     <div><label class="small block mb-1" for="deliveryChargeAmount">Delivery charge (₹)</label><input id="deliveryChargeAmount" type="number" min="0" step="1" value="49" required><p class="small text-stone-400 mt-1">आप इसे कभी भी कम या ज्यादा कर सकती हैं।</p></div>
+    <div><label class="small block mb-1" for="sellerCommissionPercent">Seller commission (%)</label><input id="sellerCommissionPercent" type="number" min="0" max="100" step="0.1" value="10" required><p class="small text-stone-400 mt-1">Seller की बिक्री से कंपनी का कमीशन; Admin तय करेगा।</p></div>
     <div class="md:col-span-2"><p id="deliverySettingsPreview" class="rounded-xl border border-blue-100 p-3 text-sm text-stone-200">₹198 के ऑर्डर पर ₹49 delivery; ₹199 पर free delivery.</p></div>
     <div class="md:col-span-2"><button id="saveDeliverySettingsBtn" class="btn primary" type="submit">Save Delivery Settings</button><p id="deliverySettingsMsg" class="small mt-2" aria-live="polite"></p></div>
   </form>
@@ -418,12 +419,24 @@ function showAdminTab(tab){
   if(tab==='products') updateUnitChoices();
   if(tab==='deliverySettings') loadDeliverySettingsForm();
 }
-let currentDeliverySettings={freeAbove:199,charge:49},deliverySettingsAdminListener=null;
+let currentDeliverySettings={freeAbove:199,charge:49},currentSellerCommission=10,deliverySettingsAdminListener=null;
 function updateDeliverySettingsPreview(){const thresholdInput=$('freeDeliveryAbove')?.value,chargeInput=$('deliveryChargeAmount')?.value;const threshold=Math.max(0,Number(thresholdInput===''||thresholdInput==null?199:thresholdInput)),charge=Math.max(0,Number(chargeInput===''||chargeInput==null?49:chargeInput));$('deliverySettingsPreview').textContent=`₹${Math.max(0,threshold-1)} के ऑर्डर पर ₹${charge} delivery charge; ₹${threshold} या उससे अधिक पर free delivery.`;}
-function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;updateDeliverySettingsPreview();}
-function startDeliverySettingsAdminListener(){if(deliverySettingsAdminListener)db.ref('deliverySettings').off('value',deliverySettingsAdminListener);deliverySettingsAdminListener=snap=>{const v=snap.val()||{};currentDeliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};loadDeliverySettingsForm();$('deliverySettingsMsg').textContent='Current settings Firebase se sync ho gayi.';};db.ref('deliverySettings').on('value',deliverySettingsAdminListener,err=>{$('deliverySettingsMsg').textContent='Settings load nahi hui: '+err.message;});}
+function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;if($('sellerCommissionPercent'))$('sellerCommissionPercent').value=currentSellerCommission;updateDeliverySettingsPreview();}
+let sellerCommissionAdminListener=null;
+function startSellerCommissionAdminListener(){
+  if(sellerCommissionAdminListener)db.ref('sellerSettings/commissionPercent').off('value',sellerCommissionAdminListener);
+  sellerCommissionAdminListener=snap=>{
+    const n=Number(snap.val());
+    currentSellerCommission=Number.isFinite(n)&&n>=0&&n<=100?n:10;
+    if($('sellerCommissionPercent'))$('sellerCommissionPercent').value=currentSellerCommission;
+  };
+  db.ref('sellerSettings/commissionPercent').on('value',sellerCommissionAdminListener,err=>{
+    if($('deliverySettingsMsg'))$('deliverySettingsMsg').textContent='Commission load nahi hua: '+err.message;
+  });
+}
+function startDeliverySettingsAdminListener(){startSellerCommissionAdminListener();if(deliverySettingsAdminListener)db.ref('deliverySettings').off('value',deliverySettingsAdminListener);deliverySettingsAdminListener=snap=>{const v=snap.val()||{};currentDeliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};loadDeliverySettingsForm();$('deliverySettingsMsg').textContent='Current settings Firebase se sync ho gayi.';};db.ref('deliverySettings').on('value',deliverySettingsAdminListener,err=>{$('deliverySettingsMsg').textContent='Settings load nahi hui: '+err.message;});}
 $('freeDeliveryAbove').addEventListener('input',updateDeliverySettingsPreview);$('deliveryChargeAmount').addEventListener('input',updateDeliverySettingsPreview);
-$('deliverySettingsForm').addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){ $('deliverySettingsMsg').textContent='Admin login required.';return;}const freeAbove=Number($('freeDeliveryAbove').value),charge=Number($('deliveryChargeAmount').value);if(!Number.isFinite(freeAbove)||freeAbove<0||!Number.isFinite(charge)||charge<0){$('deliverySettingsMsg').textContent='Dono amount zero ya usse zyada hone chahiye.';return;}const btn=$('saveDeliverySettingsBtn');btn.disabled=true;$('deliverySettingsMsg').textContent='Saving…';try{await db.ref('deliverySettings').set({freeAbove,charge,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});currentDeliverySettings={freeAbove,charge};$('deliverySettingsMsg').textContent='Delivery settings save ho gayi. User Panel par live update aayega.';addNotification('Delivery charges updated',`Free delivery ₹${freeAbove}+ · Charge ₹${charge}`,'success');}catch(err){$('deliverySettingsMsg').textContent='Save failed: '+err.message;}finally{btn.disabled=false;}});
+$('deliverySettingsForm').addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){ $('deliverySettingsMsg').textContent='Admin login required.';return;}const freeAbove=Number($('freeDeliveryAbove').value),charge=Number($('deliveryChargeAmount').value),commission=Number($('sellerCommissionPercent')?.value);if(!Number.isFinite(freeAbove)||freeAbove<0||!Number.isFinite(charge)||charge<0||!Number.isFinite(commission)||commission<0||commission>100){$('deliverySettingsMsg').textContent='Delivery amounts valid aur commission 0 se 100 ke beech hona chahiye.';return;}const btn=$('saveDeliverySettingsBtn');btn.disabled=true;$('deliverySettingsMsg').textContent='Saving…';try{const updatedAt=new Date().toISOString();await db.ref('deliverySettings').set({freeAbove,charge,updatedAt,updatedBy:signedInPhone});await db.ref('sellerSettings/commissionPercent').set(commission);currentDeliverySettings={freeAbove,charge};currentSellerCommission=commission;$('deliverySettingsMsg').textContent='Delivery settings aur seller commission save ho gaye.';addNotification('Seller commission updated',`Seller commission ${commission}% · Free delivery ₹${freeAbove}+ · Charge ₹${charge}`,'success');}catch(err){$('deliverySettingsMsg').textContent='Save failed: '+err.message;}finally{btn.disabled=false;}});
 
 function updateUnitChoices(){
   const sel=$('productUnit'); if(!sel) return;
