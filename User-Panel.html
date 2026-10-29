@@ -1647,35 +1647,22 @@ function downloadUserInvoice(orderId){
   }
 }
 function invoiceSafe(value){return String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-// Keep expanded order/tracking cards open across Firebase live re-renders.
-const expandedOrderDetails = window.__mlmExpandedOrderDetails || (window.__mlmExpandedOrderDetails = new Set());
-function toggleOrderDetails(id){
-  const safeId=String(id).replace(/[^a-zA-Z0-9_-]/g,"");
-  const el=$("orderDetails-"+safeId);
-  if(!el)return;
-  const willOpen=el.classList.contains("hidden");
-  el.classList.toggle("hidden",!willOpen);
-  if(willOpen)expandedOrderDetails.add(safeId);else expandedOrderDetails.delete(safeId);
-}
+function toggleOrderDetails(id){const el=$("orderDetails-"+String(id).replace(/[^a-zA-Z0-9_-]/g,""));if(el)el.classList.toggle("hidden");}
 function renderMyOrders(){
   const list=$("myOrdersList");
   if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
   if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return;}
-  // Preserve any expanded order details/tracking when Firebase sends a live status update.
-  // Merge the currently visible cards into persistent UI state before replacing HTML.
-  list.querySelectorAll('[id^="orderDetails-"]:not(.hidden)').forEach(el=>expandedOrderDetails.add(el.id.slice('orderDetails-'.length)));
   list.innerHTML=orders.map(o=>{
     const safeId=String(o.id).replace(/[^a-zA-Z0-9_-]/g,"");
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name||i.productName||i.product||"Item")}</strong><div class="muted">₹${Number(i.price||0).toLocaleString("en-IN")} × ${Number(i.qty||i.quantity||1)}</div></div></div>`).join("");
     const raw=String(o.status||"Order Placed").toLowerCase();
-    const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"picked",label:"Picked Up by Delivery Partner",match:["picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
+    const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"picked",label:"Picked by Courier Partner",match:["picked up by courier partner","picked by courier partner","picked up by delivery partner","picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
     let current=0;stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});if(raw.includes("cancel"))current=-1;
     const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${raw.includes("cancel")?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`:stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("")}</div>`;
     const canCancel=!(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x)));
     const paymentMethod=o.payment||o.paymentMethod||"Not available";
-    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="${expandedOrderDetails.has(safeId)?"":"hidden"}" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
+    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="hidden" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
-  // Expanded cards are rendered open directly from persistent state above.
 }
 
 $("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
@@ -1859,7 +1846,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 .hero .hero-festive-lights{position:absolute;z-index:1;left:0;right:0;top:0;height:35px;pointer-events:none;background-image:radial-gradient(circle at 10px 17px,#ff4d6d 0 3px,transparent 4px),radial-gradient(circle at 30px 20px,#ffd166 0 3px,transparent 4px),radial-gradient(circle at 50px 16px,#55e6ff 0 3px,transparent 4px),radial-gradient(circle at 70px 22px,#a7f432 0 3px,transparent 4px),radial-gradient(circle at 90px 17px,#c084fc 0 3px,transparent 4px);background-size:100px 35px;background-repeat:repeat-x;filter:drop-shadow(0 0 4px #ffd166aa);}
 .hero .hero-festive-lights:before{content:"";position:absolute;left:0;right:0;top:3px;height:20px;border-top:2px solid #d6dce8;border-radius:50% 50% 0 0;opacity:.85;}
 .hero>h1,.hero>h2,.hero>p,.hero>button{position:relative;z-index:2;}
-@media(prefers-reduced-motion:reduce){.hero .hero-sparkler-canvas{opacity:.65}}
+@media(max-width:600px){.hero .hero-sparkler-canvas{display:block!important;opacity:1!important;visibility:visible!important;pointer-events:none!important;z-index:2!important}}
 </style>
 
 <script id="modeluxe-diwali-sparkler-animation">
@@ -1877,7 +1864,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
     hero.appendChild(lights);
     const ctx=canvas.getContext('2d'); if(!ctx) return;
     let w=0,h=0,dpr=1,particles=[],rockets=[],lastLaunch=0;
-    const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce=false; // Keep festive rocket animation running on mobile and desktop.
     function resize(){
       const r=hero.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1,2);
       w=Math.max(1,r.width); h=Math.max(1,r.height);
