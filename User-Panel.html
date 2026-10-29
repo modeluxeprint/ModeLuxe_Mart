@@ -1652,6 +1652,9 @@ function renderMyOrders(){
   const list=$("myOrdersList");
   if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
   if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return;}
+  // Preserve any expanded order details/tracking when Firebase sends a live status update.
+  const expandedOrderIds=Array.from(list.querySelectorAll('[id^="orderDetails-"]:not(.hidden)'))
+    .map(el=>el.id.slice('orderDetails-'.length));
   list.innerHTML=orders.map(o=>{
     const safeId=String(o.id).replace(/[^a-zA-Z0-9_-]/g,"");
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name||i.productName||i.product||"Item")}</strong><div class="muted">₹${Number(i.price||0).toLocaleString("en-IN")} × ${Number(i.qty||i.quantity||1)}</div></div></div>`).join("");
@@ -1663,6 +1666,11 @@ function renderMyOrders(){
     const paymentMethod=o.payment||o.paymentMethod||"Not available";
     return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="hidden" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
+  // Re-open exactly the same order cards after re-render; tracking stays visible.
+  expandedOrderIds.forEach(id=>{
+    const details=$("orderDetails-"+id);
+    if(details)details.classList.remove("hidden");
+  });
 }
 
 $("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
