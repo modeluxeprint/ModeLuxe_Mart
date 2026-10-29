@@ -23,7 +23,7 @@ header{color:#111827}
 .hover\\:ring-amber-300:hover{--tw-ring-color:#93c5fd!important}
 #notificationDropdown{position:fixed!important;left:auto!important;right:12px!important;width:min(380px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:70vh;overflow-y:auto;box-sizing:border-box;z-index:9999!important;margin-top:8px!important;transform:none!important}
 @media(max-width:480px){#notificationDropdown{right:12px!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;padding:12px!important}}
-</style></head>
+.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;background:#173f70;color:#dbeafe;font-size:12px;font-weight:800;height:max-content}</style></head>
 <body><script>
 (function(){
   function clearAdminPhone(){
@@ -41,35 +41,29 @@ header{color:#111827}
 <header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
-<div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="productsTabBtn" class="btn muted" type="button" onclick="showAdminTab('products')">Products / Seller Listing</button><button id="deliverySettingsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliverySettings')">Delivery Charges</button></div>
+<div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="sellerAppsTabBtn" class="btn muted" type="button" onclick="showAdminTab('sellerApps')">Seller Applications</button><button id="withdrawalsTabBtn" class="btn muted" type="button" onclick="showAdminTab('withdrawals')">Withdrawal Requests</button><button id="deliverySettingsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliverySettings')">Delivery Charges & Commission</button></div>
 <div id="ordersTab">
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
 <div class="panel p-4 mb-4"><div class="grid md:grid-cols-[1fr_190px_auto] gap-3"><input id="search" placeholder="Order ID, customer name, phone search karein" oninput="renderOrders()"><select id="statusFilter" onchange="window.__ordersSummaryMode=this.value==='all'?'all':this.value;renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Processing</option><option>Packed</option><option>Picked Up by Delivery Partner</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button><button class="btn primary" type="button" onclick="openDeliveryScanner()">📷 Scan Delivery QR</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
 <div id="ordersList" class="space-y-3"></div>
 </div>
-<div id="productsTab" class="hidden">
+<div id="sellerAppsTab" class="hidden">
   <div class="panel p-4 mb-4">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><div><h2 class="text-xl font-bold gold">Product Listing</h2><p class="small text-stone-400">Admin/Seller product catalogue · existing orders are not changed</p></div><span id="productCount" class="text-sm gold font-bold">0 products</span></div>
-    <form id="productForm" class="grid md:grid-cols-2 gap-3" onsubmit="saveProduct(event)">
-      <input id="productEditId" type="hidden">
-      <div><label class="small block mb-1" for="productSeller">Seller / Shop Name</label><input id="productSeller" placeholder="Seller ya shop ka naam" required></div>
-      <div><label class="small block mb-1" for="productCategory">Category</label><select id="productCategory" required onchange="updateUnitChoices()"><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div>
-      <div><label class="small block mb-1" for="productName">Product Name</label><input id="productName" placeholder="Product ka naam" required></div>
-      <div><label class="small block mb-1" for="productImageFile">Product Photo Upload (optional)</label><input id="productImageFile" type="file" accept="image/*" onchange="previewProductImage(event)"><img id="productImagePreview" class="hidden mt-2 w-24 h-24 object-cover rounded-lg border border-blue-100" alt="Product photo preview"><p class="small text-stone-400 mt-1">Mobile se photo select karein; URL bharne ki zaroorat nahi.</p></div>
-      <div><label class="small block mb-1" for="productQty">Quantity / Size (left box)</label><input id="productQty" type="text" placeholder="1, 2, 250, S, XL, 6" value="1" required></div>
-      <div><label class="small block mb-1" for="productUnit">Unit (right box)</label><select id="productUnit" required></select></div>
-      <div><label class="small block mb-1" for="productPrice">Price (₹)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="Selling price" required></div>
-      <div><label class="small block mb-1" for="productStock">Stock quantity (number)</label><input id="productStock" type="number" min="0" step="0.01" value="0" required></div>
-      <div><label class="small block mb-1" for="productStockUnit">Stock unit</label><select id="productStockUnit" required><option value="kg">Kilogram (kg)</option><option value="Gram">Gram</option><option value="Quintal">Quintal</option><option value="Ton">Ton</option><option value="Piece">Piece</option><option value="Dozen">Dozen</option><option value="Pack">Pack</option><option value="Box">Box</option><option value="Plate">Plate</option><option value="Bottle">Bottle</option><option value="Litre">Litre</option><option value="ml">ml</option><option value="Set">Set</option><option value="Pair">Pair</option></select><p class="small text-stone-400 mt-1">उदाहरण: 600 + kg, 2 + Quintal या 1 + Ton.</p></div>
-      <div class="md:col-span-2"><label class="small block mb-1" for="productDescription">Description (optional)</label><textarea id="productDescription" rows="2" placeholder="Product details"></textarea></div>
-      <div class="md:col-span-2 rounded-xl border border-blue-100 p-3"><p class="small text-stone-400">Preview</p><p id="productPreview" class="font-bold gold">1 kg</p><p class="small text-stone-300">Left box में मात्रा या size खुद भरें; right box से unit चुनें. उदाहरण: 2 kg, 250 Gram, 1 Half Plate, 6 Month, 90 cm, XL.</p></div>
-      <div class="md:col-span-2 flex flex-wrap gap-2"><button id="saveProductBtn" class="btn primary" type="submit">Save Product</button><button class="btn muted" type="button" onclick="resetProductForm()">Clear Form</button></div>
-      <p id="productMsg" class="small md:col-span-2" aria-live="polite"></p>
-    </form>
+    <h2 class="text-xl font-bold gold">Seller Account Applications</h2>
+    <p class="small text-stone-400 mt-1">Seller profiles yahan review karein. Approve karne par account approved hoga; Cancel/Reject karne par seller access deny hoga.</p>
+    <div class="flex flex-wrap gap-2 mt-3"><button class="btn muted" type="button" onclick="setSellerAppFilter('all')">All</button><button class="btn muted" type="button" onclick="setSellerAppFilter('pending')">Pending</button><button class="btn muted" type="button" onclick="setSellerAppFilter('approved')">Approved</button><button class="btn muted" type="button" onclick="setSellerAppFilter('rejected')">Rejected</button></div>
+    <p id="sellerAppsMsg" class="small text-stone-400 mt-3" aria-live="polite">Seller applications load ho rahi hain…</p>
+    <div id="sellerApplicationsList" class="space-y-3 mt-3"></div>
   </div>
-  <div class="panel p-4 mb-4"><p class="small text-stone-300 mb-2">Category select karein — us category ke products neeche Edit/Delete ke saath dikhenge.</p><div class="grid md:grid-cols-2 gap-3"><input id="productSearch" placeholder="Product ya seller search karein" oninput="renderProducts()"><select id="productFilterCategory" onchange="renderProducts()"><option value="all">All categories</option><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div></div>
-  <div id="productsSyncMsg" class="small text-stone-400 mb-3">Products Firebase se load ho rahe hain…</div>
-  <div id="productsList" class="space-y-3"></div>
+</div>
+<div id="withdrawalsTab" class="hidden">
+  <div class="panel p-4 mb-4">
+    <h2 class="text-xl font-bold gold">Withdrawal Requests</h2>
+    <p class="small text-stone-400 mt-1">Seller aur Delivery Partner ki requests ko review karein. Payment karne ke baad hi “Payment Successfully Completed” mark karein.</p>
+    <div class="flex flex-wrap gap-2 mt-3"><button class="btn muted" type="button" onclick="setWithdrawalFilter('all')">All</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('pending')">Pending</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('approved')">Approved / Awaiting Payment</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('paid')">Payment Completed</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('rejected')">Rejected</button></div>
+    <p id="withdrawalsMsg" class="small text-stone-400 mt-3" aria-live="polite">Withdrawal requests load ho rahi hain…</p>
+    <div id="withdrawalRequestsList" class="space-y-3 mt-3"></div>
+  </div>
 </div>
 <div id="deliverySettingsTab" class="hidden panel p-5 mb-4 max-w-2xl">
   <h2 class="text-xl font-bold gold mb-2">Delivery Charge Settings</h2>
@@ -221,7 +215,7 @@ function deviceLockReady(){return !!localStorage.getItem(DEVICE_LOCK_KEY)&&!!loc
 function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP verify ho gaya, lekin is browser/URL par Passkey supported nahi. HTTPS par supported browser se kholein.');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');auth.signOut().catch(()=>{});return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
 async function registerDevicePasskey(){const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'ModeLuxe Mart Admin',id:location.hostname},user:{id:userId,name:'modeluxe-admin-device',displayName:'ModeLuxe Mart Admin'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000,attestation:'none'}});if(!credential)throw Error('Passkey registration cancel ho gaya.');localStorage.setItem(DEVICE_CRED_KEY,b64url(credential.rawId));}
 async function verifyDevicePasskey(){const id=localStorage.getItem(DEVICE_CRED_KEY);if(!id)throw Error('Is phone ka passkey registered nahi hai.');const challenge=crypto.getRandomValues(new Uint8Array(32));const assertion=await navigator.credentials.get({publicKey:{challenge,rpId:location.hostname,allowCredentials:[{type:'public-key',id:unb64url(id)}],userVerification:'required',timeout:60000}});if(!assertion)throw Error('Passkey verification cancel ho gaya.');}
-async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startProducts();startDeliverySettingsAdminListener();updateUnitChoices();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
+async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startDeliverySettingsAdminListener();startSellerApplications();startWithdrawalRequests();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
 $('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
@@ -410,18 +404,107 @@ const PRODUCT_UNITS = [
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
 function showAdminTab(tab){
-  $('ordersTab').classList.toggle('hidden',tab!=='orders');
-  $('productsTab').classList.toggle('hidden',tab!=='products');
-  $('deliverySettingsTab').classList.toggle('hidden',tab!=='deliverySettings');
-  $('ordersTabBtn').className='btn '+(tab==='orders'?'primary':'muted');
-  $('productsTabBtn').className='btn '+(tab==='products'?'primary':'muted');
-  $('deliverySettingsTabBtn').className='btn '+(tab==='deliverySettings'?'primary':'muted');
-  if(tab==='products') updateUnitChoices();
-  if(tab==='deliverySettings') loadDeliverySettingsForm();
+  ['orders','sellerApps','withdrawals','deliverySettings'].forEach(k=>{
+    const panel=$(k==='sellerApps'?'sellerAppsTab':k==='withdrawals'?'withdrawalsTab':k==='deliverySettings'?'deliverySettingsTab':'ordersTab');
+    if(panel)panel.classList.toggle('hidden',tab!==k);
+    const btn=$(k==='sellerApps'?'sellerAppsTabBtn':k==='withdrawals'?'withdrawalsTabBtn':k==='deliverySettings'?'deliverySettingsTabBtn':'ordersTabBtn');
+    if(btn)btn.className='btn '+(tab===k?'primary':'muted');
+  });
+  if(tab==='deliverySettings')loadDeliverySettingsForm();
+  if(tab==='sellerApps')renderSellerApplications();
+  if(tab==='withdrawals')renderWithdrawalRequests();
 }
 let currentDeliverySettings={freeAbove:199,charge:49},currentSellerCommission=10,deliverySettingsAdminListener=null;
 function updateDeliverySettingsPreview(){const thresholdInput=$('freeDeliveryAbove')?.value,chargeInput=$('deliveryChargeAmount')?.value;const threshold=Math.max(0,Number(thresholdInput===''||thresholdInput==null?199:thresholdInput)),charge=Math.max(0,Number(chargeInput===''||chargeInput==null?49:chargeInput));$('deliverySettingsPreview').textContent=`₹${Math.max(0,threshold-1)} के ऑर्डर पर ₹${charge} delivery charge; ₹${threshold} या उससे अधिक पर free delivery.`;}
 function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;if($('sellerCommissionPercent'))$('sellerCommissionPercent').value=currentSellerCommission;updateDeliverySettingsPreview();}
+
+// Seller application + withdrawal administration.
+let sellerApplicationsData={},sellerApplicationsListener=null,sellerAppsFilter='pending';
+let sellerWithdrawalsData={},deliveryWithdrawalsData={},sellerWithdrawalsListener=null,deliveryWithdrawalsListener=null,withdrawalFilter='pending';
+function setSellerAppFilter(v){sellerAppsFilter=v;renderSellerApplications();}
+function startSellerApplications(){
+  if(sellerApplicationsListener)db.ref('sellerProfiles').off('value',sellerApplicationsListener);
+  sellerApplicationsListener=snap=>{sellerApplicationsData=snap.val()||{};renderSellerApplications();};
+  db.ref('sellerProfiles').on('value',sellerApplicationsListener,err=>{$('sellerAppsMsg').textContent='Seller profiles load nahi hue: '+err.message;});
+}
+function renderSellerApplications(){
+  const entries=Object.entries(sellerApplicationsData||{}).map(([uid,p])=>({uid,p:p||{}})).filter(x=>{
+    const status=String(x.p.applicationStatus||x.p.status||'pending').toLowerCase();
+    return sellerAppsFilter==='all'||status===sellerAppsFilter;
+  }).sort((a,b)=>String(a.p.createdAt||'').localeCompare(String(b.p.createdAt||'')));
+  $('sellerApplicationsList').innerHTML=entries.length?entries.map(({uid,p})=>{
+    const status=String(p.applicationStatus||p.status||'pending').toLowerCase();
+    const statusLabel=status==='approved'?'Approved':status==='rejected'?'Rejected':'Pending review';
+    return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">${esc(p.shopName||p.sellerName||'Seller')}</p><h3 class="font-bold break-words">${esc(p.email||uid)}</h3><p class="small text-stone-300">Mobile: ${esc(p.phone||'Not provided')}</p><p class="small text-stone-400">UID: ${esc(uid)}</p><p class="small text-stone-300">Applied: ${esc(p.createdAt||'Date unavailable')}</p></div><span class="pill">${esc(statusLabel)}</span></div><div class="flex flex-wrap gap-2 mt-3"><button class="btn primary" type="button" ${status==='approved'?'disabled':''} onclick="reviewSellerApplication('${esc(uid)}','approved')">Approve</button><button class="btn danger" type="button" ${status==='rejected'?'disabled':''} onclick="reviewSellerApplication('${esc(uid)}','rejected')">Cancel / Reject</button></div></article>`;
+  }).join(''):'<div class="panel p-5 text-center text-stone-300">Is filter mein koi seller application nahi hai.</div>';
+  $('sellerAppsMsg').textContent=entries.length+' seller account(s).';
+}
+async function reviewSellerApplication(uid,status){
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
+  if(!['approved','rejected'].includes(status))return;
+  const p=sellerApplicationsData[uid]||{};
+  if(!confirm(`${status==='approved'?'Approve':'Cancel / Reject'} seller account "${p.shopName||p.email||uid}"?`))return;
+  try{
+    const now=new Date().toISOString();
+    await db.ref('sellerProfiles/'+uid).update({applicationStatus:status,status,reviewedAt:now,reviewedBy:signedInPhone});
+    addNotification('Seller application '+status,(p.shopName||p.email||uid)+' · '+status,'success');
+  }catch(e){alert('Application update fail: '+e.message);}
+}
+function setWithdrawalFilter(v){withdrawalFilter=v;renderWithdrawalRequests();}
+function startWithdrawalRequests(){
+  if(sellerWithdrawalsListener)db.ref('sellerWithdrawalRequests').off('value',sellerWithdrawalsListener);
+  if(deliveryWithdrawalsListener)db.ref('deliveryWithdrawalRequests').off('value',deliveryWithdrawalsListener);
+  sellerWithdrawalsListener=snap=>{sellerWithdrawalsData=snap.val()||{};renderWithdrawalRequests();};
+  deliveryWithdrawalsListener=snap=>{deliveryWithdrawalsData=snap.val()||{};renderWithdrawalRequests();};
+  db.ref('sellerWithdrawalRequests').on('value',sellerWithdrawalsListener,err=>{$('withdrawalsMsg').textContent='Seller withdrawal requests load nahi hui: '+err.message;});
+  db.ref('deliveryWithdrawalRequests').on('value',deliveryWithdrawalsListener,err=>{$('withdrawalsMsg').textContent='Delivery withdrawal requests load nahi hui: '+err.message;});
+}
+function normalWithdrawalStatus(r){return String((r||{}).status||'pending').toLowerCase().replace(/[ _-]+/g,'');}
+function renderWithdrawalRequests(){
+  const all=[
+    ...Object.entries(sellerWithdrawalsData||{}).map(([id,r])=>({id,r:r||{},kind:'seller'})),
+    ...Object.entries(deliveryWithdrawalsData||{}).map(([id,r])=>({id,r:r||{},kind:'delivery'}))
+  ].filter(x=>{
+    const st=normalWithdrawalStatus(x.r);
+    if(withdrawalFilter==='all')return true;
+    if(withdrawalFilter==='pending')return ['pending','requested','submitted'].includes(st);
+    if(withdrawalFilter==='approved')return ['approved','awaitingpayment','paymentpending'].includes(st);
+    if(withdrawalFilter==='paid')return ['paid','completed','paymentsuccessfullycompleted'].includes(st);
+    if(withdrawalFilter==='rejected')return ['rejected','cancelled','canceled'].includes(st);
+    return true;
+  }).sort((a,b)=>String(b.r.createdAt||b.r.requestedAt||'').localeCompare(String(a.r.createdAt||a.r.requestedAt||'')));
+  $('withdrawalRequestsList').innerHTML=all.length?all.map(({id,r,kind})=>{
+    const st=normalWithdrawalStatus(r),status=String(r.status||'Pending'),person=kind==='seller'?'Seller':'Delivery Partner';
+    const amount=Number(r.amount??r.requestAmount??r.withdrawAmount??0);
+    const canApprove=['pending','requested','submitted'].includes(st),canPaid=['approved','awaitingpayment','paymentpending'].includes(st),alreadyPaid=['paid','completed','paymentsuccessfullycompleted'].includes(st);
+    const bank=[r.accountHolder,r.bankName,r.accountNumber,r.ifsc,r.upiId].filter(Boolean).join(' · ');
+    return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">${person} · ${esc(r.name||r.shopName||r.sellerName||r.deliveryName||r.phone||r.uid||'Account')}</p><h3 class="text-xl font-black">₹${amount.toLocaleString('en-IN',{maximumFractionDigits:2})}</h3><p class="small text-stone-300">Request ID: ${esc(id)}</p><p class="small text-stone-300">Status: ${esc(status)}</p><p class="small text-stone-400">Requested: ${esc(r.createdAt||r.requestedAt||'Date unavailable')}</p>${bank?`<p class="small text-stone-300 break-words">${esc(bank)}</p>`:''}${r.transactionId?`<p class="small text-stone-300">Transaction ID: ${esc(r.transactionId)}</p>`:''}</div></div><div class="flex flex-wrap gap-2 mt-3"><button class="btn primary" type="button" ${!canApprove?'disabled':''} onclick="updateWithdrawal('${kind}','${esc(id)}','approved')">Approve Request</button><button class="btn muted" type="button" ${!canPaid?'disabled':''} onclick="markWithdrawalPaid('${kind}','${esc(id)}')">Payment Successfully Completed</button><button class="btn danger" type="button" ${(!canApprove&&!canPaid)?'disabled':''} onclick="updateWithdrawal('${kind}','${esc(id)}','rejected')">Reject</button></div><p class="small text-amber-200 mt-2">Payment Completed tabhi dabayein jab actual payment transfer ho chuka ho.</p></article>`;
+  }).join(''):'<div class="panel p-5 text-center text-stone-300">Is filter mein koi withdrawal request nahi hai.</div>';
+  $('withdrawalsMsg').textContent=all.length+' withdrawal request(s).';
+}
+async function updateWithdrawal(kind,id,status){
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
+  const path=kind==='seller'?'sellerWithdrawalRequests':'deliveryWithdrawalRequests';
+  const current=(kind==='seller'?sellerWithdrawalsData:deliveryWithdrawalsData)[id];
+  if(!current)return;
+  if(status==='approved'&&!confirm('Is withdrawal request ko approve karein?'))return;
+  if(status==='rejected'&&!confirm('Is withdrawal request ko reject karein?'))return;
+  try{await db.ref(path+'/'+id).update({status,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});addNotification('Withdrawal '+status,`${kind} · ₹${Number(current.amount??current.requestAmount??current.withdrawAmount??0)} · ${id}`,status==='rejected'?'error':'success');}
+  catch(e){alert('Withdrawal update fail: '+e.message);}
+}
+async function markWithdrawalPaid(kind,id){
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
+  const path=kind==='seller'?'sellerWithdrawalRequests':'deliveryWithdrawalRequests';
+  const data=(kind==='seller'?sellerWithdrawalsData:deliveryWithdrawalsData)[id];
+  if(!data||!['approved','awaitingpayment','paymentpending'].includes(normalWithdrawalStatus(data))){alert('Pehle request approve karein.');return;}
+  const transactionId=prompt('Payment transaction / UTR ID bharein (actual payment karne ke baad):');
+  if(transactionId===null)return;
+  if(!transactionId.trim()){alert('Payment proof ke liye transaction/UTR ID zaroori hai.');return;}
+  if(!confirm('Kya payment sach mein transfer ho gayi hai? Tabhi Completed mark karein.'))return;
+  try{await db.ref(path+'/'+id).update({status:'paid',paymentStatus:'completed',paymentCompletedAt:new Date().toISOString(),paymentCompletedBy:signedInPhone,transactionId:transactionId.trim()});addNotification('Withdrawal payment completed',`${kind} · ₹${Number(data.amount??data.requestAmount??data.withdrawAmount??0)} · UTR ${transactionId.trim()}`,'success');}
+  catch(e){alert('Payment status save nahi hua: '+e.message);}
+}
+
 let sellerCommissionAdminListener=null;
 function startSellerCommissionAdminListener(){
   if(sellerCommissionAdminListener)db.ref('sellerSettings/commissionPercent').off('value',sellerCommissionAdminListener);
