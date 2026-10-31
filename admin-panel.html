@@ -99,7 +99,7 @@ header{color:#111827}
 <div id="ordersList" class="space-y-3"></div>
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
-<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="loadSellerApplications('pending',this)">Pending</button><button class="btn muted seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="loadSellerApplications('approved',this)">Approved</button><button class="btn muted seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="loadSellerApplications('rejected',this)">Cancelled</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="loadSellerApplications('suspended',this)">Suspended</button><button class="btn primary" type="button" onclick="loadSellerApplications(appStatusFilter)">↻ Refresh</button></div><div id="sellerApplicationsList"></div></div>
+<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="loadSellerApplications('pending',this)">Pending</button><button class="btn muted seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="loadSellerApplications('approved',this)">Approved</button><button class="btn muted seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="loadSellerApplications('rejected',this)">Cancelled</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="loadSellerApplications('suspended',this)">Suspended</button><button class="btn primary" type="button" onclick="loadSellerApplications(appStatusFilter)">↻ Refresh</button></div><div id="sellerApplicationsDiagnostics" class="small mb-3" role="status" style="color:#475569">Seller applications: waiting for Firebase read…</div><div id="sellerApplicationsList" style="display:block;min-height:48px"></div></div>
 <div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
 <div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
 
@@ -518,15 +518,16 @@ const PRODUCT_UNITS = [
 function showAdminTab(tab){
  const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
  Object.values(ids).forEach(id=>$(id)?.classList.add('hidden'));
- const panel=$(ids[tab]||ids.orders);if(panel)panel.classList.remove('hidden');
+ const target=$(ids[tab]||ids.orders);if(target)target.classList.remove('hidden');
  const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
  Object.values(buttons).forEach(id=>{if($(id)){$(id).classList.remove('primary');$(id).classList.add('muted');}});
  const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
  if(tab==='deliverySettings')loadDeliverySettingsForm();
  if(tab==='applications'){
-   const list=$('sellerApplicationsList');
-   if(list){list.style.display='block';list.style.minHeight='48px';list.innerHTML='<p class="small" role="status">Firebase se seller applications load ho rahi hain…</p>';}
-   loadSellerApplications(appStatusFilter||'pending');
+   const diag=$('sellerApplicationsDiagnostics');if(diag)diag.textContent='Firebase /sellerApplications se records load ho rahe hain…';
+   const list=$('sellerApplicationsList');if(list){list.style.display='block';list.style.minHeight='48px';list.innerHTML='<div class="order-card">Loading seller applications…</div>';}
+   if(typeof loadSellerApplications==='function')loadSellerApplications(appStatusFilter||'pending');
+   else if(diag)diag.textContent='ERROR: loadSellerApplications function available nahi hai. Page cache ya JavaScript load issue.';
  }
  if(tab==='withdrawals')renderWithdrawals();if(tab==='couriers')loadCourierPartners();
 }
@@ -665,21 +666,24 @@ function updateSellerPendingIndicator(){
  lastPendingSellerIds=new Set(pending.map(([uid])=>uid));sellerAppsFirstLoad=false;
 }
 function startOwnerManagement(){
- // Keep one live listener for seller applications; render immediately when Firebase responds.
- db.ref('sellerApplications').off('value');
- db.ref('sellerApplications').on('value',snap=>{
+ const appRef=db.ref('sellerApplications');
+ appRef.off('value');
+ appRef.on('value',snap=>{
    const raw=snap.val()||{};
    const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
-   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
+   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([uid,value])=>value&&typeof value==='object'));
    updateSellerPendingIndicator();
    renderSellerApplications(appStatusFilter||'pending');
+   const diag=$('sellerApplicationsDiagnostics');
+   if(diag)diag.textContent='LIVE Firebase sync OK · Total records: '+Object.keys(sellerAppsCache).length+' · Path: /sellerApplications';
  },err=>{
-   const list=$('sellerApplicationsList');
    const msg=err&&err.message?err.message:String(err||'Unknown Firebase read error');
-   if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications read error</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">Firebase path: /sellerApplications</p></div>';
+   const diag=$('sellerApplicationsDiagnostics');if(diag)diag.textContent='FIREBASE READ ERROR · '+msg+' · Path: /sellerApplications';
+   const list=$('sellerApplicationsList');
+   if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications read nahi ho paayi</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">Admin UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p></div>';
    addNotification('Seller applications read error',msg,'error');
  });
- db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();},e=>{addNotification('Withdrawal read error',e&&e.message||'Firebase permission denied at /withdrawalRequests.','error');});
+ db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();},e=>addNotification('Withdrawal read error',e&&e.message||'Firebase permission denied at /withdrawalRequests.','error'));
  db.ref('commissionSettings').on('value',s=>{const v=s.val()||{};$('defaultCommission').value=Number(v.defaultCommission??10);$('deliveryBoyPayoutAdmin').value=Number(v.deliveryBoyPayout??20);},e=>addNotification('Settings read error',e&&e.message||'Firebase permission denied at /commissionSettings.','error'));
 }
 function renderSellerApplications(status='pending'){
@@ -698,38 +702,32 @@ function renderSellerApplications(status='pending'){
  list.innerHTML=countLine+(cards||'<div class="order-card"><p class="small">'+(entries.length?'Is status mein koi application nahi.':'Firebase se abhi koi seller application record receive nahi hua.')+'</p></div>');
 }
 window.loadSellerApplications=async function(status='pending',clickedButton){
- const normalizedStatus=String(status||'pending').toLowerCase();
- const validStatuses=['pending','approved','rejected','suspended'];
- status=validStatuses.includes(normalizedStatus)?normalizedStatus:'pending';
- const tabButtons=Array.from(document.querySelectorAll('#applicationsTab .seller-status-tab'));
- tabButtons.forEach(b=>{
+ const normalized=String(status||'pending').toLowerCase();
+ const valid=['pending','approved','rejected','suspended'];status=valid.includes(normalized)?normalized:'pending';
+ const labels={pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'};
+ document.querySelectorAll('#applicationsTab .seller-status-tab').forEach(b=>{
    const selected=(b.dataset.status||'')===status;
-   b.classList.toggle('seller-tab-active',selected);
-   b.setAttribute('aria-pressed',selected?'true':'false');
+   b.classList.toggle('seller-tab-active',selected);b.setAttribute('aria-pressed',selected?'true':'false');
  });
  appStatusFilter=status;
- const list=$('sellerApplicationsList');if(!list)return;
- list.style.display='block';
- list.innerHTML='<p class="small" role="status">'+({pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'}[status])+' applications load ho rahi hain…</p>';
+ const list=$('sellerApplicationsList'),diag=$('sellerApplicationsDiagnostics');if(!list)return;
+ list.style.display='block';list.innerHTML='<div class="order-card">'+labels[status]+' applications load ho rahi hain…</div>';
+ if(diag)diag.textContent='Admin Firebase UID: '+(auth.currentUser&&auth.currentUser.uid||'Not signed in')+' · Reading /sellerApplications…';
  try{
-  const user=auth.currentUser;
-  if(!user)throw new Error('Firebase Auth session missing. Admin ko dobara sign-in karna hoga.');
-  // Do not force-refresh the token here; the Firebase SDK refreshes it when needed.
-  const snap=await db.ref('sellerApplications').once('value');
-  const raw=snap.val()||{};
-  const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
-  sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
-  updateSellerPendingIndicator();
-  renderSellerApplications(status);
-  const shown=Object.entries(sellerAppsCache).filter(([uid,a])=>sellerApplicationStatus(a)===status).length;
-  const diag=document.createElement('p');
-  diag.className='small mt-2';diag.style.color='#475569';
-  diag.textContent=({pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'}[status])+' list · '+shown+' application(s) · Total Firebase records: '+Object.keys(sellerAppsCache).length+' · Admin UID: '+user.uid;
-  list.appendChild(diag);
+   const user=auth.currentUser;if(!user)throw new Error('Firebase Auth session missing. Admin ko dobara sign-in karna hoga.');
+   const readPromise=db.ref('sellerApplications').once('value');
+   const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase read timeout: 12 seconds mein response nahi aaya. Network / Firebase connection check karein.')),12000));
+   const snap=await Promise.race([readPromise,timeoutPromise]);
+   const raw=snap.val()||{};const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([uid,value])=>value&&typeof value==='object'));
+   updateSellerPendingIndicator();renderSellerApplications(status);
+   const shown=Object.entries(sellerAppsCache).filter(([uid,a])=>sellerApplicationStatus(a)===status).length;
+   if(diag)diag.textContent='READ SUCCESS · '+labels[status]+' · '+shown+' application(s) · Total Firebase records: '+Object.keys(sellerAppsCache).length+' · UID: '+user.uid;
  }catch(err){
-  const msg=err&&err.message?err.message:String(err);
-  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications load nahi hui</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
-  addNotification('Seller applications load error',msg,'error');
+   const msg=err&&err.message?err.message:String(err);
+   if(diag)diag.textContent='READ FAILED · '+msg+' · Database: '+firebaseConfig.databaseURL;
+   list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' list load nahi hui</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">Admin UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter,this)">Try Again</button></div>';
+   addNotification('Seller application read failed',msg,'error');
  }
 };
 window.decideSeller=async(uid,status,button)=>{
