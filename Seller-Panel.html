@@ -47,6 +47,19 @@ window.mlmVolatileStore = (() => {
 </form>
 </section>
 
+<section id="completeSellerApplication" class="card hidden">
+<h2>Complete Seller Application</h2>
+<p class="muted">Aapka login account mil gaya hai, lekin seller application record missing hai. Isi account se details complete karke dobara submit karein; naya account banane ki zaroorat nahi.</p>
+<form id="completeSellerForm" class="grid">
+<div class="field"><label for="repairShop">Shop / Seller Name *</label><input id="repairShop" maxlength="80" required></div>
+<div class="field"><label for="repairPhone">Mobile Number *</label><input id="repairPhone" inputmode="numeric" maxlength="10" required></div>
+<div class="field"><label for="repairAadhaar">Aadhaar Number *</label><input id="repairAadhaar" inputmode="numeric" maxlength="12" required></div>
+<div class="field"><label for="repairPan">PAN Number *</label><input id="repairPan" maxlength="10" autocapitalize="characters" required></div>
+<div class="field full"><p class="hint">Full Aadhaar/PAN number save nahi hoga; sirf last 4 digits application record mein jayenge.</p></div>
+<div class="field full"><button id="repairSubmit" class="primary" type="submit">Submit Seller Application</button></div>
+</form>
+<p id="repairMsg" aria-live="polite"></p>
+</section>
 <section id="pendingApplication" class="card hidden"><h2>Application Status</h2><div id="applicationStatus" class="msg">Aapki application admin approval ke liye pending hai.</div><p class="muted">Approval hone tak listing, wallet aur orders dashboard locked rahenge.</p><button id="pendingRefresh" class="secondary" type="button">Refresh Status</button><button id="pendingLogout" class="secondary" type="button">Logout</button></section>
 <section id="sellerApp" class="hidden">
 <div class="card">
@@ -121,9 +134,83 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?("msg "+type):"muted";}
 function setAuthMode(mode){authMode=mode;const registering=mode==="register";$("registerFields").classList.toggle("hidden",!registering);$("shopName").required=registering;$("sellerPhone").required=registering;$("authTitle").textContent=registering?"Naya Seller Account":"Seller Login";$("authSubmit").textContent=registering?"Create Seller Account":"Login";$("loginTab").classList.toggle("active",!registering);$("registerTab").classList.toggle("active",registering);$("password").autocomplete=registering?"new-password":"current-password";$("authMsg").textContent="";}
 $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
-$("authForm").addEventListener("submit",async e=>{e.preventDefault();const email=$("email").value.trim().toLowerCase(),password=$("password").value;const btn=$("authSubmit");btn.disabled=true;$("authMsg").textContent="Please wait…";try{if(authMode==="register"){const shop=$("shopName").value.trim(),phone=$("sellerPhone").value.trim();if(!shop)throw Error("Shop name bharein.");if(!/^\d{10}$/.test(phone))throw Error("Sahi 10-digit mobile number bharein.");if(password.length<6)throw Error("Password kam se kam 6 characters ka ho.");const cred=await auth.createUserWithEmailAndPassword(email,password);const aadhaar=$("sellerAadhaar").value.replace(/\D/g,"");const pan=$("sellerPan").value.trim().toUpperCase();if(!/^\d{12}$/.test(aadhaar))throw Error("Aadhaar ke 12 digits sahi bharein.");if(!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan))throw Error("PAN format sahi bharein.");const now=new Date().toISOString();const profile={uid:cred.user.uid,email,shopName:shop,phone,aadhaarLast4:aadhaar.slice(-4),panLast4:pan.slice(-4),kycStatus:"pending_secure_verification",applicationStatus:"pending",createdAt:now,updatedAt:now,accountType:"seller"};await db.ref("sellerProfiles/"+cred.user.uid).set(profile);await db.ref("sellerApplications/"+cred.user.uid).set({...profile,status:"pending",submittedAt:now});}else{await auth.signInWithEmailAndPassword(email,password);}}catch(err){$("authMsg").textContent=authError(err);$("authMsg").className="msg error";}finally{btn.disabled=false;}});
+$("authForm").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const email=$("email").value.trim().toLowerCase(),password=$("password").value,btn=$("authSubmit");
+ btn.disabled=true;showMsg("authMsg","Please wait…");
+ try{
+  if(authMode==="register"){
+   const shop=$("shopName").value.trim(),phone=$("sellerPhone").value.trim();
+   const aadhaar=$("sellerAadhaar").value.replace(/\D/g,""),pan=$("sellerPan").value.trim().toUpperCase();
+   if(!shop)throw Error("Shop name bharein.");
+   if(!/^\d{10}$/.test(phone))throw Error("Sahi 10-digit mobile number bharein.");
+   if(!/^\d{12}$/.test(aadhaar))throw Error("Aadhaar ke 12 digits sahi bharein.");
+   if(!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan))throw Error("PAN format sahi bharein (ABCDE1234F).");
+   if(password.length<6)throw Error("Password kam se kam 6 characters ka ho.");
+   const cred=await auth.createUserWithEmailAndPassword(email,password);
+   const now=new Date().toISOString();
+   const profile={uid:cred.user.uid,email,shopName:shop,phone,aadhaarLast4:aadhaar.slice(-4),panLast4:pan.slice(-4),kycStatus:"pending_secure_verification",applicationStatus:"pending",status:"pending",createdAt:now,updatedAt:now,accountType:"seller"};
+   try{
+    await db.ref("sellerProfiles/"+cred.user.uid).set(profile);
+    await db.ref("sellerApplications/"+cred.user.uid).set({...profile,submittedAt:now});
+   }catch(writeErr){
+    throw Error("Account ban gaya, lekin application Firebase mein save nahi hui: "+(writeErr.message||writeErr)+". Isi account se login karke Complete Seller Application form se dobara submit karein. Firebase Rules mein sellerApplications aur sellerProfiles par apne UID ki write permission honi chahiye.");
+   }
+   showMsg("authMsg","Seller application successfully submit ho gayi. Admin approval ka wait karein.","success");
+  }else{
+   await auth.signInWithEmailAndPassword(email,password);
+  }
+ }catch(err){showMsg("authMsg",authError(err),"error");}
+ finally{btn.disabled=false;}
+});
 function authError(e){const c=e&&e.code||"";if(c.includes("email-already-in-use"))return"Is email se account pehle se bana hai. Login karein.";if(c.includes("weak-password"))return"Password kamzor hai; kam se kam 6 characters rakhein.";if(c.includes("invalid-email"))return"Email address sahi nahi hai.";if(c.includes("user-not-found")||c.includes("wrong-password")||c.includes("invalid-credential"))return"Email ya password sahi nahi hai.";if(c.includes("operation-not-allowed"))return"Firebase Console mein Authentication > Sign-in method > Email/Password enable karein.";if(c.includes("permission-denied"))return"Firebase Database Rules ne access roka hai. Seller security rules configure karne honge.";return e&&e.message||"Login/register nahi ho paya.";}
-auth.onAuthStateChanged(async user=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;currentUser=user;myProducts={};$("sellerApp").classList.add("hidden");$("pendingApplication").classList.add("hidden");if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");return;}$("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("sellerEmail").textContent=user.email||"";try{const snap=await db.ref("sellerProfiles/"+user.uid).once("value");sellerProfile=snap.val()||{};if(!snap.exists())throw Error("Seller application record nahi mila.");if(sellerProfile.status==="suspended"||sellerProfile.applicationStatus==="suspended"){ $("pendingApplication").classList.remove("hidden");$("applicationStatus").textContent="Account suspended. Admin se sampark karein.";return;}if(sellerProfile.applicationStatus!=="approved"){ $("pendingApplication").classList.remove("hidden");$("applicationStatus").textContent=sellerProfile.applicationStatus==="rejected"?"Application rejected. Admin se sampark karein.":"Application pending hai. Admin approval ke baad dashboard khulega.";return;}$("sellerApp").classList.remove("hidden");fillProfile();$("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";listenMyProducts();startSellerWallet();startSellerOrders();}catch(e){showMsg("authMsg","Profile load nahi hua: "+e.message,"error");}});
+auth.onAuthStateChanged(async user=>{
+ if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
+ productListener=null;currentUser=user;myProducts={};
+ $("sellerApp").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
+ if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");return;}
+ $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("sellerEmail").textContent=user.email||"";
+ try{
+  const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
+  sellerProfile=snap.val()||{};
+  if(!snap.exists()){
+   $("completeSellerApplication").classList.remove("hidden");
+   showMsg("repairMsg","Is login account ka seller profile missing hai. Neeche details bharke application submit karein.","error");
+   return;
+  }
+  if(sellerProfile.status==="suspended"||sellerProfile.applicationStatus==="suspended"){
+   $("pendingApplication").classList.remove("hidden");$("applicationStatus").textContent="Account suspended. Admin se sampark karein.";return;
+  }
+  if(sellerProfile.applicationStatus!=="approved"){
+   $("pendingApplication").classList.remove("hidden");
+   $("applicationStatus").textContent=sellerProfile.applicationStatus==="rejected"?"Application rejected. Admin se sampark karein.":"Application pending hai. Admin approval ke baad dashboard khulega.";
+   return;
+  }
+  $("sellerApp").classList.remove("hidden");fillProfile();$("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";listenMyProducts();startSellerWallet();startSellerOrders();
+ }catch(err){
+  $("completeSellerApplication").classList.remove("hidden");
+  showMsg("repairMsg","Seller profile read nahi hua: "+(err.message||err)+". Firebase Rules mein sellerProfiles par apne UID ki read permission check karein.","error");
+ }
+});
+$("completeSellerForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(!currentUser)return;
+ const btn=$("repairSubmit");btn.disabled=true;showMsg("repairMsg","Application save ho rahi hai…");
+ try{
+  const shop=$("repairShop").value.trim(),phone=$("repairPhone").value.trim();
+  const aadhaar=$("repairAadhaar").value.replace(/\D/g,""),pan=$("repairPan").value.trim().toUpperCase();
+  if(!shop)throw Error("Shop name bharein.");
+  if(!/^\d{10}$/.test(phone))throw Error("Sahi 10-digit mobile number bharein.");
+  if(!/^\d{12}$/.test(aadhaar))throw Error("Aadhaar ke 12 digits sahi bharein.");
+  if(!/^[A-Z]{5}\d{4}[A-Z]$/.test(pan))throw Error("PAN format sahi bharein (ABCDE1234F).");
+  const now=new Date().toISOString(),email=currentUser.email||"";
+  const profile={uid:currentUser.uid,email,shopName:shop,phone,aadhaarLast4:aadhaar.slice(-4),panLast4:pan.slice(-4),kycStatus:"pending_secure_verification",applicationStatus:"pending",status:"pending",createdAt:now,updatedAt:now,accountType:"seller"};
+  await db.ref("sellerProfiles/"+currentUser.uid).set(profile);
+  await db.ref("sellerApplications/"+currentUser.uid).set({...profile,submittedAt:now});
+  sellerProfile=profile;$("completeSellerApplication").classList.add("hidden");$("pendingApplication").classList.remove("hidden");
+  $("applicationStatus").textContent="Application successfully submit ho gayi. Admin approval ka wait karein.";
+ }catch(err){showMsg("repairMsg","Application save nahi hui: "+(err.message||err)+". Firebase Rules mein sellerProfiles aur sellerApplications par current UID ki write permission check karein.","error");}
+ finally{btn.disabled=false;}
+});
 $("pendingRefresh").onclick=()=>auth.currentUser&&auth.currentUser.getIdToken(true).then(()=>auth.currentUser&&auth.currentUser.reload()).then(()=>location.reload());$("pendingLogout").onclick=()=>auth.signOut();
 function startSellerWallet(){if(!currentUser)return;db.ref("sellerWallets/"+currentUser.uid+"/balance").on("value",s=>$("sellerWallet").textContent="₹"+Number(s.val()||0).toLocaleString("en-IN"));db.ref("sellerCommission/"+currentUser.uid).on("value",s=>$("sellerCommission").textContent=Number(s.val()??10)+"%");db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{const v=s.val()||{};$("sellerWithdrawHistory").innerHTML=Object.entries(v).map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests yet.";});}
 $("sellerWithdrawBtn").onclick=async()=>{if(!currentUser)return;const amount=Number($("sellerWithdrawAmount").value);if(!Number.isFinite(amount)||amount<=0)return alert("Valid amount enter karein.");const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",processingHours:48,createdAt:new Date().toISOString()});alert("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.");$("sellerWithdrawAmount").value="";};
