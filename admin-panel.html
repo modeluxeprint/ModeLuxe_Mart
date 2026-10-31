@@ -690,7 +690,7 @@ function startOwnerManagement(){
 }
 function renderSellerApplications(status='pending'){
  appStatusFilter=status;const list=$('sellerApplicationsList');if(!list)return;const entries=Object.entries(sellerAppsCache||{});const rows=entries.filter(([uid,a])=>sellerApplicationStatus(a)===status);const counts={pending:0,approved:0,rejected:0,suspended:0};entries.forEach(([uid,a])=>{const st=sellerApplicationStatus(a);if(counts[st]!==undefined)counts[st]++;});const countLine='<p class="small mb-3" style="color:#475569">Records: '+entries.length+' · Pending: '+counts.pending+' · Approved: '+counts.approved+' · Cancelled: '+counts.rejected+' · Suspended: '+counts.suspended+'</p>';
- const cards=rows.map(([uid,a])=>{const d=sellerApplicationData(a);return `<article class="order-card mb-3"><b>${esc(d.shopName||d.sellerName||d.storeName||'Seller Store')}</b><div class="small">${esc(d.email||'')} · ${esc(d.phone||d.mobile||'')}</div><div class="small">Aadhaar ending ${esc(d.aadhaarLast4||'----')} · PAN ending ${esc(d.panLast4||'----')}</div><div class="small">Status: ${esc(sellerApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="small">Source: ${esc((a._source||[]).join(', '))}</div><div class="flex gap-2 mt-2 flex-wrap"><button class="btn success" type="button" data-seller-action="approved" data-seller-uid="${esc(uid)}">Approve</button><button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="${esc(uid)}">Cancel</button><button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="${esc(uid)}">Suspend</button><button class="btn muted" type="button" onclick="showSellerApplication('${esc(uid)}')">Details</button></div><p id="seller-action-${esc(uid)}" class="small mt-2" aria-live="polite">Actions ready · UID ${esc(uid)}</p></article>`;}).join('');
+ const cards=rows.map(([uid,a])=>{const d=sellerApplicationData(a);return `<article class="order-card mb-3"><b>${esc(d.shopName||d.sellerName||d.storeName||'Seller Store')}</b><div class="small">${esc(d.email||'')} · ${esc(d.phone||d.mobile||'')}</div><div class="small">Aadhaar ending ${esc(d.aadhaarLast4||'----')} · PAN ending ${esc(d.panLast4||'----')}</div><div class="small">Status: ${esc(sellerApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="small">Source: ${esc((a._source||[]).join(', '))}</div><div class="flex gap-2 mt-2 flex-wrap"><button class="btn success" type="button" onclick="window.decideSeller('${esc(uid)}','approved',this)">Approve</button><button class="btn danger" type="button" onclick="window.decideSeller('${esc(uid)}','cancelled',this)">Cancel</button><button class="btn muted" type="button" onclick="window.decideSeller('${esc(uid)}','suspended',this)">Suspend</button><button class="btn muted" type="button" onclick="showSellerApplication('${esc(uid)}')">Details</button></div><p id="seller-action-${esc(uid)}" class="small mt-2" aria-live="polite">Actions ready · UID ${esc(uid)}</p></article>`;}).join('');
  const sourceError=Object.entries(sellerAppsReadErrors).map(([k,v])=>k+': '+v).join(' | ');const noRecords=entries.length?'Is status mein koi application nahi hai.':'Dono Firebase paths se koi seller record nahi mila.';list.innerHTML=countLine+(cards||'<div class="order-card"><p class="small">'+noRecords+'</p></div>')+(sourceError?'<div class="order-card mt-3"><b style="color:#b91c1c">Firebase source error</b><p class="small">'+esc(sourceError)+'</p></div>':'');
 }
 async function loadSellerApplications(status='pending',clickedButton){if(!window.firebase||!firebase.apps||!firebase.apps.length||!window.firebase.database){const box=$('sellerApplicationsList'),diag=$('sellerApplicationsDiagnostics');const msg='Firebase SDK/Library load nahi hui. Internet, CDN access aur firebase-app/database compat scripts check karein.';if(diag)diag.textContent='LIBRARY LOAD ERROR · '+msg;if(box)box.innerHTML='<div class="order-card"><b style="color:#b91c1c">Firebase Library Not Found</b><p class="small">'+esc(msg)+'</p><p class="small">Required: firebase-app-compat.js, firebase-database-compat.js, firebase-auth-compat.js</p></div>';return;}const normalized=String(status||'pending').toLowerCase();const valid=['pending','approved','rejected','suspended'];status=valid.includes(normalized)?normalized:'pending';const labels={pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'};appStatusFilter=status;const list=$('sellerApplicationsList'),diag=$('sellerApplicationsDiagnostics');if(!list)return;list.innerHTML='<div class="order-card">'+labels[status]+' page open · Firebase records load ho rahe hain…</div>';if(diag)diag.textContent='Admin UID: '+(auth.currentUser&&auth.currentUser.uid||'Not signed in')+' · /sellerApplications aur /sellerProfiles read ho rahe hain…';
@@ -698,27 +698,53 @@ async function loadSellerApplications(status='pending',clickedButton){if(!window
  catch(err){const msg=err&&err.message?err.message:String(err);if(diag)diag.textContent='FIREBASE READ ERROR · '+msg+' · Database: '+(firebaseConfig.databaseURL||'URL unavailable');list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' page load nahi ho paaya</b><p class="small mt-2">Error: '+esc(msg)+'</p><p class="small">Admin UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL||'Not available')+'</p><p class="small">Paths: /sellerApplications and /sellerProfiles</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter,this)">Try Again</button></div>';addNotification('Seller application read failed',msg,'error');}
 }
 window.loadSellerApplications=loadSellerApplications;
-window.decideSeller=async(uid,status,button)=>{const result=$('seller-action-'+uid);if(result)result.textContent='CLICK RECEIVED · action start ho rahi hai…';const adminUid=auth.currentUser&&auth.currentUser.uid;if(adminUid!=='admin_7818995955'){if(result)result.textContent='Action blocked: Firebase Admin UID match nahi hua. Current UID: '+(adminUid||'Not signed in');alert('Firebase Admin login required. Current UID: '+(adminUid||'Not signed in'));return;}const allowed=['approved','cancelled','suspended'];if(!allowed.includes(status)){if(result)result.textContent='Invalid action';return;}const labels={approved:'Approve',cancelled:'Cancel',suspended:'Suspend'};if(!confirm('Seller application ko '+labels[status]+' karna hai?')){if(result)result.textContent='Action cancelled by you.';return;}const buttons=button&&button.parentElement?Array.from(button.parentElement.querySelectorAll('button')):[];buttons.forEach(b=>{b.disabled=true;b.classList.remove('seller-action-active');});if(button){button.classList.add('seller-action-active');button.textContent='Saving…';}if(result)result.textContent='Click received · Firebase par save ho raha hai…';const now=new Date().toISOString();try{await db.ref('sellerApplications/'+uid).update({status:status,applicationStatus:status,reviewedAt:now,reviewedBy:adminUid});try{await db.ref('sellerProfiles/'+uid).update({applicationStatus:status,status:status,reviewedAt:now,reviewedBy:adminUid});if(result)result.textContent='SUCCESS · '+labels[status]+' saved in Firebase.';addNotification('Seller application '+status,uid,'success');}catch(profileError){if(result)result.textContent='Application saved, but sellerProfiles sync failed: '+(profileError.message||profileError);addNotification('Seller profile sync failed',profileError.message||String(profileError),'error');}await loadSellerApplications(status==='cancelled'?'rejected':status);}catch(e){const msg=e&&e.message?e.message:String(e);if(result)result.textContent='FAILED · Firebase write error: '+msg;addNotification('Seller application update failed',msg,'error');alert('Seller status save nahi hua: '+msg);}finally{buttons.forEach(b=>b.disabled=false);if(button)button.textContent=labels[status]||'Retry';}};
-// Robust delegated click handler: works even when application cards are re-rendered by Firebase.
-(function bindSellerApplicationActions(){
- const host=$('sellerApplicationsList');
- if(!host || host.dataset.actionBound==='1') return;
- host.dataset.actionBound='1';
- host.addEventListener('click',function(event){
-  const button=event.target.closest('button[data-seller-action]');
-  if(!button || !host.contains(button)) return;
-  event.preventDefault(); event.stopPropagation();
-  const uid=button.getAttribute('data-seller-uid');
-  const status=button.getAttribute('data-seller-action');
-  if(!uid || !status){alert('Seller action details missing. Page refresh karein.');return;}
-  if(typeof window.decideSeller!=='function'){alert('Approve handler load nahi hua. Page refresh karein.');return;}
-  window.decideSeller(uid,status,button).catch(function(err){
-   const msg=err&&err.message?err.message:String(err);
-   const line=$('seller-action-'+uid); if(line) line.textContent='ACTION ERROR · '+msg;
-   alert('Seller action error: '+msg);
-  });
- },true);
-})();
+window.decideSeller=async function(uid,status,button){
+ const result=$('seller-action-'+uid);
+ const labels={approved:'Approve',cancelled:'Cancel',suspended:'Suspend'};
+ const profileStatus=status==='cancelled'?'rejected':status;
+ if(result)result.textContent='CLICK RECEIVED · '+(labels[status]||status)+' action shuru ho rahi hai…';
+ if(!uid||!labels[status]){if(result)result.textContent='ERROR · Invalid seller UID or status.';return;}
+ const user=auth&&auth.currentUser;
+ const adminUid=user&&user.uid;
+ if(!user){if(result)result.textContent='ERROR · Admin Firebase login session nahi mila. Logout karke dobara login karein.';return;}
+ if(adminUid!=='admin_7818995955'){
+  if(result)result.textContent='ERROR · Admin UID mismatch. Current UID: '+adminUid;
+  alert('Admin UID mismatch. Current Firebase UID: '+adminUid);return;
+ }
+ const card=button&&button.closest('article');
+ const buttons=card?Array.from(card.querySelectorAll('button')):[];
+ buttons.forEach(b=>b.disabled=true);
+ const oldText=button?button.textContent:'';
+ if(button){button.textContent='Saving…';button.style.opacity='.7';}
+ if(result)result.textContent='Saving status to Firebase…';
+ const now=new Date().toISOString();
+ try{
+  // Update both records independently so a rules error names the exact path.
+  const outcomes=await Promise.allSettled([
+   db.ref('sellerApplications/'+uid).update({status:profileStatus,applicationStatus:profileStatus,reviewedAt:now,reviewedBy:adminUid}),
+   db.ref('sellerProfiles/'+uid).update({applicationStatus:profileStatus,status:profileStatus,reviewedAt:now,reviewedBy:adminUid})
+  ]);
+  const names=['/sellerApplications/'+uid,'/sellerProfiles/'+uid];
+  const failed=outcomes.map((o,i)=>o.status==='rejected'?names[i]+': '+(o.reason&&o.reason.message||String(o.reason)):null).filter(Boolean);
+  if(failed.length){
+   const succeeded=outcomes.some(o=>o.status==='fulfilled');
+   const msg=(succeeded?'PARTIAL SAVE · ':'SAVE FAILED · ')+failed.join(' | ');
+   if(result)result.textContent=msg;
+   alert(msg+' · Firebase Database Rules aur write permission check karein.');
+   return;
+  }
+  if(result)result.textContent='SUCCESS · '+labels[status]+' saved in both Firebase paths.';
+  addNotification('Seller application '+profileStatus,uid,'success');
+  await loadSellerApplications(status==='cancelled'?'rejected':status);
+ }catch(e){
+  const msg=e&&e.message?e.message:String(e);
+  if(result)result.textContent='FIREBASE WRITE ERROR · '+msg;
+  alert('Seller status save nahi hua: '+msg);
+ }finally{
+  buttons.forEach(b=>b.disabled=false);
+  if(button){button.textContent=oldText||labels[status];button.style.opacity='';}
+ }
+};
 window.showSellerApplication=uid=>{const a=sellerApplicationData(sellerAppsCache[uid]||{});alert('Store: '+(a.shopName||a.sellerName||a.storeName||'')+'\\nEmail: '+(a.email||'')+'\\nMobile: '+(a.phone||a.mobile||'')+'\\nAadhaar ending: '+(a.aadhaarLast4||'----')+'\\nPAN ending: '+(a.panLast4||'----')+'\\nKYC: '+(a.kycStatus||'Not verified'));};
 function renderWithdrawals(){const rows=[];for(const [type,users] of Object.entries(withdrawCache||{}))for(const [uid,items] of Object.entries(users||{}))for(const [id,r] of Object.entries(items||{}))rows.push({type,uid,id,...r});$('withdrawalsList').innerHTML=rows.map(r=>`<article class="order-card mb-2"><b>${esc(r.type)} · ${esc(r.shopName||r.name||r.uid)}</b><div class="small">₹${Number(r.amount||0).toLocaleString('en-IN')} · ${esc(r.status||'pending')} · ${esc(r.createdAt||'')}</div><div class="flex gap-2 mt-2"><button class="btn success" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve</button><button class="btn primary" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Paid</button><button class="btn danger" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Reject</button></div></article>`).join('')||'<p class="small">No withdrawal requests.</p>';}
 window.reviewWithdrawal=async(type,uid,id,status)=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');await db.ref(`withdrawalRequests/${type}/${uid}/${id}`).update({status,reviewedAt:new Date().toISOString(),reviewedBy:signedInPhone});alert('Withdrawal status updated: '+status);};
