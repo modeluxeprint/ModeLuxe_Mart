@@ -405,6 +405,7 @@ body.search-mode #products{scroll-margin-top:115px}
 
 
 </div><nav aria-label="Store navigation" class="mainnav"><button onclick="mainNavClick('categories',this)" type="button">☰   All Categories</button><button class="navactive" onclick="mainNavClick('home',this)" type="button">Home</button><button onclick="mainNavClick('about',this)" type="button">About Us</button><button onclick="mainNavClick('contact',this)" type="button">Contact Us</button></nav></header>
+<div id="modeluxeServiceAreaBanner" role="status" aria-live="polite" style="position:relative;z-index:20;margin:0;padding:9px 12px;text-align:center;background:#e8f2ff;color:#064b91;border-bottom:1px solid #bfd8f5;font-size:13px;font-weight:800;line-height:1.45">🚚 ModeLuxe Mart: Delivery sirf Jawan Sikandarpur centre se 10 KM ke andar. Order se pehle apni GPS location check karein.</div>
 <main class="wrap">
 <section class="hero"><h2>Welcome to</h2><h1><span>Vaishu</span><br/><span>ModeLuxe</span> Mart</h1><p>Everything You Need In One Place</p><button onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now</button></section>
 <section class="category-showcase"><div class="showcase-title"><h2>🛍️ Shop by Category</h2><button onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">View All →</button></div><div class="category-cards"><button onclick="filterCategoryGroup('fashion')"><span>👕</span><b>Fashion</b></button><button onclick="filterCategoryGroup('beauty')"><span>💄</span><b>Beauty</b></button><button onclick="filterCategoryGroup('electronics')"><span>📱</span><b>Electronics</b></button><button onclick="filterCategoryGroup('home')"><span>🏠</span><b>Home</b></button></div></section>
@@ -660,7 +661,7 @@ function addCart(id){
   if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return false;}
   const item=cart.find(x=>String(x.id)===key);
   if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";}
-  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",qty:1,sellerUid:String(p.sellerUid||""),seller:String(p.seller||""),sellerPrice:Number(p.sellerPrice??p.price??0),sellerStatus:"Order Placed"});
+  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
   save();renderCart();
   showToast("Product added to Cart");
   return true;
@@ -678,15 +679,7 @@ function buyNow(id){
   const previousCart = cart;
 
   cart = [{
-    id: String(p.id),
-    name: p.name,
-    price: Number(p.price || 0),
-    image: p.image || "",
-    qty: 1,
-    sellerUid: String(p.sellerUid || ""),
-    seller: String(p.seller || ""),
-    sellerPrice: Number(p.sellerPrice ?? p.price ?? 0),
-    sellerStatus: "Order Placed"
+    id: String(p.id), name: p.name, price: Number(p.price || 0), image: p.image || "", sellerUid:p.sellerUid||"", seller:p.seller||"", qty: 1
   }];
 
   save();
@@ -794,7 +787,32 @@ function showSection(s){
   if(s==="myorders"){renderMyOrders();if(activeUserPhone)startUserOrdersListener(activeUserPhone);}
   window.scrollTo({top:0,behavior:"smooth"});
 }
-function checkArea(){const pin=$("pincode").value.trim();const msg=$("areaMsg");if(!/^[0-9]{6}$/.test(pin)){msg.innerHTML='<div class="notice error">'+(localStorage.getItem("mlm_language")==="en"?"Please enter a valid 6-digit PIN Code.":"कृपया सही 6 अंकों का PIN Code डालें।")+'</div>';return}if(pin==="202126"||pin==="202127"){msg.innerHTML='<div class="notice success">'+(localStorage.getItem("mlm_language")==="en"?"This PIN Code is currently allowed. This does not verify the actual 10 KM distance.":"यह PIN Code अभी अनुमति सूची में है। PIN Code जाँच वास्तविक 10 KM दूरी की पुष्टि नहीं करती।")+'</div>'}else{msg.innerHTML='<div class="notice error">'+(localStorage.getItem("mlm_language")==="en"?"Delivery is not currently available for this PIN Code.":"फिलहाल इस PIN Code पर डिलीवरी उपलब्ध नहीं है।")+'</div>'}}
+// Service-area centre supplied by the store owner via Google Maps.
+const MODELUXE_SERVICE_CENTRE={lat:28.020199,lng:78.123836};
+const MODELUXE_MAX_DELIVERY_KM=10;
+function modeluxeDistanceKm(lat1,lng1,lat2=MODELUXE_SERVICE_CENTRE.lat,lng2=MODELUXE_SERVICE_CENTRE.lng){
+ const rad=v=>v*Math.PI/180, dLat=rad(lat2-lat1),dLng=rad(lng2-lng1);
+ const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
+ return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function modeluxeCheckDeliveryRadius(lat,lng){
+ if(lat===""||lng===""||lat===null||lng===null)return {allowed:false,reason:"location_required"};
+ const distance=modeluxeDistanceKm(Number(lat),Number(lng));
+ return {allowed:Number.isFinite(distance)&&distance<=MODELUXE_MAX_DELIVERY_KM,distanceKm:distance};
+}
+function checkArea(){
+ const pin=$("pincode").value.trim(),msg=$("areaMsg");
+ if(!/^[0-9]{6}$/.test(pin)){msg.innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
+ const lat=$("deliveryLat")?.value,lng=$("deliveryLng")?.value;
+ const result=modeluxeCheckDeliveryRadius(lat,lng);
+ if(result.reason==="location_required"){
+   msg.innerHTML='<div class="notice error">सिर्फ PIN Code से 10 KM की दूरी तय नहीं हो सकती। पहले “My Current Location” दबाकर GPS location दें।</div>';
+   return;
+ }
+ msg.innerHTML=result.allowed
+  ?'<div class="notice success">आपके पते पर डिलीवरी उपलब्ध है। Centre से दूरी: '+result.distanceKm.toFixed(2)+' KM</div>'
+  :'<div class="notice error">क्षमा करें, आपका पता 10 KM delivery area से बाहर है ('+result.distanceKm.toFixed(2)+' KM)। यहाँ ऑर्डर स्वीकार नहीं होगा।</div>';
+}
 function handleStoreSearch(){
  const query=$("search").value.trim();
  const searching=query.length>0;
@@ -812,7 +830,10 @@ $("orderForm").addEventListener("submit",async e=>{
   if(!activeUserPhone){showToast("Please log in with your mobile number before placing an order.");showSection("account");return;}
   if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
-  if(pin!=="202126"&&pin!=="202127"){$("orderMsg").innerHTML='<div class="notice error">इस समय केवल PIN 202126 और 202127 अनुमति सूची में हैं। यह वास्तविक 10 KM दूरी की जाँच नहीं है।</div>';return}
+  if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
+  const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
+  if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">ऑर्डर से पहले “My Current Location” या “Choose on Map” से delivery location चुनना अनिवार्य है।</div>';return;}
+  if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">आपका delivery address 10 KM सीमा से बाहर है ('+areaCheck.distanceKm.toFixed(2)+' KM)। इस क्षेत्र में ऑर्डर नहीं लिया जा सकता।</div>';return;}
   const order={
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
     address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
@@ -862,7 +883,7 @@ function startUserProductsListener(){
   if(userProductsListener)db.ref("sellerProducts").off("value",userProductsListener);
   userProductsListener=snap=>{
     const raw=snap.val()||{};
-    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||""),sellerPrice:Number(p.price||p.sellingPrice||0)};}).filter(p=>p.name && p.stock>0);
+    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||"")};}).filter(p=>p.name && p.stock>0);
     if(activeCategory!=="All"&&!products.some(p=>p.category===activeCategory))activeCategory="All";
     categories();renderProducts();
   };
@@ -941,8 +962,8 @@ function authMessage(message,isError=false){
 }
 function showAuthState(user){
   const status=$("authStatus"),fields=$("otpLoginFields"),logout=$("logoutBtn");
-  const saved=localStorage.getItem("mlm_sms_verified_phone");
-  const phone=(user&&user.phoneNumber)||(saved?"+91"+saved:"");
+  const uidMatch = user && String(user.uid || "").match(/^phone_(91\d{10})$/);
+  const phone=(user&&user.phoneNumber)||(uidMatch?"+91"+uidMatch[1].slice(2):"");
   if(phone){
     const digits=phone.replace(/^\+91/,"").replace(/\D/g,"");
     switchUserData(digits);
@@ -991,17 +1012,19 @@ async function verifyLoginOTP(){
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"OTP गलत है या समाप्त हो गया है।");
-    localStorage.setItem("mlm_sms_verified_phone",phone);
+    const customToken = result.firebase && result.firebase.customToken;
+    if(!customToken)throw new Error("OTP verify hua, lekin Firebase Custom Token nahi mila. Updated OTP Worker deploy karein.");
+    if(!auth)throw new Error("Firebase Authentication load nahi hua.");
+    const credential = await auth.signInWithCustomToken(customToken);
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
-    authMessage("Mobile OTP verified. Login successful.");
-    showAuthState(null);
+    authMessage("Mobile OTP verified. Firebase login successful.");
+    showAuthState(credential.user);
   }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
-  localStorage.removeItem("mlm_sms_verified_phone");
   pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);showSection("account");
   authMessage("You have been logged out.");
 }
@@ -1039,6 +1062,8 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     dateTime:order.date||new Date().toLocaleString()
   };
   await db.ref("orders/"+order.id).set(firebaseOrder);
+  const groups={};(order.items||[]).forEach(item=>{const sid=String(item.sellerUid||"");if(sid){(groups[sid]||(groups[sid]=[])).push(item);}});
+  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{sellerUpdates["sellerOrders/"+sid+"/"+order.id]={orderId:order.id,sellerUid:sid,items,customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||"",total:items.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0),status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()};});if(Object.keys(sellerUpdates).length)await db.ref().update(sellerUpdates);
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
   order.razorpayPaymentId=paymentId;
@@ -1167,7 +1192,9 @@ function setDeliveryLocation(lat,lng,source){
   const preview=document.getElementById("locationPreview");
   preview.classList.remove("hidden");
   preview.innerHTML="📍 <strong>लोकेशन सेव हुई</strong><br>Latitude: "+lat.toFixed(6)+"<br>Longitude: "+lng.toFixed(6)+"<br><a href=\"https://www.google.com/maps?q="+lat+","+lng+"\" target=\"_blank\" rel=\"noopener\" style=\"color:var(--accent)\">मैप पर देखें</a>";
-  setLocationStatus(source==="gps"?"आपकी वर्तमान लोकेशन मिल गई। डिलीवरी के लिए पता भी जाँच लें।":"मैप लोकेशन सेव हो गई। डिलीवरी के लिए पता भी जाँच लें।","success");
+  const radiusResult=modeluxeCheckDeliveryRadius(lat,lng);
+  if(radiusResult.allowed){setLocationStatus("आपकी लोकेशन 10 KM delivery area में है ("+radiusResult.distanceKm.toFixed(2)+" KM)।","success");}
+  else{setLocationStatus("आपकी लोकेशन 10 KM delivery area से बाहर है ("+radiusResult.distanceKm.toFixed(2)+" KM)। यहाँ ऑर्डर नहीं होगा।","error");}
   if(activeUserPhone)localStorage.setItem(userKey("mlm_delivery_location"),JSON.stringify({lat,lng}));
 }
 function getExactLocation(){
@@ -1188,7 +1215,7 @@ function openMapPicker(){
     }
     if(!inlineMap){
       const saved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
-      const lat=saved?.lat||28.026382, lng=saved?.lng||78.115068;
+      const lat=saved?.lat||MODELUXE_SERVICE_CENTRE.lat, lng=saved?.lng||MODELUXE_SERVICE_CENTRE.lng;
       inlineMap=L.map("inlineMap").setView([lat,lng],18);
       const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
         maxZoom:19,attribution:"© OpenStreetMap contributors"
@@ -1208,7 +1235,7 @@ function openMapPicker(){
       showPendingMapPoint(pendingLat,pendingLng,true);
     }
     const currentSaved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
-    const targetLat=currentSaved?.lat??28.026382, targetLng=currentSaved?.lng??78.115068;
+    const targetLat=currentSaved?.lat??MODELUXE_SERVICE_CENTRE.lat, targetLng=currentSaved?.lng??MODELUXE_SERVICE_CENTRE.lng;
     inlineMap.setView([targetLat,targetLng],18);
     inlineMap.invalidateSize();
     const c=inlineMap.getCenter();pendingLat=c.lat;pendingLng=c.lng;
@@ -1651,21 +1678,43 @@ function downloadUserInvoice(orderId){
   }
 }
 function invoiceSafe(value){return String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function toggleOrderDetails(id){const el=$("orderDetails-"+String(id).replace(/[^a-zA-Z0-9_-]/g,""));if(el)el.classList.toggle("hidden");}
+// Keep expanded order details open when Firebase sends live status updates and renderMyOrders rebuilds the list.
+const expandedOrderDetailIds = window.__modeluxeExpandedOrderDetailIds || (window.__modeluxeExpandedOrderDetailIds = new Set());
+function toggleOrderDetails(id){
+  const safeId=String(id).replace(/[^a-zA-Z0-9_-]/g,"");
+  const el=$("orderDetails-"+safeId);
+  if(!el)return;
+  if(el.classList.contains("hidden")){
+    expandedOrderDetailIds.add(safeId);
+    el.classList.remove("hidden");
+  }else{
+    expandedOrderDetailIds.delete(safeId);
+    el.classList.add("hidden");
+  }
+}
 function renderMyOrders(){
   const list=$("myOrdersList");
+  // Before replacing the list during a Firebase live refresh, remember which order details are currently expanded.
+  // This is intentionally read from the live DOM as well as the shared Set, so a status refresh cannot collapse tracking.
+  if(list){
+    list.querySelectorAll('[id^="orderDetails-"]').forEach(el=>{
+      const id=String(el.id).slice("orderDetails-".length);
+      if(!id)return;
+      if(!el.classList.contains("hidden")) expandedOrderDetailIds.add(id);
+    });
+  }
   if(!activeUserPhone){list.innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';return;}
   if(!orders.length){list.innerHTML='<div class="empty">You don\'t have any orders yet. Your orders will appear here after ordering.</div>';return;}
   list.innerHTML=orders.map(o=>{
     const safeId=String(o.id).replace(/[^a-zA-Z0-9_-]/g,"");
     const items=(o.items||[]).map(i=>`<div class="orderproduct"><img src="${esc(i.image||"")}" alt="" onerror="this.style.visibility='hidden'"><div><strong>${esc(i.name||i.productName||i.product||"Item")}</strong><div class="muted">₹${Number(i.price||0).toLocaleString("en-IN")} × ${Number(i.qty||i.quantity||1)}</div></div></div>`).join("");
     const raw=String(o.status||"Order Placed").toLowerCase();
-    const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"picked",label:"Picked Up by Delivery Partner",match:["picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
+    const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"picked",label:"Picked by Courier Partner",match:["picked up by courier partner","picked by courier partner","picked up by delivery partner","picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
     let current=0;stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});if(raw.includes("cancel"))current=-1;
     const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${raw.includes("cancel")?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`:stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("")}</div>`;
     const canCancel=!(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x)));
     const paymentMethod=o.payment||o.paymentMethod||"Not available";
-    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="hidden" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
+    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="${expandedOrderDetailIds.has(safeId)?"":"hidden"}" data-order-details-id="${safeId}" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
 }
 
@@ -1850,7 +1899,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 .hero .hero-festive-lights{position:absolute;z-index:1;left:0;right:0;top:0;height:35px;pointer-events:none;background-image:radial-gradient(circle at 10px 17px,#ff4d6d 0 3px,transparent 4px),radial-gradient(circle at 30px 20px,#ffd166 0 3px,transparent 4px),radial-gradient(circle at 50px 16px,#55e6ff 0 3px,transparent 4px),radial-gradient(circle at 70px 22px,#a7f432 0 3px,transparent 4px),radial-gradient(circle at 90px 17px,#c084fc 0 3px,transparent 4px);background-size:100px 35px;background-repeat:repeat-x;filter:drop-shadow(0 0 4px #ffd166aa);}
 .hero .hero-festive-lights:before{content:"";position:absolute;left:0;right:0;top:3px;height:20px;border-top:2px solid #d6dce8;border-radius:50% 50% 0 0;opacity:.85;}
 .hero>h1,.hero>h2,.hero>p,.hero>button{position:relative;z-index:2;}
-@media(prefers-reduced-motion:reduce){.hero .hero-sparkler-canvas{opacity:.65}}
+@media(max-width:600px){.hero .hero-sparkler-canvas{display:block!important;opacity:1!important;visibility:visible!important;pointer-events:none!important;z-index:2!important}}
 </style>
 
 <script id="modeluxe-diwali-sparkler-animation">
@@ -1868,7 +1917,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
     hero.appendChild(lights);
     const ctx=canvas.getContext('2d'); if(!ctx) return;
     let w=0,h=0,dpr=1,particles=[],rockets=[],lastLaunch=0;
-    const reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce=false; // Keep festive rocket animation running on mobile and desktop.
     function resize(){
       const r=hero.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1,2);
       w=Math.max(1,r.width); h=Math.max(1,r.height);
