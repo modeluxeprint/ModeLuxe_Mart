@@ -396,6 +396,13 @@ body.search-mode #products{scroll-margin-top:115px}
 @media(prefers-reduced-motion:reduce){.hero-hanging-garland .garland-star,.hero-hanging-garland .garland-bulb{animation:none!important}}
 </style>
 
+<script>
+/* Volatile-only state adapter. Cleared on refresh or page close. */
+window.mlmVolatileStore = (() => {
+ const data = new Map();
+ return { getItem(k){return data.has(String(k))?data.get(String(k)):null;}, setItem(k,v){data.set(String(k),String(v));}, removeItem(k){data.delete(String(k));}, clear(){data.clear();}, key(i){return Array.from(data.keys())[i]??null;}, get length(){return data.size;} };
+})();
+</script>
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
@@ -566,12 +573,70 @@ const $=id=>document.getElementById(id);
 // Live catalogue comes from Admin Panel Firebase listings. Remove only old built-in demo products.
 const OLD_DEMO_NAMES=["Classic T-Shirt","Women's Everyday Wear","Kids Casual Outfit","Fashion Accessories"];
 let savedProducts=load("mlm_products",DEFAULT_PRODUCTS);
-if(Array.isArray(savedProducts) && savedProducts.some(p=>OLD_DEMO_NAMES.includes(p.name))){savedProducts=savedProducts.filter(p=>!OLD_DEMO_NAMES.includes(p.name));localStorage.setItem("mlm_products",JSON.stringify(savedProducts));}
+if(Array.isArray(savedProducts) && savedProducts.some(p=>OLD_DEMO_NAMES.includes(p.name))){savedProducts=savedProducts.filter(p=>!OLD_DEMO_NAMES.includes(p.name));mlmVolatileStore.setItem("mlm_products",JSON.stringify(savedProducts));}
 let products=savedProducts,cart=load("mlm_cart_logged_out",load("mlm_cart",[])),orders=[],activeCategory="All",activeUserPhone="";
 let userProductsListener=null;
-function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):JSON.parse(JSON.stringify(fallback))}catch(e){return JSON.parse(JSON.stringify(fallback))}}
+// Firebase cloud cart sync: one private cart per authenticated Firebase UID.
+let cartCloudRef=null, cartCloudListener=null, cartCloudUid="", cartCloudApplying=false, cartCloudWriteTimer=null;
+function stopCartCloudSync(){
+  if(cartCloudRef && cartCloudListener) cartCloudRef.off("value",cartCloudListener);
+  cartCloudRef=null;cartCloudListener=null;cartCloudUid="";
+  if(cartCloudWriteTimer){clearTimeout(cartCloudWriteTimer);cartCloudWriteTimer=null;}
+}
+function startCartCloudSync(user){
+  stopCartCloudSync();
+  if(!user || !user.uid || !window.MLM_CART_DB)return;
+  const uid=String(user.uid);
+  cartCloudUid=uid;
+  cartCloudRef=window.MLM_CART_DB.ref("customerCarts/"+uid);
+  cartCloudListener=snap=>{
+    const remote=snap.val();
+    cartCloudApplying=true;
+    if(remote && Array.isArray(remote.items)){
+      cart=remote.items.filter(x=>x && x.id!==undefined).map(x=>({
+        id:String(x.id),name:String(x.name||""),price:Number(x.price||0),
+        image:String(x.image||""),sellerUid:String(x.sellerUid||""),
+        seller:String(x.seller||""),qty:Math.max(1,Math.floor(Number(x.qty||1)))
+      }));
+      mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));
+      renderCart();
+      showToast("Cart cloud se sync ho gaya");
+    }else if(!snap.exists()){
+      // First login on a new device: seed the cloud cart from this session's current cart.
+      writeCartCloudNow();
+    }
+    cartCloudApplying=false;
+  };
+  cartCloudRef.on("value",cartCloudListener,error=>{
+    console.error("Cart cloud sync read failed:",error);
+    showToast("Cart cloud sync nahi hua. Firebase Rules check karein.");
+  });
+}
+function writeCartCloudNow(){
+  if(cartCloudApplying || !cartCloudRef || !cartCloudUid || !window.MLM_CART_DB)return;
+  const payload={
+    uid:cartCloudUid,items:cart.map(x=>({
+      id:String(x.id),name:String(x.name||""),price:Number(x.price||0),
+      image:String(x.image||""),sellerUid:String(x.sellerUid||""),
+      seller:String(x.seller||""),qty:Math.max(1,Math.floor(Number(x.qty||1)))
+    })),
+    itemCount:cart.reduce((n,x)=>n+Math.max(0,Number(x.qty||0)),0),
+    updatedAt:Date.now(),schemaVersion:1
+  };
+  cartCloudRef.set(payload).catch(error=>{
+    console.error("Cart cloud sync write failed:",error);
+    showToast("Cart cloud par save nahi hua. Firebase Rules check karein.");
+  });
+}
+function scheduleCartCloudSync(){
+  if(cartCloudApplying || !cartCloudRef)return;
+  if(cartCloudWriteTimer)clearTimeout(cartCloudWriteTimer);
+  cartCloudWriteTimer=setTimeout(()=>{cartCloudWriteTimer=null;writeCartCloudNow();},350);
+}
+
+function load(key,fallback){try{const v=mlmVolatileStore.getItem(key);return v?JSON.parse(v):JSON.parse(JSON.stringify(fallback))}catch(e){return JSON.parse(JSON.stringify(fallback))}}
 function userKey(base,phone=activeUserPhone){return phone?base+"_user_"+String(phone).replace(/\D/g,""):base+"_logged_out"}
-function save(){localStorage.setItem("mlm_products",JSON.stringify(products));localStorage.setItem(userKey("mlm_cart"),JSON.stringify(cart));if(activeUserPhone)localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));}
+function save(){mlmVolatileStore.setItem("mlm_products",JSON.stringify(products));mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));if(activeUserPhone)mlmVolatileStore.setItem(userKey("mlm_orders"),JSON.stringify(orders));scheduleCartCloudSync();}
 function switchUserData(phone){
   activeUserPhone=String(phone||"").replace(/\D/g,"");
   if(activeUserPhone){
@@ -579,23 +644,23 @@ function switchUserData(phone){
     startSharedProfileListener(activeUserPhone);
     cart=load(userKey("mlm_cart"),[]);orders=load(userKey("mlm_orders"),[]);
     const pk=userKey("mlm_profile");
-    if(!localStorage.getItem(pk)){
+    if(!mlmVolatileStore.getItem(pk)){
       const old=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});
-      if(String(old.phone||"").replace(/\D/g,"")===activeUserPhone)localStorage.setItem(pk,JSON.stringify(old));
+      if(String(old.phone||"").replace(/\D/g,"")===activeUserPhone)mlmVolatileStore.setItem(pk,JSON.stringify(old));
     }
     const ok=userKey("mlm_orders");
-    if(!localStorage.getItem(ok)){
+    if(!mlmVolatileStore.getItem(ok)){
       const legacy=load("mlm_orders",[]).filter(o=>String(o.phone||"").replace(/\D/g,"")===activeUserPhone);
-      orders=legacy;localStorage.setItem(ok,JSON.stringify(orders));
+      orders=legacy;mlmVolatileStore.setItem(ok,JSON.stringify(orders));
     }
   }else{stopUserOrdersListener();cart=[];orders=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
   renderCart();renderMyOrders();renderProfileAvatar(activeUserPhone?load(userKey("mlm_profile"),{name:"",avatar:""}):{name:"",avatar:""});
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(localStorage.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
+function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(mlmVolatileStore.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
 function setCategory(c){activeCategory=c;categories();renderProducts()}
 let wishlistIds=load("mlm_wishlist",[]).map(String), wishlistOnly=false;
-function saveWishlist(){try{localStorage.setItem("mlm_wishlist",JSON.stringify(wishlistIds));}catch(e){} const badge=$("bottomWishlistCount");if(badge)badge.textContent=String(wishlistIds.length);}
+function saveWishlist(){try{mlmVolatileStore.setItem("mlm_wishlist",JSON.stringify(wishlistIds));}catch(e){} const badge=$("bottomWishlistCount");if(badge)badge.textContent=String(wishlistIds.length);}
 function toggleWishlist(id){id=String(id);if(wishlistIds.includes(id)){wishlistIds=wishlistIds.filter(x=>x!==id);showToast("Removed from Wishlist");}else{wishlistIds.push(id);showToast("Added to Wishlist");}saveWishlist();renderProducts();}
 function showWishlist(){wishlistOnly=true;activeCategory="All";categories();showSection("store");renderProducts();$("listingTitle").textContent="Wishlist";$("products").scrollIntoView({behavior:"smooth",block:"start"});if(!wishlistIds.length)showToast("Your Wishlist is empty.");}
 
@@ -611,10 +676,10 @@ function showWishlistNotice(){showWishlist()}
 saveWishlist();
 function filterCategoryGroup(group){const choices={fashion:["Men's Wear","Women's Wear","Kids / Baby Wear","Jewellery"],beauty:["Cosmetics"],electronics:["Electronics"],home:["Home & Kitchen","Grocery"]};const found=(choices[group]||[]).find(c=>products.some(p=>String(p.category||"").toLowerCase()===c.toLowerCase()));if(found){setCategory(found);document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}else{activeCategory="All";categories();renderProducts();showToast("इस category में अभी कोई live product उपलब्ध नहीं है।");document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}}
 function handleProductImageError(img){img.onerror=null;img.style.display="none";const fallback=document.createElement("div");fallback.className="image-fallback";fallback.textContent="📦 Photo not available";img.insertAdjacentElement("afterend",fallback)}
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>`<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button data-add-cart="${esc(p.id)}" type="button">${localStorage.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button">${localStorage.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>`<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button data-add-cart="${esc(p.id)}" type="button">${mlmVolatileStore.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button">${mlmVolatileStore.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
 function openProductDetails(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
- const en=localStorage.getItem("mlm_language")==="en";
+ const en=mlmVolatileStore.getItem("mlm_language")==="en";
  const image=p.image||"";const quantity=p.quantity||p.weight||"1";const unit=p.unit||"Piece";const stock=Number(p.stock||0);const stockUnit=p.stockUnit||unit;
  const size=p.size||p.sizes||p.variant||p.variants||p.productSize||"";
  const description=p.description||p.details||p.productDescription||"";
@@ -627,7 +692,7 @@ function closeProductDetails(){$("productDetailOverlay").classList.add("hidden")
 
 function showOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.remove("hidden")}function closeOrderSuccess(){const el=document.getElementById("orderSuccessOverlay");if(el)el.classList.add("hidden")}
 let toastTimer;function showToast(message){const t=$("toast");$("toastText").textContent=message;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2300)}
-function getSavedDeliveryAddress(){if(!activeUserPhone)return null;try{return JSON.parse(localStorage.getItem(userKey("mlm_saved_delivery_address"))||"null")}catch(e){return null}}
+function getSavedDeliveryAddress(){if(!activeUserPhone)return null;try{return JSON.parse(mlmVolatileStore.getItem(userKey("mlm_saved_delivery_address"))||"null")}catch(e){return null}}
 function renderSavedDeliveryAddress(){
   const saved=getSavedDeliveryAddress(),card=$("savedAddressCard");
   if(!card)return;
@@ -653,7 +718,7 @@ function newDeliveryAddress(){
   $("customerAddress").focus();
 }
 function rememberDeliveryAddress(order){
-  if(!activeUserPhone)return;localStorage.setItem(userKey("mlm_saved_delivery_address"),JSON.stringify({name:order.name,phone:order.phone,address:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||""}));
+  if(!activeUserPhone)return;mlmVolatileStore.setItem(userKey("mlm_saved_delivery_address"),JSON.stringify({name:order.name,phone:order.phone,address:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||""}));
 }
 function addCart(id){
   const key=String(id);
@@ -711,7 +776,7 @@ document.addEventListener("click",function(event){
 function renderCart(){
   const totalCartQty=cart.reduce((n,x)=>n+Number(x.qty||0),0);const cartCountBadge=$("cartCount");if(cartCountBadge)cartCountBadge.textContent=totalCartQty;const topCartBadge=$("cartTopCount");if(topCartBadge)topCartBadge.textContent=totalCartQty;
   cart=cart.map(x=>({...x,image:x.image||(products.find(p=>p.id===x.id)||{}).image||""}));
-  $("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility='hidden'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${localStorage.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;
+  $("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility='hidden'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${mlmVolatileStore.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;
   save();const subtotal=getCartSubtotal(),fee=getDeliveryFee(subtotal),total=subtotal+fee;
   if($("cartSubtotal"))$("cartSubtotal").textContent="₹"+subtotal.toLocaleString("en-IN");
   if($("cartDeliveryFee"))$("cartDeliveryFee").textContent="₹"+fee.toLocaleString("en-IN");
@@ -865,6 +930,7 @@ const firebaseConfig = {
 };
 if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
+window.MLM_CART_DB=db;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
 // Delivery fee settings are shared with Admin Panel through Firebase.
 let deliverySettings={freeAbove:199,charge:49};
@@ -873,7 +939,7 @@ let sharedProfileListener=null;
 let sharedProfileLoadedPhone="";
 function getCartSubtotal(){return cart.reduce((n,x)=>n+Number(x.price||0)*Number(x.qty||0),0)}
 function getDeliveryFee(subtotal=getCartSubtotal()){return subtotal < Number(deliverySettings.freeAbove??199) ? Math.max(0,Number(deliverySettings.charge??49)) : 0}
-function renderDeliveryThresholdNotice(){const el=$("deliveryThresholdNotice");if(el)el.textContent=`Delivery charges of ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} apply to purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`;const detail=$("productDeliveryChargeNotice");if(detail){const en=localStorage.getItem("mlm_language")==="en";detail.textContent=en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`;}}
+function renderDeliveryThresholdNotice(){const el=$("deliveryThresholdNotice");if(el)el.textContent=`Delivery charges of ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} apply to purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`;const detail=$("productDeliveryChargeNotice");if(detail){const en=mlmVolatileStore.getItem("mlm_language")==="en";detail.textContent=en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`;}}
 function startDeliverySettingsListener(){if(!db)return;if(deliverySettingsListener)db.ref("deliverySettings").off("value",deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};renderCart();renderDeliveryThresholdNotice()};db.ref("deliverySettings").on("value",deliverySettingsListener,err=>console.warn("Delivery settings sync failed",err&&err.message));}
 startDeliverySettingsListener();
 renderDeliveryThresholdNotice();
@@ -953,7 +1019,7 @@ function mergeAndRenderUserOrders(){
     const tb=Number(b.id)||Date.parse(b.createdAt||"")||0;
     return tb-ta;
   });
-  localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));
+  mlmVolatileStore.setItem(userKey("mlm_orders"),JSON.stringify(orders));
   renderMyOrders();
 }
 function authMessage(message,isError=false){
@@ -962,25 +1028,25 @@ function authMessage(message,isError=false){
 }
 function showAuthState(user){
   const status=$("authStatus"),fields=$("otpLoginFields"),logout=$("logoutBtn");
-  const uidMatch = user && String(user.uid || "").match(/^phone_(91\d{10})$/);
-  const phone=(user&&user.phoneNumber)||(uidMatch?"+91"+uidMatch[1].slice(2):"");
+  // Authentication is accepted only from Firebase Auth; a client-side phone flag is never a login.
+  const phone=(user&&user.phoneNumber)||(user&&user.uid?user.phoneNumber||"+91"+(user.phoneNumber||""):"");
   if(phone){
     const digits=phone.replace(/^\+91/,"").replace(/\D/g,"");
     switchUserData(digits);
-    status.className="notice success";status.textContent=(localStorage.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
+    status.className="notice success";status.textContent=(mlmVolatileStore.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
-    const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});p.phone=digits;localStorage.setItem(userKey("mlm_profile"),JSON.stringify(p));
+    const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
     if($("profilePhone"))$("profilePhone").value=digits;
   }else{
     switchUserData("");
-    status.className="notice";status.textContent=localStorage.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
+    status.className="notice";status.textContent=mlmVolatileStore.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
     fields.classList.remove("hidden");logout.classList.add("hidden");
     $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
     renderProfileAvatar({name:"",avatar:""});
     if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';
   }
 }
-if(auth){auth.onAuthStateChanged(user=>{if(user)showAuthState(user);else showAuthState(null)})}
+if(auth){auth.onAuthStateChanged(user=>{if(user){showAuthState(user);startCartCloudSync(user);}else{stopCartCloudSync();showAuthState(null);}})}
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय Mobile number डालें।",true);return}
@@ -1012,19 +1078,21 @@ async function verifyLoginOTP(){
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"OTP गलत है या समाप्त हो गया है।");
-    const customToken = result.firebase && result.firebase.customToken;
-    if(!customToken)throw new Error("OTP verify hua, lekin Firebase Custom Token nahi mila. Updated OTP Worker deploy karein.");
-    if(!auth)throw new Error("Firebase Authentication load nahi hua.");
-    const credential = await auth.signInWithCustomToken(customToken);
+    const customToken=result.customToken||(result.firebase&&result.firebase.customToken);
+    if(!customToken)throw new Error("OTP Worker ne Firebase customToken nahi diya. Matching OTP Worker deploy hona zaroori hai.");
+    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Auth SDK उपलब्ध नहीं है।");
+    const credential=await auth.signInWithCustomToken(customToken);
+    if(!credential||!credential.user)throw new Error("Firebase login complete nahi hua.");
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
     authMessage("Mobile OTP verified. Firebase login successful.");
-    showAuthState(credential.user);
+    showAuthState(credential.user);startCartCloudSync(credential.user);
   }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
+  mlmVolatileStore.removeItem("mlm_sms_verified_phone");
   pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);showSection("account");
   authMessage("You have been logged out.");
 }
@@ -1102,7 +1170,7 @@ function startRazorpayPayment(order){
           // Razorpay has returned a successful checkout response. Persist the order first
           // with a pending verification status, using the same order ID for safe retries.
           const pending={order, response, savedAt:new Date().toISOString()};
-          try{localStorage.setItem("mlm_pending_paid_order",JSON.stringify(pending));}catch(storageErr){}
+          try{mlmVolatileStore.setItem("mlm_pending_paid_order",JSON.stringify(pending));}catch(storageErr){}
           order.razorpayPaymentId=response.razorpay_payment_id||"";
           order.payment="Razorpay ("+(response.razorpay_payment_id||"")+")";
           order.paymentStatus="Verification Pending";
@@ -1128,7 +1196,7 @@ function startRazorpayPayment(order){
             if(!verifyResponse.ok||verification.verified!==true)throw new Error(verification.message||"Payment verification pending");
             await db.ref("orders/"+order.id).update({paymentStatus:"Verified",paymentMethod:order.payment,razorpayPaymentId:response.razorpay_payment_id});
             order.paymentStatus="Verified";save();renderMyOrders();
-            try{localStorage.removeItem("mlm_pending_paid_order");}catch(storageErr){}
+            try{mlmVolatileStore.removeItem("mlm_pending_paid_order");}catch(storageErr){}
           }catch(verifyErr){
             $("orderMsg").innerHTML='<div class="notice">Your order is placed. Payment verification is pending; do not pay again. Payment ID: '+esc(response.razorpay_payment_id||"")+'.</div>';
           }
@@ -1150,7 +1218,7 @@ function startRazorpayPayment(order){
 
 async function retryPendingPaidOrder(){
   let pending;
-  try{pending=JSON.parse(localStorage.getItem("mlm_pending_paid_order")||"null");}catch(e){pending=null;}
+  try{pending=JSON.parse(mlmVolatileStore.getItem("mlm_pending_paid_order")||"null");}catch(e){pending=null;}
   if(!pending||!pending.order||!pending.response){
     $("orderMsg").innerHTML='<div class="notice error">कोई pending payment order इस device पर नहीं मिला। Payment ID से सहायता लें; दोबारा भुगतान न करें।</div>';
     return;
@@ -1169,7 +1237,7 @@ async function retryPendingPaidOrder(){
     try{
       const vr=await fetch(RAZORPAY_VERIFY_PAYMENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
       const result=await vr.json().catch(()=>({}));
-      if(vr.ok&&result.verified===true){await ref.update({paymentStatus:"Verified"});try{localStorage.removeItem("mlm_pending_paid_order");}catch(e){} $("orderMsg").innerHTML='<div class="notice success">Order saved. Payment verified successfully.</div>';return;}
+      if(vr.ok&&result.verified===true){await ref.update({paymentStatus:"Verified"});try{mlmVolatileStore.removeItem("mlm_pending_paid_order");}catch(e){} $("orderMsg").innerHTML='<div class="notice success">Order saved. Payment verified successfully.</div>';return;}
     }catch(e){}
     $("orderMsg").innerHTML='<div class="notice success">Order saved and placed. Payment verification is still pending. Do not pay again.</div>';
   }catch(err){
@@ -1195,13 +1263,13 @@ function setDeliveryLocation(lat,lng,source){
   const radiusResult=modeluxeCheckDeliveryRadius(lat,lng);
   if(radiusResult.allowed){setLocationStatus("आपकी लोकेशन 10 KM delivery area में है ("+radiusResult.distanceKm.toFixed(2)+" KM)।","success");}
   else{setLocationStatus("आपकी लोकेशन 10 KM delivery area से बाहर है ("+radiusResult.distanceKm.toFixed(2)+" KM)। यहाँ ऑर्डर नहीं होगा।","error");}
-  if(activeUserPhone)localStorage.setItem(userKey("mlm_delivery_location"),JSON.stringify({lat,lng}));
+  if(activeUserPhone)mlmVolatileStore.setItem(userKey("mlm_delivery_location"),JSON.stringify({lat,lng}));
 }
 function getExactLocation(){
   if(!navigator.geolocation){setLocationStatus("इस ब्राउज़र में लोकेशन सपोर्ट उपलब्ध नहीं है।","error");return;}
   setLocationStatus("आपकी अनुमति का इंतज़ार है…");
   navigator.geolocation.getCurrentPosition(pos=>setDeliveryLocation(pos.coords.latitude,pos.coords.longitude,"gps"),err=>{
-    const en=localStorage.getItem("mlm_language")==="en";
+    const en=mlmVolatileStore.getItem("mlm_language")==="en";
     const msg=err.code===1?(en?"Location permission was denied. Allow location access in browser settings.":"लोकेशन की अनुमति नहीं मिली। ब्राउज़र सेटिंग में Location अनुमति दें।"):(en?"Could not get your location. Turn on GPS and try again.":"लोकेशन नहीं मिल सकी। GPS चालू करके दोबारा कोशिश करें।");
     setLocationStatus(msg,"error");
   },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
@@ -1214,7 +1282,7 @@ function openMapPicker(){
       document.getElementById("mapSelectedCoords").textContent="मैप लोड नहीं हुआ। इंटरनेट कनेक्शन Check।";return;
     }
     if(!inlineMap){
-      const saved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
+      const saved=activeUserPhone?JSON.parse(mlmVolatileStore.getItem(userKey("mlm_delivery_location"))||"null"):null;
       const lat=saved?.lat||MODELUXE_SERVICE_CENTRE.lat, lng=saved?.lng||MODELUXE_SERVICE_CENTRE.lng;
       inlineMap=L.map("inlineMap").setView([lat,lng],18);
       const streetLayer=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
@@ -1234,7 +1302,7 @@ function openMapPicker(){
       else {const c=inlineMap.getCenter();pendingLat=c.lat;pendingLng=c.lng}
       showPendingMapPoint(pendingLat,pendingLng,true);
     }
-    const currentSaved=activeUserPhone?JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null"):null;
+    const currentSaved=activeUserPhone?JSON.parse(mlmVolatileStore.getItem(userKey("mlm_delivery_location"))||"null"):null;
     const targetLat=currentSaved?.lat??MODELUXE_SERVICE_CENTRE.lat, targetLng=currentSaved?.lng??MODELUXE_SERVICE_CENTRE.lng;
     inlineMap.setView([targetLat,targetLng],18);
     inlineMap.invalidateSize();
@@ -1245,7 +1313,7 @@ function openMapPicker(){
 function showPendingMapPoint(lat,lng,lookup=true){
   pendingLat=Number(lat);pendingLng=Number(lng);
   const box=document.getElementById("mapSelectedCoords");
-  box.textContent=(localStorage.getItem("mlm_language")==="en"?"Selected location: ":"चुनी गई लोकेशन: ")+pendingLat.toFixed(6)+", "+pendingLng.toFixed(6);
+  box.textContent=(mlmVolatileStore.getItem("mlm_language")==="en"?"Selected location: ":"चुनी गई लोकेशन: ")+pendingLat.toFixed(6)+", "+pendingLng.toFixed(6);
   if(lookup)reverseGeocodeLocation(pendingLat,pendingLng);
 }
 async function reverseGeocodeLocation(lat,lng){
@@ -1256,12 +1324,12 @@ async function reverseGeocodeLocation(lat,lng){
     if(!response.ok)throw new Error("reverse lookup failed");
     const data=await response.json();
     if(token!==reverseLookupToken)return;
-    const lang=localStorage.getItem("mlm_language")==="en";
+    const lang=mlmVolatileStore.getItem("mlm_language")==="en";
     const address=data.display_name||"";
     box.textContent=(lang?"Selected location: ":"चुनी गई लोकेशन: ")+lat.toFixed(6)+", "+lng.toFixed(6)+(address?"\n"+(lang?"Nearby place: ":"पास की जगह: ")+address:"");
   }catch(e){
     if(token===reverseLookupToken){
-      const lang=localStorage.getItem("mlm_language")==="en";
+      const lang=mlmVolatileStore.getItem("mlm_language")==="en";
       box.textContent=(lang?"Selected location: ":"चुनी गई लोकेशन: ")+lat.toFixed(6)+", "+lng.toFixed(6)+"\n"+(lang?"Place name unavailable; coordinates will still be saved.":"जगह का नाम नहीं मिला; coordinates फिर भी सेव होंगे।");
     }
   }
@@ -1290,12 +1358,12 @@ function applyMapLink(){saveInlineMapLocation()}
 function restoreDeliveryLocation(){
   const latField=document.getElementById("deliveryLat"),lngField=document.getElementById("deliveryLng");
   if(!activeUserPhone){if(latField)latField.value="";if(lngField)lngField.value="";const preview=document.getElementById("locationPreview");if(preview)preview.classList.add("hidden");return;}
-  try{const loc=JSON.parse(localStorage.getItem(userKey("mlm_delivery_location"))||"null");if(loc)setDeliveryLocation(loc.lat,loc.lng,"map");else{if(latField)latField.value="";if(lngField)lngField.value="";const preview=document.getElementById("locationPreview");if(preview)preview.classList.add("hidden");}}catch(e){if(latField)latField.value="";if(lngField)lngField.value="";}
+  try{const loc=JSON.parse(mlmVolatileStore.getItem(userKey("mlm_delivery_location"))||"null");if(loc)setDeliveryLocation(loc.lat,loc.lng,"map");else{if(latField)latField.value="";if(lngField)lngField.value="";const preview=document.getElementById("locationPreview");if(preview)preview.classList.add("hidden");}}catch(e){if(latField)latField.value="";if(lngField)lngField.value="";}
 }
 
 function setLanguage(lang){
   lang = "en";
-  localStorage.setItem("mlm_language", "en");
+  mlmVolatileStore.setItem("mlm_language", "en");
   document.documentElement.lang = lang;
   const en=lang==="en";
   const t=en?{
@@ -1408,7 +1476,7 @@ function startProductRatingsListener(){
     const raw=snap.val()||{},all=[];
     Object.entries(raw).forEach(([productId,users])=>Object.entries(users||{}).forEach(([userPhone,r])=>{if(r&&Number(r.rating)>=1&&Number(r.rating)<=5)all.push({...r,productId:String(r.productId||productId),userPhone:String(r.userPhone||userPhone),rating:Number(r.rating)});}));
     sharedProductRatings=all;
-    try{localStorage.setItem("mlm_product_ratings",JSON.stringify(all));}catch(e){}
+    try{mlmVolatileStore.setItem("mlm_product_ratings",JSON.stringify(all));}catch(e){}
     renderProducts();if(typeof renderMyOrders==="function")renderMyOrders();
     const overlay=document.getElementById("productDetailOverlay");if(overlay&&!overlay.classList.contains("hidden")){const title=document.getElementById("productDetailName");const prod=products.find(x=>x.name===title?.textContent);if(prod)openProductDetails(prod.id);}
   },err=>console.warn("Product ratings sync failed:",err&&err.message));
@@ -1440,7 +1508,7 @@ function startSharedProfileListener(phone){
     if(!remote)return;
     const local=load(userKey("mlm_profile"),{});
     const profile={...local,...remote};
-    try{localStorage.setItem(userKey("mlm_profile"),JSON.stringify(profile));}catch(e){}
+    try{mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(profile));}catch(e){}
     renderProfileAvatar(profile);
     if($("profileName") && document.activeElement!==$("profileName"))$("profileName").value=profile.name||"";
     if($("profilePhone") && document.activeElement!==$("profilePhone"))$("profilePhone").value=profile.phone||digits;
@@ -1498,7 +1566,7 @@ $("profileForm").addEventListener("submit",e=>{
   if(!activeUserPhone){showToast("Please log in before saving your profile.");showSection("account");return;}
   const oldProfile=load(userKey("mlm_profile"),{});
   const profile={name:$("profileName").value.trim(),phone:$("profilePhone").value.trim(),address:$("profileAddress").value.trim(),pin:$("profilePin").value.trim(),avatar:pendingProfileAvatar||oldProfile.avatar||""};
-  try{localStorage.setItem(userKey("mlm_profile"),JSON.stringify(profile));}
+  try{mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(profile));}
   catch(err){showToast("Photo is too large. Please choose a smaller photo.");return;}
   pendingProfileAvatar="";
   $("profileDisplayName").textContent=profile.name||"Your Profile";
@@ -1539,7 +1607,7 @@ async function cancelUserOrder(orderId){
     });
     order.status="Cancelled";
     order.updatedAt=new Date().toISOString();
-    localStorage.setItem(userKey("mlm_orders"),JSON.stringify(orders));
+    mlmVolatileStore.setItem(userKey("mlm_orders"),JSON.stringify(orders));
     renderMyOrders();
     showToast("ऑर्डर Cancel हो गया।");
   }catch(err){
@@ -1718,7 +1786,7 @@ function renderMyOrders(){
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();localStorage.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
+$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();mlmVolatileStore.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
 
 
 // Live connection indicator for Firebase Realtime Database.
