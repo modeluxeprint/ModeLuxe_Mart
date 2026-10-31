@@ -598,9 +598,13 @@ function exportCSV(){const rows=[['Order ID','Customer','Phone','Address','Produ
 let sellerAppsCache={},withdrawCache={};let appStatusFilter='pending';
 let lastPendingSellerIds=new Set(),sellerAppsFirstLoad=true;
 function sellerApplicationStatus(a){
- const value=String((a&& (a.status||a.applicationStatus))||'').trim().toLowerCase();
- if(['pending','approved','rejected','cancelled','suspended'].includes(value)) return value==='cancelled'?'rejected':value;
- return '';
+ // The seller form writes applicationStatus='pending'. Prefer that field
+ // because older seller records may also contain a separate account status.
+ const valid=['pending','approved','rejected','cancelled','suspended'];
+ const appValue=String(a&&a.applicationStatus||'').trim().toLowerCase();
+ const statusValue=String(a&&a.status||'').trim().toLowerCase();
+ const value=valid.includes(appValue)?appValue:(valid.includes(statusValue)?statusValue:'');
+ return value==='cancelled'?'rejected':value;
 }
 function updateSellerPendingIndicator(){
  const pending=Object.entries(sellerAppsCache||{}).filter(([uid,a])=>sellerApplicationStatus(a)==='pending');
