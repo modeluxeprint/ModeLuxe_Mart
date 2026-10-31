@@ -3,7 +3,33 @@
 
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#062b78"><title>ModeLuxe Mart — Admin Panel</title>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><style>body{background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}
+<script src="https://cdn.tailwindcss.com"></script><script>
+/* QR scanner loader: try jsDelivr first, then unpkg as fallback. */
+(function(){
+  window.__loadModeLuxeQrLibrary = function(){
+    if (typeof window.Html5Qrcode !== 'undefined') return Promise.resolve(true);
+    if (window.__modeLuxeQrLoading) return window.__modeLuxeQrLoading;
+    const sources = [
+      'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+      'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'
+    ];
+    window.__modeLuxeQrLoading = new Promise((resolve) => {
+      let index = 0;
+      const tryNext = () => {
+        if (typeof window.Html5Qrcode !== 'undefined') return resolve(true);
+        if (index >= sources.length) return resolve(false);
+        const script = document.createElement('script');
+        script.src = sources[index++];
+        script.onload = () => resolve(typeof window.Html5Qrcode !== 'undefined');
+        script.onerror = tryNext;
+        document.head.appendChild(script);
+      };
+      tryNext();
+    });
+    return window.__modeLuxeQrLoading;
+  };
+})();
+</script><style>body{background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}
 input,select,textarea{color:#111827;background:#f8fafc;border:1px solid #e3eaf2;border-radius:10px;padding:10px;width:100%;outline:none}
 button{transition:.15s}button:disabled{opacity:.5;cursor:not-allowed}
 .gold{color:#075fc4}
@@ -40,7 +66,7 @@ header{color:#111827}
   window.addEventListener('load',function(){setTimeout(clearAdminPhone,250);setTimeout(clearAdminPhone,1000);});
 })();
 </script><main class="max-w-6xl mx-auto p-4 md:p-6">
-<header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex items-center gap-2"><button id="headerScannerBtn" type="button" class="btn muted" style="position:fixed;top:14px;right:76px;z-index:10000;padding:9px 11px;border-radius:999px;box-shadow:0 3px 12px #0002" aria-label="Scan Delivery QR" title="Scan Delivery QR" onclick="openDeliveryScanner()">📷</button><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div></header>
+<header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex flex-col items-end gap-2 shrink-0"><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div><button id="headerScannerBtn" type="button" class="btn muted flex items-center justify-center gap-3" style="min-width:100%;padding:12px 16px;border-radius:18px;background:#e6f3ff;color:#174f7d;font-weight:800;box-shadow:0 3px 12px #00008" aria-label="Scan Delivery QR" title="Scan Delivery QR" onclick="openDeliveryScanner()"><span aria-hidden="true">📷</span><span>Scan QR</span></button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
 <div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted" type="button" onclick="showAdminTab('applications')">Seller Applications</button><button id="withdrawTabBtn" class="btn muted" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button></div>
@@ -318,7 +344,14 @@ function printInvoice(id){const html=buildInvoiceHtml(id);if(!html)return;const 
 let deliveryQrScanner=null,deliveryQrBusy=false;
 async function openDeliveryScanner(){
   if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)||localStorage.getItem('modeluxeAdminDeviceUnlocked')!=='yes'){alert('Pehle Admin login aur device verification complete karein.');return;}
-  if(typeof Html5Qrcode==='undefined'){alert('QR scanner library load nahi hui. Internet check karke page refresh karein.');return;}
+  if(typeof Html5Qrcode==='undefined'){
+    $('deliveryScannerMsg').textContent='QR scanner library load ho rahi hai…';
+    const loaded = await (window.__loadModeLuxeQrLibrary ? window.__loadModeLuxeQrLibrary() : Promise.resolve(false));
+    if(!loaded || typeof Html5Qrcode==='undefined'){
+      alert('QR Scanner library load nahi hui. Internet connection check karein; baaki Admin Panel kaam karta rahega.');
+      return;
+    }
+  }
   $('deliveryScannerModal').classList.remove('hidden');$('deliveryScannerModal').classList.add('flex');$('deliveryScannerMsg').textContent='Camera permission ka intezar hai…';deliveryQrBusy=false;
   try{
     deliveryQrScanner=new Html5Qrcode('deliveryQrReader');
