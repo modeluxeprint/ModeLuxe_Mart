@@ -99,7 +99,7 @@ header{color:#111827}
 <div id="ordersList" class="space-y-3"></div>
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
-<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted seller-status-tab" type="button" aria-pressed="false" onclick="loadSellerApplications('pending',this)">Pending</button><button class="btn muted seller-status-tab" type="button" aria-pressed="false" onclick="loadSellerApplications('approved',this)">Approved</button><button class="btn muted seller-status-tab" type="button" aria-pressed="false" onclick="loadSellerApplications('rejected',this)">Cancelled</button><button class="btn muted seller-status-tab" type="button" aria-pressed="false" onclick="loadSellerApplications('suspended',this)">Suspended</button><button class="btn primary" type="button" onclick="loadSellerApplications(appStatusFilter)">↻ Refresh</button></div><div id="sellerApplicationsList"></div></div>
+<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="loadSellerApplications('pending',this)">Pending</button><button class="btn muted seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="loadSellerApplications('approved',this)">Approved</button><button class="btn muted seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="loadSellerApplications('rejected',this)">Cancelled</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="loadSellerApplications('suspended',this)">Suspended</button><button class="btn primary" type="button" onclick="loadSellerApplications(appStatusFilter)">↻ Refresh</button></div><div id="sellerApplicationsList"></div></div>
 <div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
 <div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
 
@@ -679,33 +679,37 @@ function renderSellerApplications(status='pending'){
  }).join('')||'<p class="small">Is status mein koi application nahi.</p>');
 }
 window.loadSellerApplications=async function(status='pending',clickedButton){
+ const normalizedStatus=String(status||'pending').toLowerCase();
+ const validStatuses=['pending','approved','rejected','suspended'];
+ status=validStatuses.includes(normalizedStatus)?normalizedStatus:'pending';
  const tabButtons=Array.from(document.querySelectorAll('#applicationsTab .seller-status-tab'));
- tabButtons.forEach(b=>{b.classList.remove('seller-tab-active');b.setAttribute('aria-pressed','false');});
- const activeTab=clickedButton||tabButtons.find(b=>b.textContent.trim().toLowerCase()===(status==='rejected'?'cancelled':status));
- if(activeTab){activeTab.classList.add('seller-tab-active');activeTab.setAttribute('aria-pressed','true');}
-
+ tabButtons.forEach(b=>{
+   const selected=(b.dataset.status||'')===status;
+   b.classList.toggle('seller-tab-active',selected);
+   b.setAttribute('aria-pressed',selected?'true':'false');
+ });
  appStatusFilter=status;
  const list=$('sellerApplicationsList');if(!list)return;
- list.innerHTML='<p class="small" role="status">Pending/Applications button click received · Firebase se /sellerApplications load ho raha hai…</p>';
+ const labels={pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'};
+ list.innerHTML='<p class="small" role="status">'+labels[status]+' applications load ho rahi hain…</p>';
  try{
   const user=auth.currentUser;
-  if(!user)throw new Error('Firebase Auth session missing. Admin ko Firebase mein dobara sign-in karna hoga.');
-  const token=await user.getIdToken(true);
-  if(!token)throw new Error('Firebase ID token nahi mila.');
+  if(!user)throw new Error('Firebase Auth session missing. Admin ko dobara sign-in karna hoga.');
+  await user.getIdToken(true);
   const snap=await db.ref('/sellerApplications').once('value');
   const raw=snap.val()||{};
   const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
   updateSellerPendingIndicator();
   renderSellerApplications(status);
-  const count=Object.keys(sellerAppsCache).length;
-  const diag=document.createElement('div');
-  diag.className='order-card mt-3';
-  diag.innerHTML='<b style="color:#166534">Firebase read successful</b><p class="small mt-1">UID: '+esc(user.uid)+'</p><p class="small">Path: /sellerApplications · Total records: '+count+'</p><p class="small">Showing tab: '+esc(status)+'</p>';
+  const shown=Object.entries(sellerAppsCache).filter(([uid,a])=>sellerApplicationStatus(a)===status).length;
+  const diag=document.createElement('p');
+  diag.className='small mt-2';
+  diag.textContent=labels[status]+' list · '+shown+' application(s) · Total Firebase records: '+Object.keys(sellerAppsCache).length;
   list.appendChild(diag);
  }catch(err){
   const msg=err&&err.message?err.message:String(err);
-  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Firebase applications load failed</b><p class="small mt-2">'+esc(msg)+'</p><p class="small mt-2">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><p class="small mt-2">Button click received; Firebase read did not complete.</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
+  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' list load nahi hui</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
   addNotification('Seller applications load error',msg,'error');
  }
 };
