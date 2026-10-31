@@ -515,7 +515,21 @@ const PRODUCT_UNITS = [
   'Half Plate','Full Plate','Plate','Combo','S','M','L','XL','XXL','XXXL',
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
-function showAdminTab(tab){const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};Object.values(ids).forEach(id=>$(id)?.classList.add('hidden'));$(ids[tab]||ids.orders)?.classList.remove('hidden');const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};Object.values(buttons).forEach(id=>{if($(id)){$(id).classList.remove('primary');$(id).classList.add('muted');}});const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}if(tab==='deliverySettings')loadDeliverySettingsForm();if(tab==='applications')loadSellerApplications('pending');if(tab==='withdrawals')renderWithdrawals();if(tab==='couriers')loadCourierPartners();}
+function showAdminTab(tab){
+ const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
+ Object.values(ids).forEach(id=>$(id)?.classList.add('hidden'));
+ const panel=$(ids[tab]||ids.orders);if(panel)panel.classList.remove('hidden');
+ const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
+ Object.values(buttons).forEach(id=>{if($(id)){$(id).classList.remove('primary');$(id).classList.add('muted');}});
+ const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
+ if(tab==='deliverySettings')loadDeliverySettingsForm();
+ if(tab==='applications'){
+   const list=$('sellerApplicationsList');
+   if(list){list.style.display='block';list.style.minHeight='48px';list.innerHTML='<p class="small" role="status">Firebase se seller applications load ho rahi hain…</p>';}
+   loadSellerApplications(appStatusFilter||'pending');
+ }
+ if(tab==='withdrawals')renderWithdrawals();if(tab==='couriers')loadCourierPartners();
+}
 let currentDeliverySettings={freeAbove:199,charge:49},deliverySettingsAdminListener=null;
 function updateDeliverySettingsPreview(){const thresholdInput=$('freeDeliveryAbove')?.value,chargeInput=$('deliveryChargeAmount')?.value;const threshold=Math.max(0,Number(thresholdInput===''||thresholdInput==null?199:thresholdInput)),charge=Math.max(0,Number(chargeInput===''||chargeInput==null?49:chargeInput));$('deliverySettingsPreview').textContent=`₹${Math.max(0,threshold-1)} के ऑर्डर पर ₹${charge} delivery charge; ₹${threshold} या उससे अधिक पर free delivery.`;}
 function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;updateDeliverySettingsPreview();}
@@ -651,16 +665,19 @@ function updateSellerPendingIndicator(){
  lastPendingSellerIds=new Set(pending.map(([uid])=>uid));sellerAppsFirstLoad=false;
 }
 function startOwnerManagement(){
+ // Keep one live listener for seller applications; render immediately when Firebase responds.
  db.ref('sellerApplications').off('value');
- db.ref('sellerApplications').on('value',s=>{
-   const raw=s.val()||{};
-   sellerAppsCache=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+ db.ref('sellerApplications').on('value',snap=>{
+   const raw=snap.val()||{};
+   const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
    updateSellerPendingIndicator();
-   renderSellerApplications(appStatusFilter);
- },e=>{
+   renderSellerApplications(appStatusFilter||'pending');
+ },err=>{
    const list=$('sellerApplicationsList');
-   if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications read error</b><p class="small mt-2">'+esc(e&&e.message||'Firebase permission denied at /sellerApplications.')+'</p></div>';
-   addNotification('Seller applications read error',e&&e.message||'Firebase permission denied at /sellerApplications.','error');
+   const msg=err&&err.message?err.message:String(err||'Unknown Firebase read error');
+   if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications read error</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">Firebase path: /sellerApplications</p></div>';
+   addNotification('Seller applications read error',msg,'error');
  });
  db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();},e=>{addNotification('Withdrawal read error',e&&e.message||'Firebase permission denied at /withdrawalRequests.','error');});
  db.ref('commissionSettings').on('value',s=>{const v=s.val()||{};$('defaultCommission').value=Number(v.defaultCommission??10);$('deliveryBoyPayoutAdmin').value=Number(v.deliveryBoyPayout??20);},e=>addNotification('Settings read error',e&&e.message||'Firebase permission denied at /commissionSettings.','error'));
@@ -668,15 +685,17 @@ function startOwnerManagement(){
 function renderSellerApplications(status='pending'){
  appStatusFilter=status;
  const list=$('sellerApplicationsList');if(!list)return;
+ list.style.display='block';
  const entries=Object.entries(sellerAppsCache||{});
  const rows=entries.filter(([uid,a])=>sellerApplicationStatus(a)===status);
  const counts={pending:0,approved:0,rejected:0,suspended:0};
  entries.forEach(([uid,a])=>{const st=sellerApplicationStatus(a);if(counts[st]!==undefined)counts[st]++;});
- const countLine='<p class="small mb-3">Firebase records: '+entries.length+' · Pending: '+counts.pending+' · Approved: '+counts.approved+' · Cancelled: '+counts.rejected+' · Suspended: '+counts.suspended+'</p>';
- list.innerHTML=countLine+(rows.map(([uid,a])=>{
+ const countLine='<p class="small mb-3" style="color:#475569">Firebase records: '+entries.length+' · Pending: '+counts.pending+' · Approved: '+counts.approved+' · Cancelled: '+counts.rejected+' · Suspended: '+counts.suspended+'</p>';
+ const cards=rows.map(([uid,a])=>{
    const d=sellerApplicationData(a);
-   return `<article class="order-card mb-3"><b>${esc(d.shopName||d.sellerName||d.storeName||'Store')}</b><div class="small">${esc(d.email||'')} · ${esc(d.phone||d.mobile||'')}</div><div class="small">Aadhaar ending ${esc(d.aadhaarLast4||'----')} · PAN ending ${esc(d.panLast4||'----')}</div><div class="small">Status: ${esc(sellerApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="flex gap-2 mt-2 flex-wrap"><button class="btn success" type="button" onclick="decideSeller('${esc(uid)}','approved',this)">Approve</button><button class="btn danger" type="button" onclick="decideSeller('${esc(uid)}','cancelled',this)">Cancel</button><button class="btn muted" type="button" onclick="decideSeller('${esc(uid)}','suspended',this)">Suspend</button><button class="btn muted" type="button" onclick="showSellerApplication('${esc(uid)}')">Details</button></div><p id="seller-action-${esc(uid)}" class="small mt-2" aria-live="polite">Actions ready · UID ${esc(uid)}</p></article>`;
- }).join('')||'<p class="small">Is status mein koi application nahi.</p>');
+   return `<article class="order-card mb-3"><b>${esc(d.shopName||d.sellerName||d.storeName||'Seller Store')}</b><div class="small">${esc(d.email||'')} · ${esc(d.phone||d.mobile||'')}</div><div class="small">Aadhaar ending ${esc(d.aadhaarLast4||'----')} · PAN ending ${esc(d.panLast4||'----')}</div><div class="small">Status: ${esc(sellerApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="flex gap-2 mt-2 flex-wrap"><button class="btn success" type="button" onclick="decideSeller('${esc(uid)}','approved',this)">Approve</button><button class="btn danger" type="button" onclick="decideSeller('${esc(uid)}','cancelled',this)">Cancel</button><button class="btn muted" type="button" onclick="decideSeller('${esc(uid)}','suspended',this)">Suspend</button><button class="btn muted" type="button" onclick="showSellerApplication('${esc(uid)}')">Details</button></div><p id="seller-action-${esc(uid)}" class="small mt-2" aria-live="polite">Actions ready · UID ${esc(uid)}</p></article>`;
+ }).join('');
+ list.innerHTML=countLine+(cards||'<div class="order-card"><p class="small">'+(entries.length?'Is status mein koi application nahi.':'Firebase se abhi koi seller application record receive nahi hua.')+'</p></div>');
 }
 window.loadSellerApplications=async function(status='pending',clickedButton){
  const normalizedStatus=String(status||'pending').toLowerCase();
@@ -690,13 +709,13 @@ window.loadSellerApplications=async function(status='pending',clickedButton){
  });
  appStatusFilter=status;
  const list=$('sellerApplicationsList');if(!list)return;
- const labels={pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'};
- list.innerHTML='<p class="small" role="status">'+labels[status]+' applications load ho rahi hain…</p>';
+ list.style.display='block';
+ list.innerHTML='<p class="small" role="status">'+({pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'}[status])+' applications load ho rahi hain…</p>';
  try{
   const user=auth.currentUser;
   if(!user)throw new Error('Firebase Auth session missing. Admin ko dobara sign-in karna hoga.');
-  await user.getIdToken(true);
-  const snap=await db.ref('/sellerApplications').once('value');
+  // Do not force-refresh the token here; the Firebase SDK refreshes it when needed.
+  const snap=await db.ref('sellerApplications').once('value');
   const raw=snap.val()||{};
   const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
   sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
@@ -704,12 +723,12 @@ window.loadSellerApplications=async function(status='pending',clickedButton){
   renderSellerApplications(status);
   const shown=Object.entries(sellerAppsCache).filter(([uid,a])=>sellerApplicationStatus(a)===status).length;
   const diag=document.createElement('p');
-  diag.className='small mt-2';
-  diag.textContent=labels[status]+' list · '+shown+' application(s) · Total Firebase records: '+Object.keys(sellerAppsCache).length;
+  diag.className='small mt-2';diag.style.color='#475569';
+  diag.textContent=({pending:'Pending',approved:'Approved',rejected:'Cancelled',suspended:'Suspended'}[status])+' list · '+shown+' application(s) · Total Firebase records: '+Object.keys(sellerAppsCache).length+' · Admin UID: '+user.uid;
   list.appendChild(diag);
  }catch(err){
   const msg=err&&err.message?err.message:String(err);
-  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' list load nahi hui</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
+  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications load nahi hui</b><p class="small mt-2">'+esc(msg)+'</p><p class="small">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
   addNotification('Seller applications load error',msg,'error');
  }
 };
