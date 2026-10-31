@@ -1,4 +1,6 @@
 <!doctype html>
+<!-- IMPORTANT: Firebase Realtime Database Rules + trusted backend authorization must be deployed before production. Browser-side UI checks are not security boundaries. KYC full Aadhaar/PAN must be processed only by a secure KYC provider/backend; this build stores masked last-four only. -->
+
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#062b78"><title>ModeLuxe Mart — Admin Panel</title>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><style>body{background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}
@@ -23,7 +25,7 @@ header{color:#111827}
 .hover\\:ring-amber-300:hover{--tw-ring-color:#93c5fd!important}
 #notificationDropdown{position:fixed!important;left:auto!important;right:12px!important;width:min(380px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:70vh;overflow-y:auto;box-sizing:border-box;z-index:9999!important;margin-top:8px!important;transform:none!important}
 @media(max-width:480px){#notificationDropdown{right:12px!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;padding:12px!important}}
-.pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;background:#173f70;color:#dbeafe;font-size:12px;font-weight:800;height:max-content}</style></head>
+</style></head>
 <body><script>
 (function(){
   function clearAdminPhone(){
@@ -41,37 +43,23 @@ header{color:#111827}
 <header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
-<div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="sellerAppsTabBtn" class="btn muted" type="button" onclick="showAdminTab('sellerApps')">Seller Applications</button><button id="withdrawalsTabBtn" class="btn muted" type="button" onclick="showAdminTab('withdrawals')">Withdrawal Requests</button><button id="deliverySettingsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliverySettings')">Delivery Charges & Commission</button></div>
+<div class="flex flex-wrap gap-2 mb-4"><button id="ordersTabBtn" class="btn primary" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted" type="button" onclick="showAdminTab('applications')">Seller Applications</button><button id="withdrawTabBtn" class="btn muted" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button></div>
 <div id="ordersTab">
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
 <div class="panel p-4 mb-4"><div class="grid md:grid-cols-[1fr_190px_auto] gap-3"><input id="search" placeholder="Order ID, customer name, phone search karein" oninput="renderOrders()"><select id="statusFilter" onchange="window.__ordersSummaryMode=this.value==='all'?'all':this.value;renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Processing</option><option>Packed</option><option>Picked Up by Delivery Partner</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button><button class="btn primary" type="button" onclick="openDeliveryScanner()">📷 Scan Delivery QR</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
 <div id="ordersList" class="space-y-3"></div>
 </div>
-<div id="sellerAppsTab" class="hidden">
-  <div class="panel p-4 mb-4">
-    <h2 class="text-xl font-bold gold">Seller Account Applications</h2>
-    <p class="small text-stone-400 mt-1">Seller profiles yahan review karein. Approve karne par account approved hoga; Cancel/Reject karne par seller access deny hoga.</p>
-    <div class="flex flex-wrap gap-2 mt-3"><button class="btn muted" type="button" onclick="setSellerAppFilter('all')">All</button><button class="btn muted" type="button" onclick="setSellerAppFilter('pending')">Pending</button><button class="btn muted" type="button" onclick="setSellerAppFilter('approved')">Approved</button><button class="btn muted" type="button" onclick="setSellerAppFilter('rejected')">Rejected</button></div>
-    <p id="sellerAppsMsg" class="small text-stone-400 mt-3" aria-live="polite">Seller applications load ho rahi hain…</p>
-    <div id="sellerApplicationsList" class="space-y-3 mt-3"></div>
-  </div>
-</div>
-<div id="withdrawalsTab" class="hidden">
-  <div class="panel p-4 mb-4">
-    <h2 class="text-xl font-bold gold">Withdrawal Requests</h2>
-    <p class="small text-stone-400 mt-1">Seller aur Delivery Partner ki requests ko review karein. Payment karne ke baad hi “Payment Successfully Completed” mark karein.</p>
-    <div class="flex flex-wrap gap-2 mt-3"><button class="btn muted" type="button" onclick="setWithdrawalFilter('all')">All</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('pending')">Pending</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('approved')">Approved / Awaiting Payment</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('paid')">Payment Completed</button><button class="btn muted" type="button" onclick="setWithdrawalFilter('rejected')">Rejected</button></div>
-    <p id="withdrawalsMsg" class="small text-stone-400 mt-3" aria-live="polite">Withdrawal requests load ho rahi hain…</p>
-    <div id="withdrawalRequestsList" class="space-y-3 mt-3"></div>
-  </div>
-</div>
+<!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
+<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted" onclick="renderSellerApplications('pending')">Pending</button><button class="btn muted" onclick="renderSellerApplications('approved')">Approved</button><button class="btn muted" onclick="renderSellerApplications('rejected')">Cancelled</button><button class="btn muted" onclick="renderSellerApplications('suspended')">Suspended</button></div><div id="sellerApplicationsList"></div></div>
+<div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
+<div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
+<!-- Admin product listing removed: sellers manage their own private listings. -->
 <div id="deliverySettingsTab" class="hidden panel p-5 mb-4 max-w-2xl">
   <h2 class="text-xl font-bold gold mb-2">Delivery Charge Settings</h2>
   <p class="small text-stone-300 mb-4">यह सेटिंग Firebase में सेव होगी और User Panel के cart/checkout total पर लागू होगी।</p>
   <form id="deliverySettingsForm" class="grid md:grid-cols-2 gap-3">
     <div><label class="small block mb-1" for="freeDeliveryAbove">Free delivery threshold (₹)</label><input id="freeDeliveryAbove" type="number" min="0" step="1" value="199" required><p class="small text-stone-400 mt-1">इस राशि से कम पर delivery charge लगेगा।</p></div>
     <div><label class="small block mb-1" for="deliveryChargeAmount">Delivery charge (₹)</label><input id="deliveryChargeAmount" type="number" min="0" step="1" value="49" required><p class="small text-stone-400 mt-1">आप इसे कभी भी कम या ज्यादा कर सकती हैं।</p></div>
-    <div><label class="small block mb-1" for="sellerCommissionPercent">Seller commission (%)</label><input id="sellerCommissionPercent" type="number" min="0" max="100" step="0.1" value="10" required><p class="small text-stone-400 mt-1">Seller की बिक्री से कंपनी का कमीशन; Admin तय करेगा।</p></div>
     <div class="md:col-span-2"><p id="deliverySettingsPreview" class="rounded-xl border border-blue-100 p-3 text-sm text-stone-200">₹198 के ऑर्डर पर ₹49 delivery; ₹199 पर free delivery.</p></div>
     <div class="md:col-span-2"><button id="saveDeliverySettingsBtn" class="btn primary" type="submit">Save Delivery Settings</button><p id="deliverySettingsMsg" class="small mt-2" aria-live="polite"></p></div>
   </form>
@@ -94,6 +82,19 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const auth=firebase.auth();
+const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
+async function uploadImageToR2(file){
+  if(!auth.currentUser)throw new Error("Admin Firebase login missing hai. Dobara login karein.");
+  if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Valid image select karein.");
+  if(file.size>8*1024*1024)throw new Error("Photo 8 MB se chhoti rakhein.");
+  const token=await auth.currentUser.getIdToken();
+  const form=new FormData();form.append("file",file,file.name||"product-image.jpg");
+  const res=await fetch(R2_UPLOAD_URL,{method:"POST",headers:{Authorization:"Bearer "+token},body:form});
+  const result=await res.json().catch(()=>({}));
+  if(!res.ok||!result.success||!result.url)throw new Error(result.error||"R2 upload fail ho gaya.");
+  return result.url;
+}
+
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
 const ADMIN_PHONE='7818995955';
 const ADMIN_PHONE_ALLOWLIST=[ADMIN_PHONE];
@@ -215,7 +216,7 @@ function deviceLockReady(){return !!localStorage.getItem(DEVICE_LOCK_KEY)&&!!loc
 function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP verify ho gaya, lekin is browser/URL par Passkey supported nahi. HTTPS par supported browser se kholein.');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');auth.signOut().catch(()=>{});return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
 async function registerDevicePasskey(){const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'ModeLuxe Mart Admin',id:location.hostname},user:{id:userId,name:'modeluxe-admin-device',displayName:'ModeLuxe Mart Admin'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000,attestation:'none'}});if(!credential)throw Error('Passkey registration cancel ho gaya.');localStorage.setItem(DEVICE_CRED_KEY,b64url(credential.rawId));}
 async function verifyDevicePasskey(){const id=localStorage.getItem(DEVICE_CRED_KEY);if(!id)throw Error('Is phone ka passkey registered nahi hai.');const challenge=crypto.getRandomValues(new Uint8Array(32));const assertion=await navigator.credentials.get({publicKey:{challenge,rpId:location.hostname,allowCredentials:[{type:'public-key',id:unb64url(id)}],userVerification:'required',timeout:60000}});if(!assertion)throw Error('Passkey verification cancel ho gaya.');}
-async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startDeliverySettingsAdminListener();startSellerApplications();startWithdrawalRequests();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
+async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startDeliverySettingsAdminListener();startOwnerManagement();updateUnitChoices();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
 $('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
@@ -403,123 +404,13 @@ const PRODUCT_UNITS = [
   'Half Plate','Full Plate','Plate','Combo','S','M','L','XL','XXL','XXXL',
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
-function showAdminTab(tab){
-  ['orders','sellerApps','withdrawals','deliverySettings'].forEach(k=>{
-    const panel=$(k==='sellerApps'?'sellerAppsTab':k==='withdrawals'?'withdrawalsTab':k==='deliverySettings'?'deliverySettingsTab':'ordersTab');
-    if(panel)panel.classList.toggle('hidden',tab!==k);
-    const btn=$(k==='sellerApps'?'sellerAppsTabBtn':k==='withdrawals'?'withdrawalsTabBtn':k==='deliverySettings'?'deliverySettingsTabBtn':'ordersTabBtn');
-    if(btn)btn.className='btn '+(tab===k?'primary':'muted');
-  });
-  if(tab==='deliverySettings')loadDeliverySettingsForm();
-  if(tab==='sellerApps')renderSellerApplications();
-  if(tab==='withdrawals')renderWithdrawalRequests();
-}
-let currentDeliverySettings={freeAbove:199,charge:49},currentSellerCommission=10,deliverySettingsAdminListener=null;
+function showAdminTab(tab){['ordersTab','deliverySettingsTab','applicationsTab','withdrawalsTab','commissionTab'].forEach(id=>$(id)?.classList.add('hidden'));const map={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab'};$(map[tab])?.classList.remove('hidden');['ordersTabBtn','deliverySettingsTabBtn','appsTabBtn','withdrawTabBtn','commissionTabBtn'].forEach(id=>$(id)?.classList.remove('primary'));['ordersTabBtn','deliverySettingsTabBtn','appsTabBtn','withdrawTabBtn','commissionTabBtn'].forEach(id=>$(id)?.classList.add('muted'));const active={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn'}[tab];if(active){$(active).classList.remove('muted');$(active).classList.add('primary');}if(tab==='deliverySettings')loadDeliverySettingsForm();if(tab==='applications')renderSellerApplications('pending');if(tab==='withdrawals')renderWithdrawals();}
+let currentDeliverySettings={freeAbove:199,charge:49},deliverySettingsAdminListener=null;
 function updateDeliverySettingsPreview(){const thresholdInput=$('freeDeliveryAbove')?.value,chargeInput=$('deliveryChargeAmount')?.value;const threshold=Math.max(0,Number(thresholdInput===''||thresholdInput==null?199:thresholdInput)),charge=Math.max(0,Number(chargeInput===''||chargeInput==null?49:chargeInput));$('deliverySettingsPreview').textContent=`₹${Math.max(0,threshold-1)} के ऑर्डर पर ₹${charge} delivery charge; ₹${threshold} या उससे अधिक पर free delivery.`;}
-function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;if($('sellerCommissionPercent'))$('sellerCommissionPercent').value=currentSellerCommission;updateDeliverySettingsPreview();}
-
-// Seller application + withdrawal administration.
-let sellerApplicationsData={},sellerApplicationsListener=null,sellerAppsFilter='pending';
-let sellerWithdrawalsData={},deliveryWithdrawalsData={},sellerWithdrawalsListener=null,deliveryWithdrawalsListener=null,withdrawalFilter='pending';
-function setSellerAppFilter(v){sellerAppsFilter=v;renderSellerApplications();}
-function startSellerApplications(){
-  if(sellerApplicationsListener)db.ref('sellerProfiles').off('value',sellerApplicationsListener);
-  sellerApplicationsListener=snap=>{sellerApplicationsData=snap.val()||{};renderSellerApplications();};
-  db.ref('sellerProfiles').on('value',sellerApplicationsListener,err=>{$('sellerAppsMsg').textContent='Seller profiles load nahi hue: '+err.message;});
-}
-function renderSellerApplications(){
-  const entries=Object.entries(sellerApplicationsData||{}).map(([uid,p])=>({uid,p:p||{}})).filter(x=>{
-    const status=String(x.p.applicationStatus||x.p.status||'pending').toLowerCase();
-    return sellerAppsFilter==='all'||status===sellerAppsFilter;
-  }).sort((a,b)=>String(a.p.createdAt||'').localeCompare(String(b.p.createdAt||'')));
-  $('sellerApplicationsList').innerHTML=entries.length?entries.map(({uid,p})=>{
-    const status=String(p.applicationStatus||p.status||'pending').toLowerCase();
-    const statusLabel=status==='approved'?'Approved':status==='rejected'?'Rejected':'Pending review';
-    return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">${esc(p.shopName||p.sellerName||'Seller')}</p><h3 class="font-bold break-words">${esc(p.email||uid)}</h3><p class="small text-stone-300">Mobile: ${esc(p.phone||'Not provided')}</p><p class="small text-stone-400">UID: ${esc(uid)}</p><p class="small text-stone-300">Applied: ${esc(p.createdAt||'Date unavailable')}</p></div><span class="pill">${esc(statusLabel)}</span></div><div class="flex flex-wrap gap-2 mt-3"><button class="btn primary" type="button" ${status==='approved'?'disabled':''} onclick="reviewSellerApplication('${esc(uid)}','approved')">Approve</button><button class="btn danger" type="button" ${status==='rejected'?'disabled':''} onclick="reviewSellerApplication('${esc(uid)}','rejected')">Cancel / Reject</button></div></article>`;
-  }).join(''):'<div class="panel p-5 text-center text-stone-300">Is filter mein koi seller application nahi hai.</div>';
-  $('sellerAppsMsg').textContent=entries.length+' seller account(s).';
-}
-async function reviewSellerApplication(uid,status){
-  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
-  if(!['approved','rejected'].includes(status))return;
-  const p=sellerApplicationsData[uid]||{};
-  if(!confirm(`${status==='approved'?'Approve':'Cancel / Reject'} seller account "${p.shopName||p.email||uid}"?`))return;
-  try{
-    const now=new Date().toISOString();
-    await db.ref('sellerProfiles/'+uid).update({applicationStatus:status,status,reviewedAt:now,reviewedBy:signedInPhone});
-    addNotification('Seller application '+status,(p.shopName||p.email||uid)+' · '+status,'success');
-  }catch(e){alert('Application update fail: '+e.message);}
-}
-function setWithdrawalFilter(v){withdrawalFilter=v;renderWithdrawalRequests();}
-function startWithdrawalRequests(){
-  if(sellerWithdrawalsListener)db.ref('sellerWithdrawalRequests').off('value',sellerWithdrawalsListener);
-  if(deliveryWithdrawalsListener)db.ref('deliveryWithdrawalRequests').off('value',deliveryWithdrawalsListener);
-  sellerWithdrawalsListener=snap=>{sellerWithdrawalsData=snap.val()||{};renderWithdrawalRequests();};
-  deliveryWithdrawalsListener=snap=>{deliveryWithdrawalsData=snap.val()||{};renderWithdrawalRequests();};
-  db.ref('sellerWithdrawalRequests').on('value',sellerWithdrawalsListener,err=>{$('withdrawalsMsg').textContent='Seller withdrawal requests load nahi hui: '+err.message;});
-  db.ref('deliveryWithdrawalRequests').on('value',deliveryWithdrawalsListener,err=>{$('withdrawalsMsg').textContent='Delivery withdrawal requests load nahi hui: '+err.message;});
-}
-function normalWithdrawalStatus(r){return String((r||{}).status||'pending').toLowerCase().replace(/[ _-]+/g,'');}
-function renderWithdrawalRequests(){
-  const all=[
-    ...Object.entries(sellerWithdrawalsData||{}).map(([id,r])=>({id,r:r||{},kind:'seller'})),
-    ...Object.entries(deliveryWithdrawalsData||{}).map(([id,r])=>({id,r:r||{},kind:'delivery'}))
-  ].filter(x=>{
-    const st=normalWithdrawalStatus(x.r);
-    if(withdrawalFilter==='all')return true;
-    if(withdrawalFilter==='pending')return ['pending','requested','submitted'].includes(st);
-    if(withdrawalFilter==='approved')return ['approved','awaitingpayment','paymentpending'].includes(st);
-    if(withdrawalFilter==='paid')return ['paid','completed','paymentsuccessfullycompleted'].includes(st);
-    if(withdrawalFilter==='rejected')return ['rejected','cancelled','canceled'].includes(st);
-    return true;
-  }).sort((a,b)=>String(b.r.createdAt||b.r.requestedAt||'').localeCompare(String(a.r.createdAt||a.r.requestedAt||'')));
-  $('withdrawalRequestsList').innerHTML=all.length?all.map(({id,r,kind})=>{
-    const st=normalWithdrawalStatus(r),status=String(r.status||'Pending'),person=kind==='seller'?'Seller':'Delivery Partner';
-    const amount=Number(r.amount??r.requestAmount??r.withdrawAmount??0);
-    const canApprove=['pending','requested','submitted'].includes(st),canPaid=['approved','awaitingpayment','paymentpending'].includes(st),alreadyPaid=['paid','completed','paymentsuccessfullycompleted'].includes(st);
-    const bank=[r.accountHolder,r.bankName,r.accountNumber,r.ifsc,r.upiId].filter(Boolean).join(' · ');
-    return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">${person} · ${esc(r.name||r.shopName||r.sellerName||r.deliveryName||r.phone||r.uid||'Account')}</p><h3 class="text-xl font-black">₹${amount.toLocaleString('en-IN',{maximumFractionDigits:2})}</h3><p class="small text-stone-300">Request ID: ${esc(id)}</p><p class="small text-stone-300">Status: ${esc(status)}</p><p class="small text-stone-400">Requested: ${esc(r.createdAt||r.requestedAt||'Date unavailable')}</p>${bank?`<p class="small text-stone-300 break-words">${esc(bank)}</p>`:''}${r.transactionId?`<p class="small text-stone-300">Transaction ID: ${esc(r.transactionId)}</p>`:''}</div></div><div class="flex flex-wrap gap-2 mt-3"><button class="btn primary" type="button" ${!canApprove?'disabled':''} onclick="updateWithdrawal('${kind}','${esc(id)}','approved')">Approve Request</button><button class="btn muted" type="button" ${!canPaid?'disabled':''} onclick="markWithdrawalPaid('${kind}','${esc(id)}')">Payment Successfully Completed</button><button class="btn danger" type="button" ${(!canApprove&&!canPaid)?'disabled':''} onclick="updateWithdrawal('${kind}','${esc(id)}','rejected')">Reject</button></div><p class="small text-amber-200 mt-2">Payment Completed tabhi dabayein jab actual payment transfer ho chuka ho.</p></article>`;
-  }).join(''):'<div class="panel p-5 text-center text-stone-300">Is filter mein koi withdrawal request nahi hai.</div>';
-  $('withdrawalsMsg').textContent=all.length+' withdrawal request(s).';
-}
-async function updateWithdrawal(kind,id,status){
-  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
-  const path=kind==='seller'?'sellerWithdrawalRequests':'deliveryWithdrawalRequests';
-  const current=(kind==='seller'?sellerWithdrawalsData:deliveryWithdrawalsData)[id];
-  if(!current)return;
-  if(status==='approved'&&!confirm('Is withdrawal request ko approve karein?'))return;
-  if(status==='rejected'&&!confirm('Is withdrawal request ko reject karein?'))return;
-  try{await db.ref(path+'/'+id).update({status,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});addNotification('Withdrawal '+status,`${kind} · ₹${Number(current.amount??current.requestAmount??current.withdrawAmount??0)} · ${id}`,status==='rejected'?'error':'success');}
-  catch(e){alert('Withdrawal update fail: '+e.message);}
-}
-async function markWithdrawalPaid(kind,id){
-  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required.');return;}
-  const path=kind==='seller'?'sellerWithdrawalRequests':'deliveryWithdrawalRequests';
-  const data=(kind==='seller'?sellerWithdrawalsData:deliveryWithdrawalsData)[id];
-  if(!data||!['approved','awaitingpayment','paymentpending'].includes(normalWithdrawalStatus(data))){alert('Pehle request approve karein.');return;}
-  const transactionId=prompt('Payment transaction / UTR ID bharein (actual payment karne ke baad):');
-  if(transactionId===null)return;
-  if(!transactionId.trim()){alert('Payment proof ke liye transaction/UTR ID zaroori hai.');return;}
-  if(!confirm('Kya payment sach mein transfer ho gayi hai? Tabhi Completed mark karein.'))return;
-  try{await db.ref(path+'/'+id).update({status:'paid',paymentStatus:'completed',paymentCompletedAt:new Date().toISOString(),paymentCompletedBy:signedInPhone,transactionId:transactionId.trim()});addNotification('Withdrawal payment completed',`${kind} · ₹${Number(data.amount??data.requestAmount??data.withdrawAmount??0)} · UTR ${transactionId.trim()}`,'success');}
-  catch(e){alert('Payment status save nahi hua: '+e.message);}
-}
-
-let sellerCommissionAdminListener=null;
-function startSellerCommissionAdminListener(){
-  if(sellerCommissionAdminListener)db.ref('sellerSettings/commissionPercent').off('value',sellerCommissionAdminListener);
-  sellerCommissionAdminListener=snap=>{
-    const n=Number(snap.val());
-    currentSellerCommission=Number.isFinite(n)&&n>=0&&n<=100?n:10;
-    if($('sellerCommissionPercent'))$('sellerCommissionPercent').value=currentSellerCommission;
-  };
-  db.ref('sellerSettings/commissionPercent').on('value',sellerCommissionAdminListener,err=>{
-    if($('deliverySettingsMsg'))$('deliverySettingsMsg').textContent='Commission load nahi hua: '+err.message;
-  });
-}
-function startDeliverySettingsAdminListener(){startSellerCommissionAdminListener();if(deliverySettingsAdminListener)db.ref('deliverySettings').off('value',deliverySettingsAdminListener);deliverySettingsAdminListener=snap=>{const v=snap.val()||{};currentDeliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};loadDeliverySettingsForm();$('deliverySettingsMsg').textContent='Current settings Firebase se sync ho gayi.';};db.ref('deliverySettings').on('value',deliverySettingsAdminListener,err=>{$('deliverySettingsMsg').textContent='Settings load nahi hui: '+err.message;});}
+function loadDeliverySettingsForm(){if(!$('freeDeliveryAbove'))return;$('freeDeliveryAbove').value=currentDeliverySettings.freeAbove;$('deliveryChargeAmount').value=currentDeliverySettings.charge;updateDeliverySettingsPreview();}
+function startDeliverySettingsAdminListener(){if(deliverySettingsAdminListener)db.ref('deliverySettings').off('value',deliverySettingsAdminListener);deliverySettingsAdminListener=snap=>{const v=snap.val()||{};currentDeliverySettings={freeAbove:Number(v.freeAbove??199),charge:Number(v.charge??49)};loadDeliverySettingsForm();$('deliverySettingsMsg').textContent='Current settings Firebase se sync ho gayi.';};db.ref('deliverySettings').on('value',deliverySettingsAdminListener,err=>{$('deliverySettingsMsg').textContent='Settings load nahi hui: '+err.message;});}
 $('freeDeliveryAbove').addEventListener('input',updateDeliverySettingsPreview);$('deliveryChargeAmount').addEventListener('input',updateDeliverySettingsPreview);
-$('deliverySettingsForm').addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){ $('deliverySettingsMsg').textContent='Admin login required.';return;}const freeAbove=Number($('freeDeliveryAbove').value),charge=Number($('deliveryChargeAmount').value),commission=Number($('sellerCommissionPercent')?.value);if(!Number.isFinite(freeAbove)||freeAbove<0||!Number.isFinite(charge)||charge<0||!Number.isFinite(commission)||commission<0||commission>100){$('deliverySettingsMsg').textContent='Delivery amounts valid aur commission 0 se 100 ke beech hona chahiye.';return;}const btn=$('saveDeliverySettingsBtn');btn.disabled=true;$('deliverySettingsMsg').textContent='Saving…';try{const updatedAt=new Date().toISOString();await db.ref('deliverySettings').set({freeAbove,charge,updatedAt,updatedBy:signedInPhone});await db.ref('sellerSettings/commissionPercent').set(commission);currentDeliverySettings={freeAbove,charge};currentSellerCommission=commission;$('deliverySettingsMsg').textContent='Delivery settings aur seller commission save ho gaye.';addNotification('Seller commission updated',`Seller commission ${commission}% · Free delivery ₹${freeAbove}+ · Charge ₹${charge}`,'success');}catch(err){$('deliverySettingsMsg').textContent='Save failed: '+err.message;}finally{btn.disabled=false;}});
+$('deliverySettingsForm').addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){ $('deliverySettingsMsg').textContent='Admin login required.';return;}const freeAbove=Number($('freeDeliveryAbove').value),charge=Number($('deliveryChargeAmount').value);if(!Number.isFinite(freeAbove)||freeAbove<0||!Number.isFinite(charge)||charge<0){$('deliverySettingsMsg').textContent='Dono amount zero ya usse zyada hone chahiye.';return;}const btn=$('saveDeliverySettingsBtn');btn.disabled=true;$('deliverySettingsMsg').textContent='Saving…';try{await db.ref('deliverySettings').set({freeAbove,charge,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});currentDeliverySettings={freeAbove,charge};$('deliverySettingsMsg').textContent='Delivery settings save ho gayi. User Panel par live update aayega.';addNotification('Delivery charges updated',`Free delivery ₹${freeAbove}+ · Charge ₹${charge}`,'success');}catch(err){$('deliverySettingsMsg').textContent='Save failed: '+err.message;}finally{btn.disabled=false;}});
 
 function updateUnitChoices(){
   const sel=$('productUnit'); if(!sel) return;
@@ -563,9 +454,15 @@ function productImageToDataURL(file){
         const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round((img.naturalWidth||img.width)*scale));canvas.height=Math.max(1,Math.round((img.naturalHeight||img.height)*scale));
         const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Photo canvas open nahi hua.');
         ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        const data=canvas.toDataURL('image/jpeg',0.72);cleanup();
-        if(!data||data.length<100)throw new Error('Photo convert nahi ho paayi. JPG/PNG photo dobara select karein.');
-        resolve(data);
+        canvas.toBlob(async blob=>{
+          cleanup();
+          try{
+            if(!blob||blob.size<100)throw new Error('Photo convert nahi ho paayi. JPG/PNG photo dobara select karein.');
+            const uploadFile=new File([blob],'product-image.jpg',{type:'image/jpeg'});
+            const imageUrl=await uploadImageToR2(uploadFile);
+            resolve(imageUrl);
+          }catch(err){reject(err)}
+        },'image/jpeg',0.72);
       }catch(err){cleanup();reject(err)}
     };
     img.onerror=()=>{cleanup();reject(new Error('Photo browser mein open nahi ho paayi. JPG ya PNG photo select karein.'))};
@@ -608,4 +505,14 @@ async function saveProduct(event){
 function editProduct(id){const p=productsData[id];if(!p)return;$('productEditId').value=id;$('productSeller').value=p.seller||'';$('productCategory').value=p.category||'Grocery';$('productName').value=p.name||'';$('productImageFile').value='';$('productImagePreview').src=p.imageUrl||'';$('productImagePreview').classList.toggle('hidden',!p.imageUrl);$('productQty').value=p.quantity||'1';$('productPrice').value=Number(p.price||0);$('productStock').value=Number(p.stock||0);$('productStockUnit').value=p.stockUnit||((['Fruits','Vegetables'].includes(p.category))?'kg':'Piece');$('productDescription').value=p.description||'';updateUnitChoices();$('productUnit').value=p.unit||'Piece';updateProductPreview();$('saveProductBtn').textContent='Update Product';$('productMsg').textContent='Product edit mode mein hai.';window.scrollTo({top:0,behavior:'smooth'});}
 async function deleteProduct(id){if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}const p=productsData[id];if(!p)return;if(!confirm('Product "'+(p.name||id)+'" ko sellerProducts catalogue se delete karna hai?'))return;try{await db.ref('sellerProducts/'+id).remove();addNotification('Product deleted',p.name||id,'error');}catch(e){alert('Delete fail: '+e.message);addNotification('Product delete failed',e.message||'Product delete nahi hua.','error');}}
 function exportCSV(){const rows=[['Order ID','Customer','Phone','Address','Product','Total','Payment','Status','Date'],...Object.entries(ordersData).map(([id,o])=>[id,o.customerName||'',o.customerPhone||'',o.shippingAddress||'',o.product||'',o.totalAmount||0,o.paymentStatus||o.paymentMethod||'',o.status||'',o.dateTime||o.createdAt||''])];const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='modeluxe-orders.csv';a.click();URL.revokeObjectURL(a.href);addNotification('Orders exported','Orders की CSV फाइल export की गई।','success');}
+
+// 4-panel owner controls: application decisions, commission and withdrawal approvals.
+let sellerAppsCache={},withdrawCache={};let appStatusFilter='pending';
+function startOwnerManagement(){db.ref('sellerApplications').on('value',s=>{sellerAppsCache=s.val()||{};renderSellerApplications(appStatusFilter);});db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();});db.ref('commissionSettings').on('value',s=>{const v=s.val()||{};$('defaultCommission').value=Number(v.defaultCommission??10);$('deliveryBoyPayoutAdmin').value=Number(v.deliveryBoyPayout??20);});}
+function renderSellerApplications(status='pending'){appStatusFilter=status;const rows=Object.entries(sellerAppsCache).filter(([id,a])=>(a.status||a.applicationStatus||'pending')===status);$('sellerApplicationsList').innerHTML=rows.map(([uid,a])=>`<article class="order-card mb-3"><b>${esc(a.shopName||'Store')}</b><div class="small">${esc(a.email||'')} · ${esc(a.phone||'')}</div><div class="small">Aadhaar ending ${esc(a.aadhaarLast4||'----')} · PAN ending ${esc(a.panLast4||'----')}</div><div class="small">Status: ${esc(a.status||a.applicationStatus||'pending')}</div><div class="flex gap-2 mt-2 flex-wrap"><button class="btn success" onclick="decideSeller('${esc(uid)}','approved')">Approve</button><button class="btn danger" onclick="decideSeller('${esc(uid)}','rejected')">Cancel</button><button class="btn muted" onclick="decideSeller('${esc(uid)}','suspended')">Suspend</button><button class="btn muted" onclick="showSellerApplication('${esc(uid)}')">Details</button></div></article>`).join('')||'<p class="small">Is status mein koi application nahi.</p>';}
+window.decideSeller=async(uid,status)=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const now=new Date().toISOString();const updates={};updates['sellerApplications/'+uid+'/status']=status;updates['sellerApplications/'+uid+'/reviewedAt']=now;updates['sellerApplications/'+uid+'/reviewedBy']=signedInPhone;updates['sellerProfiles/'+uid+'/applicationStatus']=status;updates['sellerProfiles/'+uid+'/status']=status;await db.ref().update(updates);addNotification('Seller application '+status,uid,'success');};
+window.showSellerApplication=uid=>{const a=sellerAppsCache[uid]||{};alert('Store: '+(a.shopName||'')+'\nEmail: '+(a.email||'')+'\nMobile: '+(a.phone||'')+'\nAadhaar ending: '+(a.aadhaarLast4||'----')+'\nPAN ending: '+(a.panLast4||'----')+'\nKYC: '+(a.kycStatus||'Not verified'));};
+function renderWithdrawals(){const rows=[];for(const [type,users] of Object.entries(withdrawCache||{}))for(const [uid,items] of Object.entries(users||{}))for(const [id,r] of Object.entries(items||{}))rows.push({type,uid,id,...r});$('withdrawalsList').innerHTML=rows.map(r=>`<article class="order-card mb-2"><b>${esc(r.type)} · ${esc(r.shopName||r.name||r.uid)}</b><div class="small">₹${Number(r.amount||0).toLocaleString('en-IN')} · ${esc(r.status||'pending')} · ${esc(r.createdAt||'')}</div><div class="flex gap-2 mt-2"><button class="btn success" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve</button><button class="btn primary" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Paid</button><button class="btn danger" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Reject</button></div></article>`).join('')||'<p class="small">No withdrawal requests.</p>';}
+window.reviewWithdrawal=async(type,uid,id,status)=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');await db.ref(`withdrawalRequests/${type}/${uid}/${id}`).update({status,reviewedAt:new Date().toISOString(),reviewedBy:signedInPhone});alert('Withdrawal status updated: '+status);};
+window.saveCommissionSettings=async()=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return;const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);if(defaultCommission<0||defaultCommission>100||deliveryBoyPayout<0)return alert('Values check karein');await db.ref('commissionSettings').set({defaultCommission,deliveryBoyPayout,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});await db.ref('deliverySettings/deliveryBoyPayout').set(deliveryBoyPayout);$('commissionMsg').textContent='Commission aur delivery payout save ho gaye.';};
 </script></body></html>
