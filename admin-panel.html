@@ -76,7 +76,7 @@ header{color:#111827}
 <div id="ordersList" class="space-y-3"></div>
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
-<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted" onclick="loadSellerApplications('pending')">Pending</button><button class="btn muted" onclick="loadSellerApplications('approved')">Approved</button><button class="btn muted" onclick="loadSellerApplications('rejected')">Cancelled</button><button class="btn muted" onclick="loadSellerApplications('suspended')">Suspended</button></div><div id="sellerApplicationsList"></div></div>
+<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted" onclick="loadSellerApplications('pending')">Pending</button><button class="btn muted" onclick="loadSellerApplications('approved')">Approved</button><button class="btn muted" onclick="loadSellerApplications('rejected')">Cancelled</button><button class="btn muted" onclick="loadSellerApplications('suspended')">Suspended</button><button class="btn primary" type="button" onclick="loadSellerApplications(appStatusFilter)">↻ Refresh</button></div><div id="sellerApplicationsList"></div></div>
 <div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
 <div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
 
@@ -602,14 +602,15 @@ function sellerApplicationData(a){
  return nested&&typeof nested==='object'?{...a,...nested}:a||{};
 }
 function sellerApplicationStatus(a){
- const d = sellerApplicationData(a);
- const values = [d.applicationStatus, d.status, d.approvalStatus, d.accountStatus, d.sellerStatus]
-  .map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
- 
- if(values.includes('pending') || values.includes('under_review') || values.includes('under review') || values.length === 0) return 'pending';
- if(values.includes('suspended')) return 'suspended';
- if(values.includes('approved') || values.includes('active')) return 'approved';
- if(values.includes('rejected') || values.includes('cancelled') || values.includes('canceled')) return 'rejected';
+ const d=sellerApplicationData(a);
+ const values=[d.applicationStatus,d.status,d.approvalStatus,d.accountStatus,d.sellerStatus]
+  .map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+ // If any application field explicitly says pending, keep it in Pending.
+ if(values.includes('pending')||values.includes('under_review')||values.includes('under review'))return 'pending';
+ if(values.includes('suspended'))return 'suspended';
+ if(values.includes('approved')||values.includes('active'))return 'approved';
+ if(values.includes('rejected')||values.includes('cancelled')||values.includes('canceled'))return 'rejected';
+ // Older applications without a status are treated as pending, not hidden.
  return 'pending';
 }
 function updateSellerPendingIndicator(){
@@ -627,21 +628,19 @@ function updateSellerPendingIndicator(){
  lastPendingSellerIds=new Set(pending.map(([uid])=>uid));sellerAppsFirstLoad=false;
 }
 function startOwnerManagement(){
-  db.ref('sellerApplications').off('value');
-  db.ref('sellerApplications').on('value', s => {
-    const raw = s.val() || {};
-    sellerAppsCache = (raw.applications && typeof raw.applications === 'object') ? raw.applications : raw;
-    updateSellerPendingIndicator();
-    renderSellerApplications(appStatusFilter);
-  }, e => {
-    const list = $('sellerApplicationsList');
-    if(list) list.innerHTML = '<div class="order-card"><b style="color:#b91c1c">Seller applications read error</b><p class="small mt-2">' + esc(e && e.message || 'Firebase permission denied') + '</p></div>';
-    addNotification('Seller applications read error', e && e.message || 'Firebase permission denied at /sellerApplications.', 'error');
-  });
-  
-  
-  db.ref('withdrawalRequests').on('value', s => { withdrawCache = s.val() || {}; renderWithdrawals(); }, e => {});
-  db.ref('commissionSettings').on('value', s => { const v = s.val() || {}; $('defaultCommission').value = Number(v.defaultCommission ?? 10); $('deliveryBoyPayoutAdmin').value = Number(v.deliveryBoyPayout ?? 20); }, e => {});
+ db.ref('sellerApplications').off('value');
+ db.ref('sellerApplications').on('value',s=>{
+   const raw=s.val()||{};
+   sellerAppsCache=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+   updateSellerPendingIndicator();
+   renderSellerApplications(appStatusFilter);
+ },e=>{
+   const list=$('sellerApplicationsList');
+   if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications read error</b><p class="small mt-2">'+esc(e&&e.message||'Firebase permission denied at /sellerApplications.')+'</p></div>';
+   addNotification('Seller applications read error',e&&e.message||'Firebase permission denied at /sellerApplications.','error');
+ });
+ db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();},e=>{addNotification('Withdrawal read error',e&&e.message||'Firebase permission denied at /withdrawalRequests.','error');});
+ db.ref('commissionSettings').on('value',s=>{const v=s.val()||{};$('defaultCommission').value=Number(v.defaultCommission??10);$('deliveryBoyPayoutAdmin').value=Number(v.deliveryBoyPayout??20);},e=>addNotification('Settings read error',e&&e.message||'Firebase permission denied at /commissionSettings.','error'));
 }
 function renderSellerApplications(status='pending'){
  appStatusFilter=status;
@@ -659,16 +658,28 @@ function renderSellerApplications(status='pending'){
 window.loadSellerApplications=async function(status='pending'){
  appStatusFilter=status;
  const list=$('sellerApplicationsList');if(!list)return;
- list.innerHTML='<p class="small">Firebase se applications load ho rahi hain…</p>';
+ list.innerHTML='<p class="small">Firebase /sellerApplications se data load ho raha hai…</p>';
  try{
-  if(!auth.currentUser)throw new Error('Admin Firebase login session nahi mila. Logout karke dobara login karein.');
-  const snap=await db.ref('sellerApplications').once('value');
+  const user=auth.currentUser;
+  if(!user)throw new Error('Firebase Auth session missing. Admin ko Firebase mein dobara sign-in karna hoga.');
+  await user.getIdToken(true);
+  const snap=await db.ref('/sellerApplications').once('value');
   const raw=snap.val()||{};
-  sellerAppsCache=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+  // Firebase record is expected as /sellerApplications/{sellerUid}; also support wrapped exports.
+  const source=(raw.applications&&typeof raw.applications==='object')?raw.applications:raw;
+  sellerAppsCache=Object.fromEntries(Object.entries(source).filter(([k,v])=>v&&typeof v==='object'));
+  updateSellerPendingIndicator();
   renderSellerApplications(status);
+  const count=Object.keys(sellerAppsCache).length;
+  const diag=document.createElement('p');
+  diag.className='small mt-3';
+  diag.style.color='#64748b';
+  diag.textContent='Firebase read successful · UID: '+user.uid+' · Records: '+count+' · Path: /sellerApplications';
+  list.appendChild(diag);
  }catch(err){
-  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller applications load error</b><p class="small mt-2">'+esc(err&&err.message||err)+'</p><p class="small mt-2">Path: /sellerApplications</p><p class="small">Firebase UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p></div>';
-  addNotification('Seller applications load error',err&&err.message||String(err),'error');
+  const msg=err&&err.message?err.message:String(err);
+  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Firebase applications load failed</b><p class="small mt-2">'+esc(msg)+'</p><p class="small mt-2">UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL)+'</p><p class="small">Path: /sellerApplications</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter)">Try Again</button></div>';
+  addNotification('Seller applications load error',msg,'error');
  }
 };
 window.decideSeller=async(uid,status)=>{
