@@ -238,7 +238,7 @@ async function uploadImageToR2(file){
   if(!currentUser)throw new Error("Pehle seller login karein.");
   if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Valid image select karein.");
   if(file.size>8*1024*1024)throw new Error("Photo 8 MB se chhoti rakhein.");
-  const token=await currentUser.getIdToken();
+  const token = await currentUser.getIdToken(true);
   const form=new FormData();form.append("file",file,file.name||"product-image");
   let res;
   try{
