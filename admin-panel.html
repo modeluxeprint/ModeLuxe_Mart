@@ -759,18 +759,27 @@ function renderSellerApplications(status='pending'){
    <div class="small">Source: ${esc((a._source||[]).join(', '))}</div>
 
    <div class="flex gap-2 mt-2 flex-wrap">
-    <button class="btn success seller-action-btn" type="button"
-     data-seller-action="approved"
-     data-seller-uid="${esc(uid)}">Approve</button>
-
-    <button class="btn danger seller-action-btn" type="button"
-     data-seller-action="cancelled"
-     data-seller-uid="${esc(uid)}">Cancel</button>
-
-    <button class="btn muted seller-action-btn" type="button"
-     data-seller-action="suspended"
-     data-seller-uid="${esc(uid)}">Suspend</button>
-
+    ${status==='approved'
+      ? `<button class="btn muted seller-action-btn" type="button"
+          data-seller-action="suspended"
+          data-seller-uid="${esc(uid)}">Suspend</button>`
+      : status==='suspended'
+      ? `<button class="btn success seller-action-btn" type="button"
+          data-seller-action="approved"
+          data-seller-uid="${esc(uid)}">Restore / Approve</button>`
+      : status==='rejected'
+      ? `<button class="btn success seller-action-btn" type="button"
+          data-seller-action="approved"
+          data-seller-uid="${esc(uid)}">Approve</button>`
+      : `<button class="btn success seller-action-btn" type="button"
+          data-seller-action="approved"
+          data-seller-uid="${esc(uid)}">Approve</button>
+         <button class="btn danger seller-action-btn" type="button"
+          data-seller-action="cancelled"
+          data-seller-uid="${esc(uid)}">Cancel</button>
+         <button class="btn muted seller-action-btn" type="button"
+          data-seller-action="suspended"
+          data-seller-uid="${esc(uid)}">Suspend</button>`}
     <button class="btn muted seller-details-btn" type="button"
      data-seller-uid="${esc(uid)}"
      onclick="window.showSellerApplication(this.getAttribute('data-seller-uid'))">Details</button>
@@ -924,7 +933,7 @@ window.showSellerApplication=uid=>{
  const a=sellerApplicationData(raw);
  const content=$('sellerDetailsContent');
  const niceKey=k=>String(k).replace(/([A-Z])/g,' $1').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
- const blocked=/(password|token|secret|otp|authorization|credential|aadhaar(number)?|pan(number)?|full.?document|base64)/i;
+ const blocked=/(password|token|secret|otp|authorization|credential|full.?document|base64|^aadhaar$|^pan$|aadhaarNumber|panNumber|aadhaarImage|panImage)/i;
  const rows=[];
  const walk=(obj,prefix='')=>{
   if(!obj||typeof obj!=='object')return;
@@ -941,15 +950,16 @@ window.showSellerApplication=uid=>{
  walk(a);
  const status=sellerApplicationStatus(raw);
  const actionButtons=status==='approved'
-  ?'<button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button><button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="'+esc(uid)+'">Suspend Application</button>'
+  ?'<button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="'+esc(uid)+'">Suspend Application</button>'
   :status==='rejected'
   ?'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button>'
   :status==='suspended'
-  ?'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button><button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button>'
+  ?'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Restore / Approve Application</button>'
   :'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button><button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button><button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="'+esc(uid)+'">Suspend Application</button>';
  content.innerHTML=
   '<div class="order-card mb-3"><div class="text-lg font-bold">'+esc(a.shopName||a.sellerName||a.storeName||'Seller Store')+'</div><p class="small mt-1">Application Status: <b>'+esc(status)+'</b></p><p class="small break-all">Seller UID: '+esc(uid)+'</p><p class="small">Source: '+esc((raw._source||[]).join(', '))+'</p></div>'+
   '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">'+rows.map(([k,v])=>'<div class="rounded-xl border border-blue-100 p-3 min-w-0"><div class="small text-stone-500">'+esc(k)+'</div><div class="font-semibold break-words">'+esc(v)+'</div></div>').join('')+'</div>'+
+  '<div class="rounded-xl border border-blue-100 p-3 mt-3"><h3 class="font-bold gold mb-2">Identity Documents (Masked)</h3><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div><div class="small text-stone-500">Aadhaar Number</div><div class="font-semibold">XXXX-XXXX-'+esc(a.aadhaarLast4||'Not provided')+'</div></div><div><div class="small text-stone-500">PAN Number</div><div class="font-semibold">XXXXXX'+esc(a.panLast4||'Not provided')+'</div></div></div><p class="small mt-2">Security ke liye poora Aadhaar/PAN number yahan show nahi hota; sirf last 4 characters dikhaye jaate hain.</p></div>'+
   (rows.length?'':'<p class="small">Is application mein additional details available nahi hain.</p>')+
   '<div class="flex flex-wrap gap-2 mt-4">'+actionButtons+'</div>'+
   '<p id="seller-action-'+esc(uid)+'" class="small mt-3" aria-live="polite">Seller details loaded.</p>';
