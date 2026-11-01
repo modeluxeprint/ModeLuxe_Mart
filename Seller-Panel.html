@@ -188,6 +188,7 @@ window.mlmVolatileStore = (() => {
 <button id="addTab" class="active" type="button">＋ Add Product</button>
 <button id="mineTab" type="button">My Products</button>
 <button id="profileTab" type="button">My Account</button>
+<button id="supportTab" type="button">Help &amp; Support</button>
 </div>
 
 <section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrdersList" class="muted">Orders load ho rahe hain…</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
@@ -217,6 +218,23 @@ window.mlmVolatileStore = (() => {
 <section id="mineSection" class="card hidden"><h2>My Products</h2><div class="field"><label for="productSearch">Search my products</label><input id="productSearch" placeholder="Product name ya category"></div><div id="myProductsList"></div><p id="productsMsg" class="muted" aria-live="polite">Aapke products load ho rahe hain…</p></section>
 
 <section id="profileSection" class="card hidden"><h2>My Account</h2><form id="profileForm" class="grid"><div class="field"><label for="profileShop">Shop / Seller Name *</label><input id="profileShop" required maxlength="80"></div><div class="field"><label for="profilePhone">Mobile Number *</label><input id="profilePhone" required inputmode="numeric" maxlength="10"></div><div class="field full"><label>Email (account login)</label><input id="profileEmail" disabled></div><div class="field full"><button class="primary" type="submit">Save Account Details</button></div></form><p id="profileMsg" class="muted" aria-live="polite"></p><div class="divider"></div><p class="hint">Account delete karne ke liye Admin se sampark karein. Account delete kiye bina password reset Firebase ke “Forgot password” flow se baad mein add kiya ja sakta hai.</p></section>
+<section id="supportSection" class="card hidden">
+ <h2>Help &amp; Support</h2>
+ <p class="muted">Kisi bhi problem ke liye complaint ticket submit karein. Aap apne ticket ka status aur Admin ka reply yahin dekh sakte hain.</p>
+ <div class="msg" style="background:#eff6ff;color:#164e84"><b>Email:</b> vaishumodeluxe@gmail.com<br><b>Contact:</b> 7818995955</div>
+ <div class="grid" style="margin-bottom:14px">
+  <div class="field"><button id="supportEmailBtn" class="secondary" type="button" style="width:100%">✉ Email Support</button></div>
+  <div class="field"><button id="supportCallBtn" class="secondary" type="button" style="width:100%">☎ Call Support</button></div>
+ </div>
+ <form id="supportTicketForm" class="grid">
+  <div class="field"><label for="ticketSubject">Complaint Category *</label><select id="ticketSubject" required><option value="">Select problem</option><option>Product Listing</option><option>Photo Upload</option><option>Orders</option><option>Wallet / Withdrawal</option><option>Account / Login</option><option>Payment</option><option>Other</option></select></div>
+  <div class="field"><label for="ticketPriority">Priority</label><select id="ticketPriority"><option value="normal">Normal</option><option value="high">High</option></select></div>
+  <div class="field full"><label for="ticketMessage">Complaint Details *</label><textarea id="ticketMessage" rows="4" maxlength="2000" required placeholder="Apni problem detail mein likhein..."></textarea></div>
+  <div class="field full"><button id="raiseTicketBtn" class="primary" type="submit">Raise Support Ticket</button></div>
+ </form>
+ <p id="ticketMsg" class="muted" aria-live="polite"></p>
+ <div class="divider"></div><h2 style="font-size:18px">My Tickets</h2><div id="mySupportTickets" class="muted">Tickets load ho rahe hain…</div>
+</section>
 </section>
 <div class="muted" style="text-align:center;padding:14px 0 30px">ModeLuxe Mart · Seller account data ko Firebase Security Rules se protect karna zaroori hai.</div>
 </main>
@@ -552,8 +570,9 @@ $("walletHeaderBtn").onclick=()=>{
 };
 $("sellerOrdersTab").onclick=()=>{closeWalletPanel();showSellerExtra("orders");};
 function showSellerExtra(which){
- ["sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));
+ ["sellerOrdersSection","addSection","mineSection","profileSection","supportSection"].forEach(id=>$(id).classList.add("hidden"));
  if(which==="orders")$("sellerOrdersSection").classList.remove("hidden");
+ if(which==="support")$("supportSection").classList.remove("hidden");
 }
 $("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
 function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
@@ -563,9 +582,11 @@ function renderMyProducts(){const q=$("productSearch").value.trim().toLowerCase(
 $("productSearch").oninput=renderMyProducts;
 function switchTab(tab){
  closeWalletPanel();
+ $("sellerOrdersSection").classList.add("hidden");
  $("addSection").classList.toggle("hidden",tab!=="add");
  $("mineSection").classList.toggle("hidden",tab!=="mine");
  $("profileSection").classList.toggle("hidden",tab!=="profile");
+ $("supportSection").classList.toggle("hidden",tab!=="support");
  $("addTab").classList.toggle("active",tab==="add");
  $("mineTab").classList.toggle("active",tab==="mine");
  $("profileTab").classList.toggle("active",tab==="profile");
@@ -646,6 +667,36 @@ $("sellerPauseBtn").onclick=async()=>{
  }catch(err){showSellerNotice("Shop status update nahi hua: "+(err.message||err),"error");}
  finally{btn.disabled=false;}
 };
+// Seller support: tickets are isolated under the authenticated seller UID.
+const SUPPORT_EMAIL = "vaishumodeluxe@gmail.com";
+const SUPPORT_PHONE = "7818995955";
+let sellerSupportListener=null;
+function startSellerSupportTickets(){
+ if(!currentUser)return;
+ const ref=db.ref("supportTickets/seller/"+currentUser.uid);
+ if(sellerSupportListener)ref.off("value",sellerSupportListener);
+ sellerSupportListener=snap=>{
+  const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||"").localeCompare(String((a[1]||{}).createdAt||"")));
+  $("mySupportTickets").innerHTML=rows.length?rows.map(([id,t])=>'<article class="msg" style="background:#f8fafc;border:1px solid var(--line);color:var(--text)"><b>'+esc(t.ticketNo||id)+'</b> · <b>'+esc(t.status||"Pending")+'</b><div class="hint">'+esc(t.subject||"Other")+' · '+esc(t.createdAt||"")+'</div><p style="margin:7px 0">'+esc(t.message||"")+'</p>'+(t.adminReply?'<div class="msg success"><b>Admin Reply:</b> '+esc(t.adminReply)+'</div>':'<span class="hint">Admin reply ka wait hai.</span>')+'</article>').join(""):'<div class="msg">Abhi koi support ticket nahi hai.</div>';
+ };
+ ref.on("value",sellerSupportListener,err=>$("mySupportTickets").textContent="Tickets load nahi hue: "+err.message);
+}
+$("supportTab").onclick=()=>{switchTab("support");startSellerSupportTickets();};
+$("supportEmailBtn").onclick=()=>{if(!SUPPORT_EMAIL)return showSellerNotice("Official support email abhi configure nahi hua. Filhaal Raise Support Ticket ka use karein.","error");location.href="mailto:"+SUPPORT_EMAIL;};
+$("supportCallBtn").onclick=()=>{if(!SUPPORT_PHONE)return showSellerNotice("Official support number abhi configure nahi hua. Filhaal Raise Support Ticket ka use karein.","error");location.href="tel:"+SUPPORT_PHONE;};
+$("supportTicketForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(!currentUser)return showMsg("ticketMsg","Please login karein.","error");
+ const btn=$("raiseTicketBtn"),subject=$("ticketSubject").value,message=$("ticketMessage").value.trim(),priority=$("ticketPriority").value;
+ if(!subject||!message)return showMsg("ticketMsg","Category aur complaint details bharein.","error");
+ btn.disabled=true;showMsg("ticketMsg","Ticket submit ho raha hai…");
+ try{
+  const ref=db.ref("supportTickets/seller/"+currentUser.uid).push(),now=new Date().toISOString();
+  const ticket={id:ref.key,ticketNo:"MLM-"+Date.now().toString().slice(-8),sellerUid:currentUser.uid,sellerName:sellerProfile.shopName||"Seller",sellerEmail:currentUser.email||"",subject,message,priority,status:"Pending",createdAt:now,updatedAt:now,adminReply:""};
+  await ref.set(ticket);$("supportTicketForm").reset();showMsg("ticketMsg","Complaint submit ho gayi. Ticket No: "+ticket.ticketNo,"success");startSellerSupportTickets();
+ }catch(err){showMsg("ticketMsg","Ticket submit nahi hui: "+(err.message||err)+". Firebase Rules mein supportTickets/seller/current UID par write/read permission chahiye.","error");}
+ finally{btn.disabled=false;}
+});
+
 $("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const shop=$("profileShop").value.trim(),phone=$("profilePhone").value.trim();if(!shop||!/^\d{10}$/.test(phone)){showMsg("profileMsg","Shop name aur sahi 10-digit mobile number bharein.","error");return;}try{sellerProfile={...sellerProfile,uid:currentUser.uid,email:currentUser.email||"",shopName:shop,phone,updatedAt:new Date().toISOString(),accountType:"seller"};await db.ref("sellerProfiles/"+currentUser.uid).update(sellerProfile);$("sellerHeading").textContent=shop;showMsg("profileMsg","Account details save ho gayi.","success");}catch(e2){showMsg("profileMsg","Save nahi hua: "+e2.message,"error");}});
 </script>
 </body>
