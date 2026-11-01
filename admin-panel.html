@@ -874,7 +874,39 @@ window.decideSeller=async function(uid,status,button){
 // Seller application actions use direct inline handlers on each rendered button.
 // This avoids mobile event-delegation issues when the Firebase list is re-rendered.
 window.showSellerApplication=uid=>{const a=sellerApplicationData(sellerAppsCache[uid]||{});alert('Store: '+(a.shopName||a.sellerName||a.storeName||'')+'\\nEmail: '+(a.email||'')+'\\nMobile: '+(a.phone||a.mobile||'')+'\\nAadhaar ending: '+(a.aadhaarLast4||'----')+'\\nPAN ending: '+(a.panLast4||'----')+'\\nKYC: '+(a.kycStatus||'Not verified'));};
-function renderWithdrawals(){const rows=[];for(const [type,users] of Object.entries(withdrawCache||{}))for(const [uid,items] of Object.entries(users||{}))for(const [id,r] of Object.entries(items||{}))rows.push({type,uid,id,...r});$('withdrawalsList').innerHTML=rows.map(r=>`<article class="order-card mb-2"><b>${esc(r.type)} · ${esc(r.shopName||r.name||r.uid)}</b><div class="small">₹${Number(r.amount||0).toLocaleString('en-IN')} · ${esc(r.status||'pending')} · ${esc(r.createdAt||'')}</div><div class="flex gap-2 mt-2"><button class="btn success" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve</button><button class="btn primary" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Paid</button><button class="btn danger" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Reject</button></div></article>`).join('')||'<p class="small">No withdrawal requests.</p>';}
+(function installSellerApplicationButtonDelegation(){
+ if(window.__sellerAppDelegationInstalled)return;
+ window.__sellerAppDelegationInstalled=true;
+
+ document.addEventListener('click',function(event){
+  const actionButton=event.target&&event.target.closest
+   ?event.target.closest('button[data-seller-action]')
+   :null;
+
+  if(!actionButton)return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const uid=actionButton.getAttribute('data-seller-uid')||'';
+  const status=actionButton.getAttribute('data-seller-action')||'';
+
+  const card=actionButton.closest('article');
+  const result=card&&card.querySelector('[id^="seller-action-"]');
+
+  if(result){
+   result.textContent='BUTTON CLICK RECEIVED · '+status+' · UID '+uid;
+  }
+
+  if(typeof window.decideSeller==='function'){
+   window.decideSeller(uid,status,actionButton);
+  }else{
+   if(result)result.textContent='ERROR · decideSeller function load nahi hui.';
+   alert('Seller action function load nahi hui. Page refresh karein.');
+  }
+ },true);
+})();
+  function renderWithdrawals(){const rows=[];for(const [type,users] of Object.entries(withdrawCache||{}))for(const [uid,items] of Object.entries(users||{}))for(const [id,r] of Object.entries(items||{}))rows.push({type,uid,id,...r});$('withdrawalsList').innerHTML=rows.map(r=>`<article class="order-card mb-2"><b>${esc(r.type)} · ${esc(r.shopName||r.name||r.uid)}</b><div class="small">₹${Number(r.amount||0).toLocaleString('en-IN')} · ${esc(r.status||'pending')} · ${esc(r.createdAt||'')}</div><div class="flex gap-2 mt-2"><button class="btn success" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve</button><button class="btn primary" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Paid</button><button class="btn danger" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Reject</button></div></article>`).join('')||'<p class="small">No withdrawal requests.</p>';}
 window.reviewWithdrawal=async(type,uid,id,status)=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');await db.ref(`withdrawalRequests/${type}/${uid}/${id}`).update({status,reviewedAt:new Date().toISOString(),reviewedBy:signedInPhone});alert('Withdrawal status updated: '+status);};
 window.saveCommissionSettings=async()=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return;const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);if(defaultCommission<0||defaultCommission>100||deliveryBoyPayout<0)return alert('Values check karein');await db.ref('commissionSettings').set({defaultCommission,deliveryBoyPayout,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});await db.ref('deliverySettings/deliveryBoyPayout').set(deliveryBoyPayout);$('commissionMsg').textContent='Commission aur delivery payout save ho gaye.';};
 
