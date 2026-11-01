@@ -551,16 +551,20 @@ $("sellerWithdrawBtn").onclick=async()=>{
 
 let activeCourierPartners={};
 let sellerOrdersCache={},rootOrdersCache={};
+let sellerOrdersReadState="connecting",rootOrdersReadState="connecting";
 function sellerOrderForId(id){
  const direct=sellerOrdersCache[id];
  if(direct)return direct;
  const raw=rootOrdersCache[id];
  if(!raw)return null;
- const uid=currentUser&&currentUser.uid;
- const items=(Array.isArray(raw.items)?raw.items:[]).filter(i=>
-  String(i&&i.sellerUid||"")===String(uid||"") ||
-  (i&&i.id!==undefined&&Object.prototype.hasOwnProperty.call(myProducts,String(i.id)))
- );
+ const uid=String(currentUser&&currentUser.uid||"");
+ const items=(Array.isArray(raw.items)?raw.items:[]).filter(i=>{
+   if(!i)return false;
+   const itemSellerUid=String(i.sellerUid||"");
+   if(itemSellerUid)return itemSellerUid===uid;
+   // Legacy orders without sellerUid: match only a product ID in this seller's private catalogue.
+   return i.id!==undefined&&Object.prototype.hasOwnProperty.call(myProducts,String(i.id));
+ });
  if(!items.length)return null;
  return {
   orderId:id,sellerUid:uid,items,
@@ -578,20 +582,47 @@ function sellerOrderForId(id){
 function renderSellerOrders(){
  const combined={...rootOrdersCache,...sellerOrdersCache};
  const rows=Object.keys(combined).map(id=>[id,sellerOrderForId(id)]).filter(([id,o])=>o);
- $("sellerOrdersList").innerHTML=rows.sort((a,b)=>String((b[1]||{}).createdAt||"").localeCompare(String((a[1]||{}).createdAt||""))).map(([id,o])=>`<article class="product"><div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(o.status||"Order Placed")}</div><div class="meta">${esc((o.items||[]).map(i=>i.name).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:`<div class="actions"><select id="courierPick_${esc(id)}"><option value="">Select courier partner</option>${Object.entries(activeCourierPartners).map(([pid,p])=>`<option value="${esc(pid)}">${esc(p.name)}</option>`).join("")}</select><button class="primary" onclick="bookSellerCourier('${esc(id)}')">Book Courier via API</button></div>`}<div class="actions"><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Processing')">Seller Processing</button><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')">Shipped</button></div></div></article>`).join("")||"No seller orders.";
+ const cards=rows.sort((a,b)=>String((b[1]||{}).createdAt||"").localeCompare(String((a[1]||{}).createdAt||""))).map(([id,o])=>`<article class="product"><div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(o.status||"Order Placed")}</div><div class="meta">${esc((o.items||[]).map(i=>i.name).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:`<div class="actions"><select id="courierPick_${esc(id)}"><option value="">Select courier partner</option>${Object.entries(activeCourierPartners).map(([pid,p])=>`<option value="${esc(pid)}">${esc(p.name)}</option>`).join("")}</select><button class="primary" onclick="bookSellerCourier('${esc(id)}')">Book Courier via API</button></div>`}<div class="actions"><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Processing')">Seller Processing</button><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')">Shipped</button></div></div></article>`).join("");
+ if(cards){$("sellerOrdersList").innerHTML=cards;return;}
+ if(sellerOrdersReadState==="denied"&&rootOrdersReadState==="denied"){
+  $("sellerOrdersList").innerHTML='<div class="msg error"><b>Firebase access blocked.</b><br>Seller Panel ko <code>sellerOrders/{yourSellerUID}</code> aur <code>orders</code> dono paths read karne ki permission nahi mil rahi. Firebase Realtime Database Rules check karni hongi.</div>';
+ }else if(rootOrdersReadState==="denied"){
+  $("sellerOrdersList").innerHTML='<div class="msg error"><b>Customer orders read nahi ho pa rahe.</b><br>User Panel ka main order path <code>orders/{orderId}</code> hai, lekin Firebase Rules Seller Panel ko ise read karne nahi de rahe. Seller-specific <code>sellerOrders/{yourSellerUID}</code> path bhi check karein.</div>';
+ }else if(sellerOrdersReadState==="denied"){
+  $("sellerOrdersList").innerHTML='<div class="msg error"><b>Seller order list read nahi hui.</b><br><code>sellerOrders/{yourSellerUID}</code> par Firebase read permission check karein. Main customer order path <code>orders</code> se recovery chal rahi hai.</div>';
+ }else if(sellerOrdersReadState==="loaded"&&rootOrdersReadState==="loaded"){
+  $("sellerOrdersList").textContent="Abhi is Seller ke liye koi order nahi mila. Naye order ke product mein sellerUid isi Seller account UID ka hona chahiye.";
+ }else{
+  $("sellerOrdersList").textContent="Firebase se orders load ho rahe hain…";
+ }
 }
 function startSellerOrders(){
  if(!currentUser)return;
  sellerOrdersCache={};rootOrdersCache={};
- db.ref("courierPartners").on("value",s=>{activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));$("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";renderSellerOrders();});
- // Primary path written by the User Panel: sellerOrders/{sellerUid}/{orderId}
- db.ref("sellerOrders/"+currentUser.uid).on("value",s=>{sellerOrdersCache=s.val()||{};renderSellerOrders();},e=>{console.error("Seller-specific order read failed:",e);$("sellerOrdersList").textContent="Seller orders read nahi ho paaye: "+(e.message||e);});
- // Recovery path: older customer orders stored only at orders/{orderId}.
- // Match this seller's items by sellerUid OR by product IDs in this seller's private catalogue.
- db.ref("orders").on("value",s=>{rootOrdersCache=s.val()||{};renderSellerOrders();},e=>{console.error("Customer order recovery read failed:",e);});
+ sellerOrdersReadState="connecting";rootOrdersReadState="connecting";
+ db.ref("courierPartners").on("value",s=>{
+  activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));
+  $("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";
+  renderSellerOrders();
+ },e=>{$("sellerCourierPartnersStatus").textContent="Courier settings read error: "+(e.message||e);});
+ // Customer Panel's canonical saved-order path is /orders/{orderId}.
+ // Seller view filters each order's items against the logged-in seller UID/private product IDs.
+ db.ref("orders").on("value",s=>{
+  rootOrdersCache=s.val()||{};rootOrdersReadState="loaded";renderSellerOrders();
+ },e=>{
+  rootOrdersReadState="denied";
+  console.error("Canonical /orders read failed:",e);
+  renderSellerOrders();
+ });
+ // Secondary seller-specific fan-out written by Customer Panel.
+ db.ref("sellerOrders/"+currentUser.uid).on("value",s=>{
+  sellerOrdersCache=s.val()||{};sellerOrdersReadState="loaded";renderSellerOrders();
+ },e=>{
+  sellerOrdersReadState="denied";
+  console.error("sellerOrders/{uid} read failed:",e);
+  renderSellerOrders();
+ });
 }
-window.bookSellerCourier=async id=>{if(!currentUser)return;const partnerId=$("courierPick_"+id)?.value;if(!partnerId)return alert("Courier partner select karein.");const partner=activeCourierPartners[partnerId];if(!partner)return alert("Courier partner active nahi hai.");let order=sellerOrderForId(id);if(!order)return alert("Order not found for this seller.");try{const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);const existing=(await ref.once("value")).val();if(!existing){await ref.set(order);order=(await ref.once("value")).val();}if(order.courierTracking)return alert("Is order ki courier booking pehle se maujood hai.");const token=await currentUser.getIdToken(true);const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:result.awb||result.trackingId||"",courierShipmentId:result.shipmentId||"",courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",courierBookedAt:new Date().toISOString()};await ref.update(patch);await db.ref("orders/"+id).update(patch);alert("Courier booking successful. AWB: "+(patch.courierTracking||"Generated"));}catch(e){alert("Courier booking nahi hui: "+e.message);}};
-window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;try{const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);let order=(await ref.once("value")).val();if(!order){order=sellerOrderForId(id);if(!order)return alert("Not your order");await ref.set(order);}await ref.update({status,sellerUpdatedAt:new Date().toISOString()});const allSnap=await db.ref("sellerOrders").once("value"),all=allSnap.val()||{};const siblings=Object.values(all).map(x=>x&&x[id]).filter(Boolean);if(siblings.length&&siblings.every(x=>x.status==="Shipped")){await db.ref("orders/"+id).update({status:"Shipped",sellerShippedAt:new Date().toISOString()});}else{await db.ref("orders/"+id).update({status:"Seller Processing",sellerProgressUpdatedAt:new Date().toISOString()});}}catch(e){alert("Order status update nahi hua: "+(e.message||e));}};
 // Ek waqt mein sirf ek panel visible rahega. Wahi button dobara dabane par panel band hoga.
 let activeSellerPanel="add";
 const sellerPanelSections={orders:"sellerOrdersSection",add:"addSection",mine:"mineSection",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
