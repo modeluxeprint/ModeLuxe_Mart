@@ -130,7 +130,16 @@ window.mlmVolatileStore = (() => {
 <button id="withdrawCancelBtn" class="withdraw-filter-btn cancelled" type="button">Cancel Request</button>
 </div>
 <div id="sellerWithdrawHistory"></div></section>
-<section id="authCard" class="card">
+<section id="authChoice" class="card">
+ <h2>Welcome to ModeLuxe Mart Seller Panel</h2>
+ <p class="muted">Naye seller hain to application submit karein. Pehle se seller account hai to apne purane email aur password se login karein.</p>
+ <div class="grid">
+  <div class="field"><button id="choiceApplyBtn" class="primary" type="button" style="width:100%">Submit Seller Application</button></div>
+  <div class="field"><button id="choiceLoginBtn" class="secondary" type="button" style="width:100%">Login</button></div>
+ </div>
+ <p id="choiceMsg" class="muted" aria-live="polite"></p>
+</section>
+<section id="authCard" class="card hidden">
 <h2 id="authTitle">Seller Login</h2>
 <p class="muted">Har seller apne email aur password se alag account banayega. Seller ko panel mein sirf apne account ke products dikhaye jayenge.</p>
 <div class="tabs"><button id="loginTab" class="active" type="button">Login</button><button id="registerTab" type="button">Naya Seller Account</button></div>
@@ -266,7 +275,46 @@ function showSellerNotice(message,type="success"){
 
 function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?("msg "+type):"muted";}
 function setAuthMode(mode){authMode=mode;const registering=mode==="register";$("registerFields").classList.toggle("hidden",!registering);$("shopName").required=registering;$("sellerPhone").required=registering;$("authTitle").textContent=registering?"Naya Seller Account":"Seller Login";$("authSubmit").textContent=registering?"Create Seller Account":"Login";$("loginTab").classList.toggle("active",!registering);$("registerTab").classList.toggle("active",registering);$("password").autocomplete=registering?"new-password":"current-password";$("authMsg").textContent="";}
-$("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
+let pendingProfileUser=null;
+
+function showAuthChoice(message=""){
+ $("authChoice").classList.remove("hidden");
+ $("authCard").classList.add("hidden");
+ $("completeSellerApplication").classList.add("hidden");
+ $("choiceMsg").textContent=message;
+ $("logoutBtn").classList.add("hidden");
+ $("walletHeaderBtn").classList.add("hidden");
+}
+
+$("choiceApplyBtn").onclick=()=>{
+ if(pendingProfileUser){
+  $("authChoice").classList.add("hidden");
+  $("completeSellerApplication").classList.remove("hidden");
+  showMsg("repairMsg","Apna seller application record complete karein. Isi existing login account ka use hoga.","");
+  return;
+ }
+ $("authChoice").classList.add("hidden");
+ $("authCard").classList.remove("hidden");
+ setAuthMode("register");
+};
+
+$("choiceLoginBtn").onclick=async()=>{
+ if(pendingProfileUser){
+  try{
+   await auth.signOut();
+   pendingProfileUser=null;
+  }catch(e){
+   $("choiceMsg").textContent="Login screen kholne ke liye pehle current session sign out nahi ho paya: "+(e.message||e);
+   return;
+  }
+ }
+ $("authChoice").classList.add("hidden");
+ $("authCard").classList.remove("hidden");
+ setAuthMode("login");
+};
+
+$("loginTab").onclick=()=>setAuthMode("login");
+$("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const email=$("email").value.trim().toLowerCase(),password=$("password").value,btn=$("authSubmit");
@@ -300,29 +348,62 @@ function authError(e){const c=e&&e.code||"";if(c.includes("email-already-in-use"
 auth.onAuthStateChanged(async user=>{
  if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
  productListener=null;currentUser=user;myProducts={};
- $("sellerApp").classList.add("hidden");$("walletSection").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
- if(!user){sellerProfile={};$("walletSection").classList.add("hidden");$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");return;}
- $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("walletHeaderBtn").classList.add("hidden");$("sellerEmail").textContent=user.email||"";
+ $("sellerApp").classList.add("hidden");
+ $("walletSection").classList.add("hidden");
+ $("pendingApplication").classList.add("hidden");
+ $("completeSellerApplication").classList.add("hidden");
+ $("logoutBtn").classList.add("hidden");
+ $("walletHeaderBtn").classList.add("hidden");
+
+ if(!user){
+  sellerProfile={};
+  pendingProfileUser=null;
+  showAuthChoice("");
+  return;
+ }
+
+ $("authChoice").classList.add("hidden");
+ $("authCard").classList.add("hidden");
+ $("sellerEmail").textContent=user.email||"";
+
  try{
   const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
   sellerProfile=snap.val()||{};
+
   if(!snap.exists()){
-   $("completeSellerApplication").classList.remove("hidden");
-   showMsg("repairMsg","Is login account ka seller profile missing hai. Neeche details bharke application submit karein.","error");
+   // Keep the existing authenticated account available for an explicit application repair.
+   // Do not show Logout or a profile-missing warning until the user chooses an action.
+   pendingProfileUser=user;
+   showAuthChoice("");
    return;
   }
+
+  pendingProfileUser=null;
+  $("logoutBtn").classList.remove("hidden");
+
   if(sellerProfile.status==="suspended"||sellerProfile.applicationStatus==="suspended"){
-   $("pendingApplication").classList.remove("hidden");$("applicationStatus").textContent="Account suspended. Admin se sampark karein.";return;
+   $("pendingApplication").classList.remove("hidden");
+   $("applicationStatus").textContent="Account suspended. Admin se sampark karein.";
+   return;
   }
+
   if(sellerProfile.applicationStatus!=="approved"){
    $("pendingApplication").classList.remove("hidden");
    $("applicationStatus").textContent=sellerProfile.applicationStatus==="rejected"?"Application rejected. Admin se sampark karein.":"Application pending hai. Admin approval ke baad dashboard khulega.";
    return;
   }
-  $("sellerApp").classList.remove("hidden");$("walletHeaderBtn").classList.remove("hidden");fillProfile();$("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";listenMyProducts();startSellerWallet();startSellerOrders();
+
+  $("sellerApp").classList.remove("hidden");
+  $("walletHeaderBtn").classList.remove("hidden");
+  fillProfile();
+  $("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";
+  listenMyProducts();
+  startSellerWallet();
+  startSellerOrders();
+
  }catch(err){
-  $("completeSellerApplication").classList.remove("hidden");
-  showMsg("repairMsg","Seller profile read nahi hua: "+(err.message||err)+". Firebase Rules mein sellerProfiles par apne UID ki read permission check karein.","error");
+  pendingProfileUser=user;
+  showAuthChoice("");
  }
 });
 $("completeSellerForm").addEventListener("submit",async e=>{
@@ -339,7 +420,7 @@ $("completeSellerForm").addEventListener("submit",async e=>{
   const profile={uid:currentUser.uid,email,shopName:shop,phone,aadhaarLast4:aadhaar.slice(-4),panLast4:pan.slice(-4),kycStatus:"pending_secure_verification",applicationStatus:"pending",status:"pending",createdAt:now,updatedAt:now,accountType:"seller"};
   await db.ref("sellerProfiles/"+currentUser.uid).set(profile);
   await db.ref("sellerApplications/"+currentUser.uid).set({...profile,submittedAt:now});
-  sellerProfile=profile;$("completeSellerApplication").classList.add("hidden");$("pendingApplication").classList.remove("hidden");
+  sellerProfile=profile;pendingProfileUser=null;$("completeSellerApplication").classList.add("hidden");$("pendingApplication").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
   $("applicationStatus").textContent="Application successfully submit ho gayi. Admin approval ka wait karein.";
  }catch(err){showMsg("repairMsg","Application save nahi hui: "+(err.message||err)+". Firebase Rules mein sellerProfiles aur sellerApplications par current UID ki write permission check karein.","error");}
  finally{btn.disabled=false;}
