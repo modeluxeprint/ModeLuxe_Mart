@@ -403,6 +403,42 @@ window.mlmVolatileStore = (() => {
  return { getItem(k){return data.has(String(k))?data.get(String(k)):null;}, setItem(k,v){data.set(String(k),String(v));}, removeItem(k){data.delete(String(k));}, clear(){data.clear();}, key(i){return Array.from(data.keys())[i]??null;}, get length(){return data.size;} };
 })();
 </script>
+
+<style id="modeluxe-3d-welcome-only">
+/* Only the Welcome hero typography is enhanced to match the approved 3D reference. */
+.hero h2{
+  color:#ffd34d!important;
+  font-weight:950!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+  text-shadow:0 1px 0 #fff0a0,0 2px 0 #c77c00,0 4px 0 #8a4d00,0 7px 9px #0009,0 0 18px #ffbf27aa!important;
+}
+.hero h1{
+  line-height:1.02!important;
+  font-family:Georgia,'Times New Roman',serif!important;
+  font-weight:900!important;
+  letter-spacing:-.025em!important;
+}
+.hero h1 .hero-vaishu{
+  background:linear-gradient(180deg,#ffffff 0%,#f4f5f8 24%,#c8d0dc 48%,#ffffff 64%,#8995a6 82%,#f9fbff 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+  -webkit-text-fill-color:transparent!important;
+  font-style:italic!important;
+  text-shadow:0 1px 0 #fff,0 3px 0 #7f8794,0 5px 0 #4e5662,0 8px 10px #000b,0 0 15px #dceaff66!important;
+}
+.hero h1 .hero-brand{
+  background:linear-gradient(180deg,#7beaff 0%,#16c9ff 18%,#0878ef 48%,#0047b9 72%,#43cfff 88%,#0062cf 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+  -webkit-text-fill-color:transparent!important;
+  font-style:italic!important;
+  text-shadow:0 1px 0 #a9f4ff,0 3px 0 #0754a9,0 5px 0 #033a83,0 8px 10px #000c,0 0 17px #00aaff77!important;
+}
+@media(max-width:600px){
+ .hero h2{letter-spacing:.09em!important;text-shadow:0 1px 0 #fff0a0,0 2px 0 #c77c00,0 4px 0 #8a4d00,0 6px 8px #0009,0 0 14px #ffbf27aa!important}
+ .hero h1{line-height:1.04!important}
+}
+</style>
+
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
