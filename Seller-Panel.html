@@ -1,4 +1,3 @@
-<!-- ModeLuxe Mart Seller Panel build: Wallet Toggle + Balance Guard v2 -->
 <!doctype html>
 <!-- IMPORTANT: Firebase Realtime Database Rules + trusted backend authorization must be deployed before production. Browser-side UI checks are not security boundaries. KYC full Aadhaar/PAN must be processed only by a secure KYC provider/backend; this build stores masked last-four only. -->
 
@@ -72,31 +71,13 @@ window.mlmVolatileStore = (() => {
 }
 </style>
 
-
-<style>
-.seller-notice-backdrop{
- position:fixed;inset:0;background:rgba(10,25,50,.48);
- display:flex;align-items:center;justify-content:center;
- padding:20px;z-index:9999;
-}
-.seller-notice-box{
- width:min(100%,390px);background:#fff;color:#111827;
- border:1px solid #cfe0f4;border-radius:18px;padding:22px;
- box-shadow:0 18px 55px rgba(0,25,70,.24);
-}
-.seller-notice-box h3{margin:0 0 10px;color:#075fc4;font-size:20px}
-.seller-notice-box p{margin:0 0 18px;line-height:1.5;color:#34445b}
-.seller-notice-box button{min-width:100px;background:#075fc4;color:#fff}
-</style>
-
 </head>
 <body>
 <header class="top"><div class="topinner"><div><div class="brand">MODELUXE MART</div><h1>Seller Panel</h1><div style="font-size:13px;color:#dbeafe">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
 <button id="logoutBtn" class="secondary hidden" type="button">Logout</button>
-<button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
+<button id="walletHeaderBtn" class="secondary hidden" type="button" aria-expanded="false">Wallet</button>
 </div></div></header>
 <main class="wrap">
-<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
 <section id="authCard" class="card">
 <h2 id="authTitle">Seller Login</h2>
 <p class="muted">Har seller apne email aur password se alag account banayega. Seller ko panel mein sirf apne account ke products dikhaye jayenge.</p>
@@ -133,8 +114,7 @@ window.mlmVolatileStore = (() => {
 </section>
 <section id="pendingApplication" class="card hidden"><h2>Application Status</h2><div id="applicationStatus" class="msg">Aapki application admin approval ke liye pending hai.</div><p class="muted">Approval hone tak listing, wallet aur orders dashboard locked rahenge.</p><button id="pendingRefresh" class="secondary" type="button">Refresh Status</button><button id="pendingLogout" class="secondary" type="button">Logout</button></section>
 <section id="sellerApp" class="hidden">
-
-
+<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
 <div class="card">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><div class="muted">Logged in seller</div><h2 id="sellerHeading" style="margin:3px 0">Seller</h2><div id="sellerEmail" class="muted"></div></div><span class="msg success" style="margin:0">Private seller view</span></div>
 <div class="stats" style="margin-top:14px"><div class="stat"><span class="muted">My Products</span><b id="productCount">0</b></div><div class="stat"><span class="muted">Active Listings</span><b id="activeCount">0</b></div><div class="stat"><span class="muted">Low / Out of Stock</span><b id="lowStockCount">0</b></div></div>
@@ -208,24 +188,6 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.error
 const $=id=>document.getElementById(id);
 let authMode="login",currentUser=null,sellerProfile={},myProducts={},productListener=null;
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-
-function showSellerNotice(message,type="success"){
- const old=document.getElementById("sellerNoticeBackdrop");
- if(old)old.remove();
- const backdrop=document.createElement("div");
- backdrop.id="sellerNoticeBackdrop";
- backdrop.className="seller-notice-backdrop";
- backdrop.innerHTML=`<div class="seller-notice-box" role="dialog" aria-modal="true" aria-labelledby="sellerNoticeTitle">
-  <h3 id="sellerNoticeTitle">${type==="error"?"Request not submitted":"ModeLuxe Mart"}</h3>
-  <p>${esc(message)}</p><div style="text-align:right"><button type="button" id="sellerNoticeOk">OK</button></div>
- </div>`;
- document.body.appendChild(backdrop);
- document.getElementById("sellerNoticeOk").onclick=()=>backdrop.remove();
- backdrop.addEventListener("keydown",e=>{if(e.key==="Escape")backdrop.remove();});
- document.getElementById("sellerNoticeOk").focus();
- backdrop.addEventListener("click",e=>{if(e.target===backdrop)backdrop.remove();});
-}
-
 function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?("msg "+type):"muted";}
 function setAuthMode(mode){authMode=mode;const registering=mode==="register";$("registerFields").classList.toggle("hidden",!registering);$("shopName").required=registering;$("sellerPhone").required=registering;$("authTitle").textContent=registering?"Naya Seller Account":"Seller Login";$("authSubmit").textContent=registering?"Create Seller Account":"Login";$("loginTab").classList.toggle("active",!registering);$("registerTab").classList.toggle("active",registering);$("password").autocomplete=registering?"new-password":"current-password";$("authMsg").textContent="";}
 $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
@@ -262,8 +224,8 @@ function authError(e){const c=e&&e.code||"";if(c.includes("email-already-in-use"
 auth.onAuthStateChanged(async user=>{
  if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
  productListener=null;currentUser=user;myProducts={};
- $("sellerApp").classList.add("hidden");$("walletSection").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
- if(!user){sellerProfile={};$("walletSection").classList.add("hidden");$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");return;}
+ $("sellerApp").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
+ if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");return;}
  $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("walletHeaderBtn").classList.add("hidden");$("sellerEmail").textContent=user.email||"";
  try{
   const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
@@ -308,29 +270,7 @@ $("completeSellerForm").addEventListener("submit",async e=>{
 });
 $("pendingRefresh").onclick=()=>auth.currentUser&&auth.currentUser.getIdToken(true).then(()=>auth.currentUser&&auth.currentUser.reload()).then(()=>location.reload());$("pendingLogout").onclick=()=>auth.signOut();
 function startSellerWallet(){if(!currentUser)return;db.ref("sellerWallets/"+currentUser.uid+"/balance").on("value",s=>$("sellerWallet").textContent="₹"+Number(s.val()||0).toLocaleString("en-IN"));db.ref("sellerCommission/"+currentUser.uid).on("value",s=>$("sellerCommission").textContent=Number(s.val()??10)+"%");db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{const v=s.val()||{};$("sellerWithdrawHistory").innerHTML=Object.entries(v).map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests yet.";});}
-$("sellerWithdrawBtn").onclick=async()=>{
- if(!currentUser)return;
- const btn=$("sellerWithdrawBtn");
- const amount=Number($("sellerWithdrawAmount").value);
- if(!Number.isFinite(amount)||amount<=0)return showSellerNotice("Sahi withdrawal amount enter karein.","error");
- if(!Number.isInteger(Math.round(amount*100)))return showSellerNotice("Withdrawal amount sahi enter karein.","error");
- btn.disabled=true;
- try{
-  const balanceSnap=await db.ref("sellerWallets/"+currentUser.uid+"/balance").once("value");
-  const balance=Number(balanceSnap.val()||0);
-  if(!Number.isFinite(balance)||balance<=0)throw Error("Aapke wallet mein balance nahi hai. Balance aane ke baad hi withdrawal request bhej sakte hain.");
-  if(amount>balance+0.000001)throw Error("Wallet balance ₹"+balance.toLocaleString("en-IN")+" hai. Isse zyada withdrawal request submit nahi ho sakti.");
-  const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;
-  await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({
-   id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",
-   processingHours:48,createdAt:new Date().toISOString()
-  });
-  $("sellerWithdrawAmount").value="";
-  showSellerNotice("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.","success");
- }catch(e){
-  showSellerNotice(e.message||"Withdrawal request submit nahi hui.","error");
- }finally{btn.disabled=false;}
-};
+$("sellerWithdrawBtn").onclick=async()=>{if(!currentUser)return;const amount=Number($("sellerWithdrawAmount").value);if(!Number.isFinite(amount)||amount<=0)return alert("Valid amount enter karein.");const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",processingHours:48,createdAt:new Date().toISOString()});alert("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.");$("sellerWithdrawAmount").value="";};
 
 let activeCourierPartners={};
 function startSellerOrders(){
@@ -340,37 +280,20 @@ function startSellerOrders(){
 }
 window.bookSellerCourier=async id=>{if(!currentUser)return;const partnerId=$("courierPick_"+id)?.value;if(!partnerId)return alert("Courier partner select karein.");const partner=activeCourierPartners[partnerId];if(!partner)return alert("Courier partner active nahi hai.");const order=(await db.ref("sellerOrders/"+currentUser.uid+"/"+id).once("value")).val();if(!order)return alert("Order not found.");if(order.courierTracking)return alert("Is order ki courier booking pehle se maujood hai.");try{const token=await currentUser.getIdToken(true);const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:result.awb||result.trackingId||"",courierShipmentId:result.shipmentId||"",courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",courierBookedAt:new Date().toISOString()};await db.ref("sellerOrders/"+currentUser.uid+"/"+id).update(patch);await db.ref("orders/"+id).update(patch);alert("Courier booking successful. AWB: "+(patch.courierTracking||"Generated"));}catch(e){alert("Courier booking nahi hui: "+e.message);}};
 window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);const order=(await ref.once("value")).val();if(!order)return alert("Not your order");await ref.update({status,sellerUpdatedAt:new Date().toISOString()});const allSnap=await db.ref("sellerOrders").once("value"),all=allSnap.val()||{};const siblings=Object.values(all).map(x=>x&&x[id]).filter(Boolean);if(siblings.length&&siblings.every(x=>x.status==="Shipped")){await db.ref("orders/"+id).update({status:"Shipped",sellerShippedAt:new Date().toISOString()});}else{await db.ref("orders/"+id).update({status:"Seller Processing",sellerProgressUpdatedAt:new Date().toISOString()});}};
-function closeWalletPanel(){
- $("walletSection").classList.add("hidden");
- $("walletHeaderBtn").setAttribute("aria-expanded","false");
-}
 $("walletHeaderBtn").onclick=()=>{
- const wallet=$("walletSection");
- const willOpen=wallet.classList.contains("hidden");
- wallet.classList.toggle("hidden",!willOpen);
- $("walletHeaderBtn").setAttribute("aria-expanded",String(willOpen));
- if(willOpen) window.scrollTo({top:0,behavior:"smooth"});
-};
-$("sellerOrdersTab").onclick=()=>{closeWalletPanel();showSellerExtra("orders");};
-function showSellerExtra(which){
- ["sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));
- if(which==="orders")$("sellerOrdersSection").classList.remove("hidden");
-}
+ const panel=$("walletSection");
+ const isOpen=!panel.classList.contains("hidden");
+ panel.classList.toggle("hidden",isOpen);
+ $("walletHeaderBtn").setAttribute("aria-expanded",String(!isOpen));
+ $("walletHeaderBtn").classList.toggle("active",!isOpen);
+};$("sellerOrdersTab").onclick=()=>{showSellerExtra("orders");$("walletHeaderBtn").classList.remove("active");$("walletHeaderBtn").setAttribute("aria-expanded","false");};function showSellerExtra(which){["walletSection","sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));$(which==="wallet"?"walletSection":"sellerOrdersSection").classList.remove("hidden");}
 $("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
 function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
 function listenMyProducts(){if(!currentUser)return;const ref=db.ref("sellerPrivateProducts/"+currentUser.uid);if(productListener)ref.off("value",productListener);productListener=snap=>{myProducts=snap.val()||{};renderMyProducts();updateStats();};ref.on("value",productListener,e=>showMsg("productsMsg","Products load nahi hue: "+e.message,"error"));}
 function updateStats(){const list=Object.values(myProducts||{});$("productCount").textContent=list.length;$("activeCount").textContent=list.filter(p=>p&&p.active!==false).length;$("lowStockCount").textContent=list.filter(p=>p&&Number(p.stock||0)<=0).length;}
 function renderMyProducts(){const q=$("productSearch").value.trim().toLowerCase();const list=Object.entries(myProducts||{}).filter(([id,p])=>{p=p||{};return [id,p.name,p.category,p.description].join(" ").toLowerCase().includes(q)}).sort((a,b)=>String((a[1]||{}).name||"").localeCompare(String((b[1]||{}).name||"")));$("myProductsList").innerHTML=list.length?list.map(([id,p0])=>{const p=p0||{},img=p.imageUrl||p.image||"";return `<article class="product">${img?`<img src="${esc(img)}" alt="">`:`<div style="width:86px;height:100px;background:#eff6ff;border-radius:9px;display:grid;place-items:center">📦</div>`}<div><h3>${esc(p.name||"Product")}</h3><div class="meta">${esc(p.category||"Other")} · ${esc(p.quantity||"1")} ${esc(p.unit||"Piece")}</div><div style="font-weight:800;color:var(--blue);margin:4px 0">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="meta">Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")} · ${p.active===false?"Not published":"Published"}</div><div class="actions"><button class="secondary" onclick="editProduct('${esc(id)}')">Edit</button><button class="secondary" onclick="togglePublish('${esc(id)}')">${p.active===false?"Publish":"Unpublish"}</button><button class="danger" onclick="deleteProduct('${esc(id)}')">Delete</button></div></div></article>`}).join(""):'<div class="msg">Abhi aapke account mein koi product nahi hai.</div>';$("productsMsg").textContent=list.length?list.length+" aapke product(s).":"Aapka product list khaali hai.";}
 $("productSearch").oninput=renderMyProducts;
-function switchTab(tab){
- closeWalletPanel();
- $("addSection").classList.toggle("hidden",tab!=="add");
- $("mineSection").classList.toggle("hidden",tab!=="mine");
- $("profileSection").classList.toggle("hidden",tab!=="profile");
- $("addTab").classList.toggle("active",tab==="add");
- $("mineTab").classList.toggle("active",tab==="mine");
- $("profileTab").classList.toggle("active",tab==="profile");
-}
+function switchTab(tab){$("walletSection").classList.add("hidden");$("walletHeaderBtn").classList.remove("active");$("walletHeaderBtn").setAttribute("aria-expanded","false");$("addSection").classList.toggle("hidden",tab!=="add");$("mineSection").classList.toggle("hidden",tab!=="mine");$("profileSection").classList.toggle("hidden",tab!=="profile");$("addTab").classList.toggle("active",tab==="add");$("mineTab").classList.toggle("active",tab==="mine");$("profileTab").classList.toggle("active",tab==="profile");}
 $("addTab").onclick=()=>switchTab("add");$("mineTab").onclick=()=>{switchTab("mine");renderMyProducts();};$("profileTab").onclick=()=>{switchTab("profile");fillProfile();};
 $("clearFormBtn").onclick=resetProductForm;
 $("fillTestProductBtn").onclick=()=>{
