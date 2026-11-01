@@ -623,7 +623,12 @@ function showAdminTab(tab){
  const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
  if(tab==='deliverySettings')loadDeliverySettingsForm();
  if(tab==='applications'){
-   // Show the four application-status choices first. Do not auto-open Pending.
+   document.querySelectorAll('#applicationsTab .seller-status-tab').forEach(b=>{
+     b.classList.remove('seller-tab-active','seller-action-active');
+     b.setAttribute('aria-pressed','false');
+     b.blur();
+   });
+   // Show the four application-status choices first. Do not auto-open Pending
    const home=$('sellerApplicationsHome');
    const page=$('sellerStatusPage');
    if(home)home.classList.remove('hidden');
@@ -784,7 +789,17 @@ function openSellerStatusPage(status,button){
 }
 window.openSellerStatusPage=openSellerStatusPage;
 window.closeSellerStatusPage=closeSellerStatusPage;
-function closeSellerStatusPage(){ $('sellerStatusPage')?.classList.add('hidden');$('sellerApplicationsHome')?.classList.remove('hidden'); }
+function closeSellerStatusPage(){
+ $('sellerStatusPage')?.classList.add('hidden');
+ $('sellerApplicationsHome')?.classList.remove('hidden');
+ // Clear the temporary selected/focus state so each status button returns
+ // to its original semantic color (green/blue/red/light-blue).
+ document.querySelectorAll('#applicationsTab .seller-status-tab').forEach(b=>{
+  b.classList.remove('seller-tab-active','seller-action-active');
+  b.setAttribute('aria-pressed','false');
+  b.blur();
+ });
+}
 function updateSellerPendingIndicator(){const pending=Object.entries(sellerAppsCache||{}).filter(([uid,a])=>sellerApplicationStatus(a)==='pending');const dot=$('sellerPendingDot');if(dot){dot.classList.toggle('hidden',pending.length===0);dot.style.display=pending.length?'inline-block':'none';}const tab=$('appsTabBtn');if(tab)tab.setAttribute('aria-label',pending.length+' pending seller applications');if(pending.length)pending.forEach(([uid,a])=>{if(sellerAppsFirstLoad||!lastPendingSellerIds.has(uid)){const d=sellerApplicationData(a);addNotification('Seller application pending',String(d.shopName||d.sellerName||d.storeName||d.email||d.phone||'A seller')+' approval ke liye pending hai.','info');}});lastPendingSellerIds=new Set(pending.map(([uid])=>uid));sellerAppsFirstLoad=false;}
 function mergeSellerApplicationSources(appRaw,profileRaw){const merged={};const adminUid='admin_7818995955';const add=(source,kind)=>{if(!source||typeof source!=='object')return;Object.entries(source).forEach(([key,val])=>{if(!val||typeof val!=='object')return;const d=sellerApplicationData(val);const uid=String(d.uid||key).trim();if(!uid||uid===adminUid||uid.toLowerCase().startsWith('admin_'))return;const email=String(d.email||'').trim();const accountType=String(d.accountType||'').toLowerCase();const hasSellerApplicationFields=!!(d.applicationStatus||d.status||d.shopName||d.sellerName||d.storeName||d.phone||d.mobile);if(!hasSellerApplicationFields)return;if(accountType&&accountType!=='seller')return;merged[uid]={...(merged[uid]||{}),...d,uid,_source:[...new Set([...(merged[uid]?merged[uid]._source||[]:[]),kind])]};});};const a=(appRaw&&appRaw.applications&&typeof appRaw.applications==='object')?appRaw.applications:appRaw;const p=(profileRaw&&profileRaw.profiles&&typeof profileRaw.profiles==='object')?profileRaw.profiles:profileRaw;add(a,'sellerApplications');add(p,'sellerProfiles');return merged;}
 function refreshSellerApplicationsFromLiveSources(){
@@ -1092,6 +1107,11 @@ window.openWithdrawalStatus=openWithdrawalStatus;
 function closeWithdrawalStatus(){
  $('withdrawalStatusPage')?.classList.add('hidden');
  $('withdrawalHome')?.classList.remove('hidden');
+ document.querySelectorAll('#withdrawalsTab .withdrawal-status-tab').forEach(b=>{
+  b.classList.remove('seller-tab-active','seller-action-active');
+  b.setAttribute('aria-pressed','false');
+  b.blur();
+ });
 }
 window.closeWithdrawalStatus=closeWithdrawalStatus;
 function renderWithdrawals(){
