@@ -1988,10 +1988,10 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 </script>
 
 
-<style id="modeluxe-hero-remove-empty-space-below-shop-now">
-/* Trim only the unused blue area below the Shop Now button; keep hero text and other sections unchanged. */
-.hero{min-height:0!important;padding-bottom:2px!important;}
-@media(max-width:600px){.hero{min-height:0!important;padding-bottom:2px!important;}}
+<style id="modeluxe-hero-remove-empty-bottom-space">
+/* Keep the hero only as tall as its visible content; remove the unused blue area below Shop Now. */
+.hero{height:auto!important;min-height:0!important;padding-bottom:8px!important;margin-bottom:18px!important;}
+@media(max-width:600px){.hero{height:auto!important;min-height:0!important;padding-bottom:8px!important;margin-bottom:18px!important;}}
 </style>
 
 </body>
