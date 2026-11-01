@@ -214,16 +214,35 @@ async function uploadImageToR2(file){
   if(!currentUser)throw new Error("Pehle seller login karein.");
   if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Valid image select karein.");
   if(file.size>8*1024*1024)throw new Error("Photo 8 MB se chhoti rakhein.");
-  const token=await currentUser.getIdToken();
-  const form=new FormData();form.append("file",file,file.name||"product-image");
+  // Refresh the Firebase ID token before sending it to the Cloudflare Worker.
+  // This helps avoid expired/stale-token verification failures.
+  const token=await currentUser.getIdToken(true);
+  if(!token)throw new Error("Firebase login token could not be generated. Please log out and log in again.");
+  const form=new FormData();
+  form.append("file",file,file.name||"product-image");
   let res;
   try{
-    res=await fetch(R2_UPLOAD_URL,{method:"POST",headers:{Authorization:"Bearer "+token},body:form});
+    res=await fetch(R2_UPLOAD_URL,{
+      method:"POST",
+      headers:{Authorization:"Bearer "+token},
+      body:form,
+      cache:"no-store"
+    });
   }catch(networkError){
     throw new Error("Photo upload service could not be reached. Cloudflare Worker CORS / network settings need to be checked.");
   }
-  const result=await res.json().catch(()=>({}));
-  if(!res.ok||!result.success||!result.url)throw new Error(result.error||("Photo upload failed (HTTP "+res.status+"). Check the Cloudflare Worker response."));
+  const rawResponse=await res.text();
+  let result={};
+  try{result=rawResponse?JSON.parse(rawResponse):{};}catch(parseError){
+    throw new Error("Photo upload service returned an invalid response (HTTP "+res.status+"). Check the Cloudflare Worker.");
+  }
+  if(!res.ok||!result.success||!result.url){
+    const workerError=String(result.error||result.message||"");
+    if(/firebase.*(login|token|auth).*(verif|invalid|fail)|verification.*failed/i.test(workerError)){
+      throw new Error("Firebase login verification failed at the photo-upload server. The seller panel now refreshes the login token before upload; if this message continues, the Cloudflare Worker Firebase project ID / token verification settings must be corrected.");
+    }
+    throw new Error(workerError||("Photo upload failed (HTTP "+res.status+"). Check the Cloudflare Worker response."));
+  }
   return result.url;
 }
 
