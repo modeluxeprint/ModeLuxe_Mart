@@ -22,9 +22,61 @@ window.mlmVolatileStore = (() => {
  return { getItem(k){return data.has(String(k))?data.get(String(k)):null;}, setItem(k,v){data.set(String(k),String(v));}, removeItem(k){data.delete(String(k));}, clear(){data.clear();}, key(i){return Array.from(data.keys())[i]??null;}, get length(){return data.size;} };
 })();
 </script>
+
+<style>
+.seller-header-actions{
+ display:flex;
+ flex-direction:column;
+ align-items:stretch;
+ gap:8px;
+ flex:0 0 auto;
+}
+.seller-header-actions button{
+ min-width:112px;
+ text-align:center;
+}
+#walletHeaderBtn{
+ background:#e7f2ff;
+ color:#164e84;
+}
+.seller-nav-grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px;
+ margin:0 0 14px;
+}
+.seller-nav-grid button{
+ width:100%;
+ min-width:0;
+ min-height:68px;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ text-align:center;
+ white-space:normal;
+ overflow-wrap:anywhere;
+ line-height:1.25;
+ padding:12px 9px;
+ background:var(--pale);
+ color:#164e84;
+}
+.seller-nav-grid button.active{
+ background:var(--blue);
+ color:#fff;
+}
+@media(max-width:380px){
+ .seller-header-actions button{min-width:94px;padding:10px 9px}
+ .seller-nav-grid{gap:8px}
+ .seller-nav-grid button{min-height:64px;font-size:14px;padding:9px 6px}
+}
+</style>
+
 </head>
 <body>
-<header class="top"><div class="topinner"><div><div class="brand">MODELUXE MART</div><h1>Seller Panel</h1><div style="font-size:13px;color:#dbeafe">Apna account · Apne products · Apni stock details</div></div><button id="logoutBtn" class="secondary hidden" type="button">Logout</button></div></header>
+<header class="top"><div class="topinner"><div><div class="brand">MODELUXE MART</div><h1>Seller Panel</h1><div style="font-size:13px;color:#dbeafe">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
+<button id="logoutBtn" class="secondary hidden" type="button">Logout</button>
+<button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
+</div></div></header>
 <main class="wrap">
 <section id="authCard" class="card">
 <h2 id="authTitle">Seller Login</h2>
@@ -68,7 +120,12 @@ window.mlmVolatileStore = (() => {
 <p class="hint">Customer store par jo product publish hoga uska public display (naam, photo, category aur price) customers ko dikhega. Aapki seller account/profile aur product management record alag private path mein save hota hai.</p>
 </div>
 
-<div class="tabs"><button id="walletTab" type="button">Wallet</button><button id="sellerOrdersTab" type="button">Orders</button><button id="addTab" class="active" type="button">＋ Add Product</button><button id="mineTab" type="button">My Products</button><button id="profileTab" type="button">My Account</button></div>
+<div class="seller-nav-grid">
+<button id="sellerOrdersTab" type="button">Orders</button>
+<button id="addTab" class="active" type="button">＋ Add Product</button>
+<button id="mineTab" type="button">My Products</button>
+<button id="profileTab" type="button">My Account</button>
+</div>
 
 <section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
 <section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrdersList" class="muted">Orders load ho rahe hain…</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
@@ -127,7 +184,7 @@ async function uploadImageToR2(file){
   return result.url;
 }
 
-auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(()=>{});
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.error("Auth persistence setup failed:",e));
 const $=id=>document.getElementById(id);
 let authMode="login",currentUser=null,sellerProfile={},myProducts={},productListener=null;
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -168,8 +225,8 @@ auth.onAuthStateChanged(async user=>{
  if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
  productListener=null;currentUser=user;myProducts={};
  $("sellerApp").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
- if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");return;}
- $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("sellerEmail").textContent=user.email||"";
+ if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");return;}
+ $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("walletHeaderBtn").classList.add("hidden");$("sellerEmail").textContent=user.email||"";
  try{
   const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
   sellerProfile=snap.val()||{};
@@ -186,7 +243,7 @@ auth.onAuthStateChanged(async user=>{
    $("applicationStatus").textContent=sellerProfile.applicationStatus==="rejected"?"Application rejected. Admin se sampark karein.":"Application pending hai. Admin approval ke baad dashboard khulega.";
    return;
   }
-  $("sellerApp").classList.remove("hidden");fillProfile();$("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";listenMyProducts();startSellerWallet();startSellerOrders();
+  $("sellerApp").classList.remove("hidden");$("walletHeaderBtn").classList.remove("hidden");fillProfile();$("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";listenMyProducts();startSellerWallet();startSellerOrders();
  }catch(err){
   $("completeSellerApplication").classList.remove("hidden");
   showMsg("repairMsg","Seller profile read nahi hua: "+(err.message||err)+". Firebase Rules mein sellerProfiles par apne UID ki read permission check karein.","error");
@@ -223,7 +280,7 @@ function startSellerOrders(){
 }
 window.bookSellerCourier=async id=>{if(!currentUser)return;const partnerId=$("courierPick_"+id)?.value;if(!partnerId)return alert("Courier partner select karein.");const partner=activeCourierPartners[partnerId];if(!partner)return alert("Courier partner active nahi hai.");const order=(await db.ref("sellerOrders/"+currentUser.uid+"/"+id).once("value")).val();if(!order)return alert("Order not found.");if(order.courierTracking)return alert("Is order ki courier booking pehle se maujood hai.");try{const token=await currentUser.getIdToken(true);const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:result.awb||result.trackingId||"",courierShipmentId:result.shipmentId||"",courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",courierBookedAt:new Date().toISOString()};await db.ref("sellerOrders/"+currentUser.uid+"/"+id).update(patch);await db.ref("orders/"+id).update(patch);alert("Courier booking successful. AWB: "+(patch.courierTracking||"Generated"));}catch(e){alert("Courier booking nahi hui: "+e.message);}};
 window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);const order=(await ref.once("value")).val();if(!order)return alert("Not your order");await ref.update({status,sellerUpdatedAt:new Date().toISOString()});const allSnap=await db.ref("sellerOrders").once("value"),all=allSnap.val()||{};const siblings=Object.values(all).map(x=>x&&x[id]).filter(Boolean);if(siblings.length&&siblings.every(x=>x.status==="Shipped")){await db.ref("orders/"+id).update({status:"Shipped",sellerShippedAt:new Date().toISOString()});}else{await db.ref("orders/"+id).update({status:"Seller Processing",sellerProgressUpdatedAt:new Date().toISOString()});}};
-$("walletTab").onclick=()=>showSellerExtra("wallet");$("sellerOrdersTab").onclick=()=>showSellerExtra("orders");function showSellerExtra(which){["walletSection","sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));$(which==="wallet"?"walletSection":"sellerOrdersSection").classList.remove("hidden");}
+$("walletHeaderBtn").onclick=()=>{showSellerExtra("wallet");$("walletSection").scrollIntoView({behavior:"smooth",block:"start"});};$("sellerOrdersTab").onclick=()=>showSellerExtra("orders");function showSellerExtra(which){["walletSection","sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));$(which==="wallet"?"walletSection":"sellerOrdersSection").classList.remove("hidden");}
 $("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
 function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
 function listenMyProducts(){if(!currentUser)return;const ref=db.ref("sellerPrivateProducts/"+currentUser.uid);if(productListener)ref.off("value",productListener);productListener=snap=>{myProducts=snap.val()||{};renderMyProducts();updateStats();};ref.on("value",productListener,e=>showMsg("productsMsg","Products load nahi hue: "+e.message,"error"));}
