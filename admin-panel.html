@@ -199,7 +199,25 @@ setTimeout(processDeliveryQr,800);
 // Restore the admin dashboard after refresh instead of showing the login form again.
 auth.onAuthStateChanged(user=>{
   showActualAdminUid();
-  if(user && localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
+
+  // Never leave a cached dashboard visible after Firebase has signed out.
+  if(!user){
+    signedInPhone='';
+    localStorage.removeItem('modeluxeAdminDeviceUnlocked');
+    if(orderListener)db.ref('orders').off('value',orderListener);
+    if(productListener)db.ref('sellerProducts').off('value',productListener);
+    orderListener=null;productListener=null;
+    db.ref('sellerApplications').off('value');
+    db.ref('sellerProfiles').off('value');
+    $('dashboard').classList.add('hidden');
+    $('logoutBtn').classList.add('hidden');
+    $('adminDeviceLockModal').classList.add('hidden');
+    $('adminDeviceLockModal').classList.remove('flex');
+    $('loginPanel').classList.remove('hidden');
+    return;
+  }
+
+  if(localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
     signedInPhone=ADMIN_PHONE;
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
@@ -212,6 +230,10 @@ auth.onAuthStateChanged(user=>{
     startOwnerManagement();
     updateUnitChoices();
     setTimeout(processDeliveryQr,300);
+  }else{
+    $('dashboard').classList.add('hidden');
+    $('logoutBtn').classList.add('hidden');
+    $('loginPanel').classList.remove('hidden');
   }
 });
 async function sendOTP(){
@@ -646,7 +668,20 @@ function exportCSV(){const rows=[['Order ID','Customer','Phone','Address','Produ
 // 4-panel owner controls: application decisions, commission and withdrawal approvals.
 
 function sellerApplicationData(a){const nested=a&&(a.application||a.profile||a.seller||a.details);return nested&&typeof nested==='object'?{...a,...nested}:a||{};}
-function sellerApplicationStatus(a){const d=sellerApplicationData(a);const values=[d.applicationStatus,d.status,d.approvalStatus,d.accountStatus,d.sellerStatus].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);if(values.includes('pending')||values.includes('under_review')||values.includes('under review'))return 'pending';if(values.includes('suspended'))return 'suspended';if(values.includes('approved')||values.includes('active'))return 'approved';if(values.includes('rejected')||values.includes('cancelled')||values.includes('canceled'))return 'rejected';return 'pending';}
+function sellerApplicationStatus(a){
+ const d=sellerApplicationData(a);
+ // Prefer the canonical applicationStatus; stale legacy fields must not
+ // turn an already approved/rejected/suspended application back to Pending.
+ const candidates=[d.applicationStatus,d.approvalStatus,d.sellerStatus,d.accountStatus,d.status]
+   .map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+ for(const value of candidates){
+  if(value==='suspended')return 'suspended';
+  if(value==='approved'||value==='active')return 'approved';
+  if(value==='rejected'||value==='cancelled'||value==='canceled')return 'rejected';
+  if(value==='pending'||value==='under_review'||value==='under review')return 'pending';
+ }
+ return 'pending';
+}
 function openSellerStatusPage(status,button){
  try{
   status=String(status||'pending').toLowerCase();
