@@ -99,7 +99,16 @@ header{color:#111827}
 <div id="ordersList" class="space-y-3"></div>
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
-<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div id="sellerApplicationsHome"><p class="small text-stone-300 mb-3">Status chunne ke liye button dabayein. Har status ka alag page khulega.</p><div class="flex gap-2 flex-wrap mb-3"><button class="btn muted seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('pending',this)">Pending</button><button class="btn muted seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('approved',this)">Approved</button><button class="btn muted seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('rejected',this)">Cancelled</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('suspended',this)">Suspended</button><button class="btn primary" type="button" onclick="window.loadSellerApplications('pending',this)">↻ Refresh</button></div></div><div id="sellerStatusPage" class="hidden"><div class="flex items-center gap-3 mb-3"><button class="btn muted" type="button" onclick="closeSellerStatusPage()">← Back</button><h3 id="sellerStatusTitle" class="text-lg font-bold gold">Pending Applications</h3></div><div id="sellerApplicationsDiagnostics" class="small mb-3" role="status" style="color:#475569">Seller applications: waiting for Firebase read…</div><div id="sellerApplicationsList" style="display:block;min-height:48px"></div></div></div>
+<div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div id="sellerApplicationsHome"><p class="small text-stone-300 mb-3">Application ka status chun kar uski alag list dekhein.</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3"><button class="btn success seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('approved',this)">✓ Approve Application</button><button class="btn primary seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('pending',this)">◷ Pending Application</button><button class="btn danger seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('rejected',this)">✕ Cancel Application</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('suspended',this)">Ⅱ Suspend Application</button></div><button class="btn primary" type="button" onclick="window.loadSellerApplications(appStatusFilter||'pending',this)">↻ Refresh Applications</button></div><div id="sellerStatusPage" class="hidden"><div class="flex items-center gap-3 mb-3"><button class="btn muted" type="button" onclick="closeSellerStatusPage()">← Back</button><h3 id="sellerStatusTitle" class="text-lg font-bold gold">Pending Applications</h3></div><div id="sellerApplicationsDiagnostics" class="small mb-3" role="status" style="color:#475569">Seller applications: waiting for Firebase read…</div><div id="sellerApplicationsList" style="display:block;min-height:48px"></div></div></div>
+<div id="sellerDetailsModal" class="hidden fixed inset-0 z-[140] bg-black/70 p-3 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="sellerDetailsTitle">
+ <div class="panel max-w-2xl mx-auto p-4 md:p-6 my-5">
+  <div class="flex items-center justify-between gap-3 mb-4">
+   <h2 id="sellerDetailsTitle" class="text-xl font-black gold">Seller / Store Details</h2>
+   <button class="btn muted" type="button" onclick="closeSellerDetails()">✕ Close</button>
+  </div>
+  <div id="sellerDetailsContent"></div>
+ </div>
+</div>
 <div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
 <div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
 
@@ -743,7 +752,7 @@ function renderSellerApplications(status='pending'){
  const cards=rows.map(([uid,a])=>{
   const d=sellerApplicationData(a);
   return `<article class="order-card mb-3">
-   <b>${esc(d.shopName||d.sellerName||d.storeName||'Seller Store')}</b>
+   <button type="button" class="font-bold text-left text-lg gold underline" onclick="window.showSellerApplication('${esc(uid)}')">${esc(d.shopName||d.sellerName||d.storeName||'Seller Store')} · View Details</button>
    <div class="small">${esc(d.email||'')} · ${esc(d.phone||d.mobile||'')}</div>
    <div class="small">Aadhaar ending ${esc(d.aadhaarLast4||'----')} · PAN ending ${esc(d.panLast4||'----')}</div>
    <div class="small">Status: ${esc(sellerApplicationStatus(a))} · UID: ${esc(uid)}</div>
@@ -909,7 +918,44 @@ window.decideSeller=async function(uid,status,button){
 
 // Seller application actions use direct inline handlers on each rendered button.
 // This avoids mobile event-delegation issues when the Firebase list is re-rendered.
-window.showSellerApplication=uid=>{const a=sellerApplicationData(sellerAppsCache[uid]||{});alert('Store: '+(a.shopName||a.sellerName||a.storeName||'')+'\\nEmail: '+(a.email||'')+'\\nMobile: '+(a.phone||a.mobile||'')+'\\nAadhaar ending: '+(a.aadhaarLast4||'----')+'\\nPAN ending: '+(a.panLast4||'----')+'\\nKYC: '+(a.kycStatus||'Not verified'));};
+window.showSellerApplication=uid=>{
+ const raw=sellerAppsCache[uid];
+ if(!raw){alert('Seller details nahi mile. Applications ko refresh karein.');return;}
+ const a=sellerApplicationData(raw);
+ const content=$('sellerDetailsContent');
+ const niceKey=k=>String(k).replace(/([A-Z])/g,' $1').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+ const blocked=/(password|token|secret|otp|authorization|credential|aadhaar(number)?|pan(number)?|full.?document|base64)/i;
+ const rows=[];
+ const walk=(obj,prefix='')=>{
+  if(!obj||typeof obj!=='object')return;
+  Object.entries(obj).forEach(([key,value])=>{
+   if(key.startsWith('_')||blocked.test(key))return;
+   const label=prefix?prefix+' / '+niceKey(key):niceKey(key);
+   if(value===null||value===undefined||value==='')return;
+   if(typeof value==='object'){
+    if(Array.isArray(value)){rows.push([label,value.map(v=>typeof v==='object'?JSON.stringify(v):String(v)).join(', ')]);}
+    else walk(value,label);
+   }else rows.push([label,String(value)]);
+  });
+ };
+ walk(a);
+ const status=sellerApplicationStatus(raw);
+ const actionButtons=status==='approved'
+  ?'<button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button><button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="'+esc(uid)+'">Suspend Application</button>'
+  :status==='rejected'
+  ?'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button>'
+  :status==='suspended'
+  ?'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button><button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button>'
+  :'<button class="btn success" type="button" data-seller-action="approved" data-seller-uid="'+esc(uid)+'">Approve Application</button><button class="btn danger" type="button" data-seller-action="cancelled" data-seller-uid="'+esc(uid)+'">Cancel Application</button><button class="btn muted" type="button" data-seller-action="suspended" data-seller-uid="'+esc(uid)+'">Suspend Application</button>';
+ content.innerHTML=
+  '<div class="order-card mb-3"><div class="text-lg font-bold">'+esc(a.shopName||a.sellerName||a.storeName||'Seller Store')+'</div><p class="small mt-1">Application Status: <b>'+esc(status)+'</b></p><p class="small break-all">Seller UID: '+esc(uid)+'</p><p class="small">Source: '+esc((raw._source||[]).join(', '))+'</p></div>'+
+  '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">'+rows.map(([k,v])=>'<div class="rounded-xl border border-blue-100 p-3 min-w-0"><div class="small text-stone-500">'+esc(k)+'</div><div class="font-semibold break-words">'+esc(v)+'</div></div>').join('')+'</div>'+
+  (rows.length?'':'<p class="small">Is application mein additional details available nahi hain.</p>')+
+  '<div class="flex flex-wrap gap-2 mt-4">'+actionButtons+'</div>'+
+  '<p id="seller-action-'+esc(uid)+'" class="small mt-3" aria-live="polite">Seller details loaded.</p>';
+ $('sellerDetailsModal').classList.remove('hidden');
+};
+window.closeSellerDetails=()=>{$('sellerDetailsModal').classList.add('hidden');};
 (function installSellerApplicationButtonDelegation(){
  if(window.__sellerAppDelegationInstalled)return;
  window.__sellerAppDelegationInstalled=true;
