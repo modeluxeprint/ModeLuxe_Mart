@@ -365,7 +365,8 @@ $("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const email=$("email").value.trim().toLowerCase(),password=$("password").value,btn=$("authSubmit");
- btn.disabled=true;showMsg("authMsg","Please wait…");
+ btn.disabled=true;showMsg("authMsg","Login ho raha hai…");
+ const waitLimit=(promise,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" mein 15 seconds se zyada lag rahe hain. Internet, Firebase Authentication aur Database Rules check karein.")),15000))]);
  try{
   if(authMode==="register"){
    const shop=$("shopName").value.trim(),phone=$("sellerPhone").value.trim();
@@ -386,7 +387,7 @@ $("authForm").addEventListener("submit",async e=>{
    }
    showMsg("authMsg","Seller application successfully submit ho gayi. Admin approval ka wait karein.","success");
   }else{
-   await auth.signInWithEmailAndPassword(email,password);
+   await waitLimit(auth.signInWithEmailAndPassword(email,password),"Firebase Login");
   }
  }catch(err){showMsg("authMsg",authError(err),"error");}
  finally{btn.disabled=false;}
@@ -414,7 +415,7 @@ auth.onAuthStateChanged(async user=>{
  $("sellerEmail").textContent=user.email||"";
 
  try{
-  const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
+  const snap=await Promise.race([db.ref("sellerProfiles/"+user.uid).once("value"),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Seller profile Firebase se 15 seconds mein load nahi hui. Database Rules ya internet check karein.")),15000))]);
   sellerProfile=snap.val()||{};
 
   if(!snap.exists()){
@@ -451,7 +452,7 @@ auth.onAuthStateChanged(async user=>{
 
  }catch(err){
   pendingProfileUser=user;
-  showAuthChoice("");
+  showAuthChoice("Seller profile load nahi hui: "+(err.message||err)+". Dobara refresh karke dekhein.");
  }
 });
 $("completeSellerForm").addEventListener("submit",async e=>{
