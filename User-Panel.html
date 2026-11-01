@@ -1988,15 +1988,10 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 </script>
 
 
-<style id="modeluxe-hero-end-at-shop-button-final">
-/* Reduce only the unused lower hero area; preserve the existing 3D title sizes. */
-.hero{min-height:0!important;height:auto!important;padding-bottom:12px!important;}
-.hero>button{margin-bottom:0!important;}
-@media(max-width:600px){
-  .hero{min-height:0!important;height:auto!important;padding:26px 8px 12px!important;margin-bottom:18px!important;}
-  .hero p{margin-bottom:16px!important;}
-  .hero>button{padding:13px 36px!important;font-size:18px!important;}
-}
+<style id="modeluxe-hero-remove-empty-space-below-shop-now">
+/* Trim only the unused blue area below the Shop Now button; keep hero text and other sections unchanged. */
+.hero{min-height:0!important;padding-bottom:2px!important;}
+@media(max-width:600px){.hero{min-height:0!important;padding-bottom:2px!important;}}
 </style>
 
 </body>
