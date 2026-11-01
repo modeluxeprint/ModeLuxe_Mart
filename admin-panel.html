@@ -105,6 +105,21 @@ header{color:#111827}
 }
 </style>
 
+
+<style>
+/* Center status action buttons in Seller Applications and Withdrawals */
+#applicationsTab #sellerApplicationsHome > .flex,
+#withdrawalsTab #withdrawalHome > .flex{
+ justify-content:center !important;
+ align-items:center;
+}
+#applicationsTab #sellerApplicationsHome .seller-status-tab,
+#withdrawalsTab #withdrawalHome .withdrawal-status-tab{
+ margin-left:auto;
+ margin-right:auto;
+}
+</style>
+
 </head>
 <body><script>
 (function(){
@@ -144,7 +159,7 @@ header{color:#111827}
 <h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2>
 <div id="withdrawalHome">
  <p class="small mb-3">Withdrawal request ka status chunen:</p>
- <div class="flex gap-2 flex-wrap mb-3">
+ <div class="flex gap-2 flex-wrap mb-3 justify-center">
   <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="approved" onclick="window.openWithdrawalStatus('approved',this)">Approve Request</button>
   <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="pending" onclick="window.openWithdrawalStatus('pending',this)">Pending Request</button>
   <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="cancelled" onclick="window.openWithdrawalStatus('cancelled',this)">Cancel Request</button>
