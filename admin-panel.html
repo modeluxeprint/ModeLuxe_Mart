@@ -109,7 +109,24 @@ header{color:#111827}
   <div id="sellerDetailsContent"></div>
  </div>
 </div>
-<div id="withdrawalsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2><div id="withdrawalsList"></div></div>
+<div id="withdrawalsTab" class="hidden panel p-4">
+<h2 class="text-xl font-bold gold mb-3">Withdrawal Requests</h2>
+<div id="withdrawalHome">
+ <p class="small mb-3">Withdrawal request ka status chunen:</p>
+ <div class="flex gap-2 flex-wrap mb-3">
+  <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="approved" onclick="window.openWithdrawalStatus('approved',this)">Approve Request</button>
+  <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="pending" onclick="window.openWithdrawalStatus('pending',this)">Pending Request</button>
+  <button class="btn muted withdrawal-status-tab" type="button" data-withdrawal-status="cancelled" onclick="window.openWithdrawalStatus('cancelled',this)">Cancel Request</button>
+ </div>
+</div>
+<div id="withdrawalStatusPage" class="hidden">
+ <div class="flex items-center gap-3 mb-3 flex-wrap">
+  <button class="btn muted" type="button" onclick="window.closeWithdrawalStatus()">← Back</button>
+  <h3 id="withdrawalStatusTitle" class="text-lg font-bold gold">Pending Requests</h3>
+ </div>
+ <div id="withdrawalsList"></div>
+</div>
+</div>
 <div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
 
 <div id="couriersTab" class="hidden panel p-4 max-w-3xl">
@@ -570,7 +587,13 @@ function showAdminTab(tab){
      b.setAttribute('aria-pressed','false');
    });
  }
- if(tab==='withdrawals')renderWithdrawals();if(tab==='couriers')loadCourierPartners();
+ if(tab==='withdrawals'){
+  $('withdrawalHome')?.classList.remove('hidden');
+  $('withdrawalStatusPage')?.classList.add('hidden');
+  document.querySelectorAll('#withdrawalsTab .withdrawal-status-tab').forEach(b=>{
+   b.classList.remove('seller-tab-active');b.setAttribute('aria-pressed','false');
+  });
+ }if(tab==='couriers')loadCourierPartners();
 }
 let currentDeliverySettings={freeAbove:199,charge:49},deliverySettingsAdminListener=null;
 function updateDeliverySettingsPreview(){const thresholdInput=$('freeDeliveryAbove')?.value,chargeInput=$('deliveryChargeAmount')?.value;const threshold=Math.max(0,Number(thresholdInput===''||thresholdInput==null?199:thresholdInput)),charge=Math.max(0,Number(chargeInput===''||chargeInput==null?49:chargeInput));$('deliverySettingsPreview').textContent=`₹${Math.max(0,threshold-1)} के ऑर्डर पर ₹${charge} delivery charge; ₹${threshold} या उससे अधिक पर free delivery.`;}
@@ -998,8 +1021,95 @@ window.closeSellerDetails=()=>{$('sellerDetailsModal').classList.add('hidden');}
   }
  },true);
 })();
-  function renderWithdrawals(){const rows=[];for(const [type,users] of Object.entries(withdrawCache||{}))for(const [uid,items] of Object.entries(users||{}))for(const [id,r] of Object.entries(items||{}))rows.push({type,uid,id,...r});$('withdrawalsList').innerHTML=rows.map(r=>`<article class="order-card mb-2"><b>${esc(r.type)} · ${esc(r.shopName||r.name||r.uid)}</b><div class="small">₹${Number(r.amount||0).toLocaleString('en-IN')} · ${esc(r.status||'pending')} · ${esc(r.createdAt||'')}</div><div class="flex gap-2 mt-2"><button class="btn success" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve</button><button class="btn primary" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Paid</button><button class="btn danger" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Reject</button></div></article>`).join('')||'<p class="small">No withdrawal requests.</p>';}
-window.reviewWithdrawal=async(type,uid,id,status)=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');await db.ref(`withdrawalRequests/${type}/${uid}/${id}`).update({status,reviewedAt:new Date().toISOString(),reviewedBy:signedInPhone});alert('Withdrawal status updated: '+status);};
+  let withdrawalStatusFilter='pending';
+function withdrawalRequestStatus(r){
+ const s=String(r.status||'pending').trim().toLowerCase();
+ if(['approved','paid','completed','success','successfully_paid'].includes(s))return 'approved';
+ if(['rejected','cancelled','canceled','declined'].includes(s))return 'cancelled';
+ return 'pending';
+}
+function openWithdrawalStatus(status,button){
+ const allowed=['approved','pending','cancelled'];
+ withdrawalStatusFilter=allowed.includes(status)?status:'pending';
+ $('withdrawalHome')?.classList.add('hidden');
+ $('withdrawalStatusPage')?.classList.remove('hidden');
+ const labels={approved:'Approved Requests',pending:'Pending Requests',cancelled:'Cancelled Requests'};
+ $('withdrawalStatusTitle').textContent=labels[withdrawalStatusFilter];
+ document.querySelectorAll('#withdrawalsTab .withdrawal-status-tab').forEach(b=>{
+  const active=b.dataset.withdrawalStatus===withdrawalStatusFilter;
+  b.classList.toggle('seller-tab-active',active);
+  b.setAttribute('aria-pressed',active?'true':'false');
+ });
+ renderWithdrawals();
+}
+window.openWithdrawalStatus=openWithdrawalStatus;
+function closeWithdrawalStatus(){
+ $('withdrawalStatusPage')?.classList.add('hidden');
+ $('withdrawalHome')?.classList.remove('hidden');
+}
+window.closeWithdrawalStatus=closeWithdrawalStatus;
+function renderWithdrawals(){
+ const rows=[];
+ for(const [type,users] of Object.entries(withdrawCache||{})){
+  for(const [uid,items] of Object.entries(users||{})){
+   for(const [id,r] of Object.entries(items||{})){
+    if(!r||typeof r!=='object')continue;
+    rows.push({type,uid,id,...r});
+   }
+  }
+ }
+ const filtered=rows.filter(r=>withdrawalRequestStatus(r)===withdrawalStatusFilter);
+ const labels={approved:'Approved',pending:'Pending',cancelled:'Cancelled'};
+ const cards=filtered.map(r=>{
+  const status=withdrawalRequestStatus(r);
+  const identity=String(r.shopName||r.name||r.uid||'');
+  const amount=Number(r.amount||0);
+  const details=[
+   ['Account type',r.type],
+   ['Name / Store',identity],
+   ['Amount','₹'+amount.toLocaleString('en-IN')],
+   ['Status',String(r.status||'pending')],
+   ['Requested at',String(r.createdAt||r.requestedAt||'Not provided')],
+   ['UPI ID',String(r.upiId||r.upi||'Not provided')],
+   ['Account holder',String(r.accountHolder||r.accountName||'Not provided')],
+   ['Bank / UPI details',String(r.bankName||r.accountNumber||r.bankAccount||'Not provided')]
+  ];
+  const actions=status==='pending'
+   ?`<button class="btn success" type="button" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve Request</button>
+     <button class="btn danger" type="button" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','rejected')">Cancel Request</button>`
+   :status==='approved'
+   ?`<button class="btn primary" type="button" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','paid')">Mark Payment Completed</button>`
+   :'';
+  return `<article class="order-card mb-3">
+   <b>${esc(r.type)} · ${esc(identity)}</b>
+   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+    ${details.map(([k,v])=>`<div class="rounded-xl border border-blue-100 p-3 min-w-0"><div class="small text-stone-500">${esc(k)}</div><div class="font-semibold break-words">${esc(v)}</div></div>`).join('')}
+   </div>
+   <div class="small mt-2">User UID: ${esc(r.uid)} · Request ID: ${esc(r.id)}</div>
+   ${actions?`<div class="flex gap-2 flex-wrap mt-3">${actions}</div>`:''}
+  </article>`;
+ }).join('');
+ $('withdrawalsList').innerHTML=
+  `<p class="small mb-3">Total requests: ${rows.length} · ${labels[withdrawalStatusFilter]}: ${filtered.length}</p>`+
+  (cards||`<div class="order-card">Is category mein koi ${labels[withdrawalStatusFilter].toLowerCase()} request nahi hai.</div>`);
+}
+window.reviewWithdrawal=async(type,uid,id,status)=>{
+ if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+ const allowed=['approved','paid','rejected'];
+ if(!allowed.includes(status))return alert('Invalid withdrawal status');
+ try{
+  await db.ref(`withdrawalRequests/${type}/${uid}/${id}`).update({
+   status,
+   reviewedAt:new Date().toISOString(),
+   reviewedBy:signedInPhone
+  });
+  addNotification('Withdrawal status updated',`${type} · ${uid} · ${status}`,'success');
+  alert('Withdrawal status updated: '+status);
+  renderWithdrawals();
+ }catch(e){
+  alert('Withdrawal update fail: '+(e&&e.message||String(e)));
+ }
+};
 window.saveCommissionSettings=async()=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return;const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);if(defaultCommission<0||defaultCommission>100||deliveryBoyPayout<0)return alert('Values check karein');await db.ref('commissionSettings').set({defaultCommission,deliveryBoyPayout,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});await db.ref('deliverySettings/deliveryBoyPayout').set(deliveryBoyPayout);$('commissionMsg').textContent='Commission aur delivery payout save ho gaye.';};
 
 const COURIER_PARTNERS_PATH='courierPartners';
