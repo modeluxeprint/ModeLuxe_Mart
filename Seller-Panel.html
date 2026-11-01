@@ -358,22 +358,31 @@ function startSellerWallet(){
  },e=>{
   console.error("Seller commission read failed:",e);
  });
- let sellerWithdrawalRows={},sellerWithdrawalFilter="pending";
+ let sellerWithdrawalRows={},sellerWithdrawalFilter=null;
  function renderSellerWithdrawalRows(){
-  const rows=Object.entries(sellerWithdrawalRows).filter(([id,x])=>{
-   const status=String(x.status||"pending").toLowerCase();
-   if(sellerWithdrawalFilter==="approved")return ["approved","paid","completed"].includes(status);
-   if(sellerWithdrawalFilter==="cancelled")return ["cancelled","canceled","rejected"].includes(status);
-   return ["pending","requested","processing"].includes(status);
-  });
-  $("sellerWithdrawHistory").innerHTML=rows.map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests in this category.";
+  const history=$("sellerWithdrawHistory");
+  if(!sellerWithdrawalFilter){
+   history.innerHTML="";
+  }else{
+   const rows=Object.entries(sellerWithdrawalRows).filter(([id,x])=>{
+    const status=String(x.status||"pending").toLowerCase();
+    if(sellerWithdrawalFilter==="approved")return ["approved","paid","completed"].includes(status);
+    if(sellerWithdrawalFilter==="cancelled")return ["cancelled","canceled","rejected"].includes(status);
+    return ["pending","requested","processing"].includes(status);
+   });
+   history.innerHTML=rows.map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests in this category.";
+  }
   $("withdrawApprovedBtn").classList.toggle("active",sellerWithdrawalFilter==="approved");
   $("withdrawPendingBtn").classList.toggle("active",sellerWithdrawalFilter==="pending");
   $("withdrawCancelBtn").classList.toggle("active",sellerWithdrawalFilter==="cancelled");
  }
- $("withdrawApprovedBtn").onclick=()=>{sellerWithdrawalFilter="approved";renderSellerWithdrawalRows();};
- $("withdrawPendingBtn").onclick=()=>{sellerWithdrawalFilter="pending";renderSellerWithdrawalRows();};
- $("withdrawCancelBtn").onclick=()=>{sellerWithdrawalFilter="cancelled";renderSellerWithdrawalRows();};
+ function toggleSellerWithdrawalFilter(filter){
+  sellerWithdrawalFilter=sellerWithdrawalFilter===filter?null:filter;
+  renderSellerWithdrawalRows();
+ }
+ $("withdrawApprovedBtn").onclick=()=>toggleSellerWithdrawalFilter("approved");
+ $("withdrawPendingBtn").onclick=()=>toggleSellerWithdrawalFilter("pending");
+ $("withdrawCancelBtn").onclick=()=>toggleSellerWithdrawalFilter("cancelled");
  db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{
   sellerWithdrawalRows=s.val()||{};
   renderSellerWithdrawalRows();
