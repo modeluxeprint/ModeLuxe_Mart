@@ -562,8 +562,9 @@ function updateUnitChoices(){
   updateProductPreview();
 }
 function updateProductPreview(){const q=$('productQty')?.value?.trim()||'—';const u=$('productUnit')?.value||'';const p=$('productPreview');if(p)p.textContent=(q+' '+u).trim();}
-$('productQty').addEventListener('input',updateProductPreview);
-$('productUnit').addEventListener('change',updateProductPreview);
+// Product listing UI admin panel se remove hai; optional chaining prevents a null-element error from stopping the remaining admin JavaScript.
+$('productQty')?.addEventListener('input',updateProductPreview);
+$('productUnit')?.addEventListener('change',updateProductPreview);
 function startProducts(){
   if(productListener)db.ref('sellerProducts').off('value',productListener);
   productListener=snap=>{productsData=snap.val()||{};$('productsSyncMsg').textContent='Products Firebase se live sync active · '+new Date().toLocaleTimeString();renderProducts();};
