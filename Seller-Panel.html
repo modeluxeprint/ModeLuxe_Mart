@@ -107,6 +107,15 @@ window.mlmVolatileStore = (() => {
 .seller-notice-box button{min-width:100px;background:#075fc4;color:#fff}
 </style>
 
+<style>
+.withdraw-request-filter{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 12px}
+.withdraw-filter-btn{width:100%;min-height:46px;padding:11px 10px;border-radius:10px;font-weight:750;text-align:center}
+.withdraw-filter-btn.approved{background:#dcfce7;color:#166534}
+.withdraw-filter-btn.pending{background:#dbeafe;color:#1d4ed8}
+.withdraw-filter-btn.cancelled{grid-column:1/-1;background:#fee2e2;color:#b91c1c}
+.withdraw-filter-btn.active{outline:3px solid #64748b;outline-offset:2px}
+@media(max-width:360px){.withdraw-filter-btn{font-size:13px;padding:10px 6px}}
+</style>
 </head>
 <body>
 <header class="top"><div class="topinner"><div><div class="brand">MODELUXE MART</div><h1>Seller Panel</h1><div style="font-size:13px;color:#dbeafe">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
@@ -114,7 +123,13 @@ window.mlmVolatileStore = (() => {
 <button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
 </div></div></header>
 <main class="wrap">
-<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
+<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p>
+<div class="withdraw-request-filter" role="group" aria-label="Withdrawal request filters">
+<button id="withdrawApprovedBtn" class="withdraw-filter-btn approved" type="button">Approved Request</button>
+<button id="withdrawPendingBtn" class="withdraw-filter-btn pending" type="button">Pending Request</button>
+<button id="withdrawCancelBtn" class="withdraw-filter-btn cancelled" type="button">Cancel Request</button>
+</div>
+<div id="sellerWithdrawHistory"></div></section>
 <section id="authCard" class="card">
 <h2 id="authTitle">Seller Login</h2>
 <p class="muted">Har seller apne email aur password se alag account banayega. Seller ko panel mein sirf apne account ke products dikhaye jayenge.</p>
@@ -214,35 +229,16 @@ async function uploadImageToR2(file){
   if(!currentUser)throw new Error("Pehle seller login karein.");
   if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Valid image select karein.");
   if(file.size>8*1024*1024)throw new Error("Photo 8 MB se chhoti rakhein.");
-  // Refresh the Firebase ID token before sending it to the Cloudflare Worker.
-  // This helps avoid expired/stale-token verification failures.
-  const token=await currentUser.getIdToken(true);
-  if(!token)throw new Error("Firebase login token could not be generated. Please log out and log in again.");
-  const form=new FormData();
-  form.append("file",file,file.name||"product-image");
+  const token=await currentUser.getIdToken();
+  const form=new FormData();form.append("file",file,file.name||"product-image");
   let res;
   try{
-    res=await fetch(R2_UPLOAD_URL,{
-      method:"POST",
-      headers:{Authorization:"Bearer "+token},
-      body:form,
-      cache:"no-store"
-    });
+    res=await fetch(R2_UPLOAD_URL,{method:"POST",headers:{Authorization:"Bearer "+token},body:form});
   }catch(networkError){
     throw new Error("Photo upload service could not be reached. Cloudflare Worker CORS / network settings need to be checked.");
   }
-  const rawResponse=await res.text();
-  let result={};
-  try{result=rawResponse?JSON.parse(rawResponse):{};}catch(parseError){
-    throw new Error("Photo upload service returned an invalid response (HTTP "+res.status+"). Check the Cloudflare Worker.");
-  }
-  if(!res.ok||!result.success||!result.url){
-    const workerError=String(result.error||result.message||"");
-    if(/firebase.*(login|token|auth).*(verif|invalid|fail)|verification.*failed/i.test(workerError)){
-      throw new Error("Firebase login verification failed at the photo-upload server. The seller panel now refreshes the login token before upload; if this message continues, the Cloudflare Worker Firebase project ID / token verification settings must be corrected.");
-    }
-    throw new Error(workerError||("Photo upload failed (HTTP "+res.status+"). Check the Cloudflare Worker response."));
-  }
+  const result=await res.json().catch(()=>({}));
+  if(!res.ok||!result.success||!result.url)throw new Error(result.error||("Photo upload failed (HTTP "+res.status+"). Check the Cloudflare Worker response."));
   return result.url;
 }
 
@@ -362,9 +358,25 @@ function startSellerWallet(){
  },e=>{
   console.error("Seller commission read failed:",e);
  });
+ let sellerWithdrawalRows={},sellerWithdrawalFilter="pending";
+ function renderSellerWithdrawalRows(){
+  const rows=Object.entries(sellerWithdrawalRows).filter(([id,x])=>{
+   const status=String(x.status||"pending").toLowerCase();
+   if(sellerWithdrawalFilter==="approved")return ["approved","paid","completed"].includes(status);
+   if(sellerWithdrawalFilter==="cancelled")return ["cancelled","canceled","rejected"].includes(status);
+   return ["pending","requested","processing"].includes(status);
+  });
+  $("sellerWithdrawHistory").innerHTML=rows.map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests in this category.";
+  $("withdrawApprovedBtn").classList.toggle("active",sellerWithdrawalFilter==="approved");
+  $("withdrawPendingBtn").classList.toggle("active",sellerWithdrawalFilter==="pending");
+  $("withdrawCancelBtn").classList.toggle("active",sellerWithdrawalFilter==="cancelled");
+ }
+ $("withdrawApprovedBtn").onclick=()=>{sellerWithdrawalFilter="approved";renderSellerWithdrawalRows();};
+ $("withdrawPendingBtn").onclick=()=>{sellerWithdrawalFilter="pending";renderSellerWithdrawalRows();};
+ $("withdrawCancelBtn").onclick=()=>{sellerWithdrawalFilter="cancelled";renderSellerWithdrawalRows();};
  db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{
-  const v=s.val()||{};
-  $("sellerWithdrawHistory").innerHTML=Object.entries(v).map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests yet.";
+  sellerWithdrawalRows=s.val()||{};
+  renderSellerWithdrawalRows();
  },e=>{
   $("sellerWithdrawHistory").textContent="Withdrawal history is currently unavailable.";
   console.error("Withdrawal history read failed:",e);
