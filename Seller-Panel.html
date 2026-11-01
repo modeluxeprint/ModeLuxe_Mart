@@ -178,7 +178,7 @@ window.mlmVolatileStore = (() => {
 
 
 <div class="card">
-<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><div class="muted">Logged in seller</div><h2 id="sellerHeading" style="margin:3px 0">Seller</h2><div id="sellerEmail" class="muted"></div></div><span class="msg success" style="margin:0">Private seller view</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><div class="muted">Logged in seller</div><h2 id="sellerHeading" style="margin:3px 0">Seller</h2><div id="sellerEmail" class="muted"></div></div><span class="msg success" style="margin:0">Private seller view</span></div><div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button id="sellerPauseBtn" class="danger" type="button">Pause My Shop</button><span id="sellerPauseInfo" class="hint">Shop active hai. Products customers ko dikh rahe hain.</span></div>
 <div class="stats" style="margin-top:14px"><div class="stat"><span class="muted">My Products</span><b id="productCount">0</b></div><div class="stat"><span class="muted">Active Listings</span><b id="activeCount">0</b></div><div class="stat"><span class="muted">Low / Out of Stock</span><b id="lowStockCount">0</b></div></div>
 <p class="hint">Customer store par jo product publish hoga uska public display (naam, photo, category aur price) customers ko dikhega. Aapki seller account/profile aur product management record alag private path mein save hota hai.</p>
 </div>
@@ -425,6 +425,7 @@ auth.onAuthStateChanged(async user=>{
   $("sellerApp").classList.remove("hidden");
   $("walletHeaderBtn").classList.remove("hidden");
   fillProfile();
+  updatePauseUi();
   $("sellerHeading").textContent=sellerProfile.shopName||"Seller Account";
   listenMyProducts();
   startSellerWallet();
@@ -608,7 +609,7 @@ $("productForm").addEventListener("submit",async e=>{
   const product={id:id||null,sellerUid:currentUser.uid,seller:sellerProfile.shopName||"Seller",name,category,quantity,unit,price,stock,stockUnit,description,imageUrl,image:imageUrl,active,updatedAt:now,updatedBy:currentUser.uid,createdAt:old.createdAt||now};
   saveStage="saving product in Firebase";
   const productId=id||db.ref("sellerProducts").push().key;product.id=productId;
-  const publicProduct={id:productId,sellerUid:currentUser.uid,seller:product.seller,name,category,quantity,unit,price,stock,stockUnit,description,imageUrl,image:imageUrl,img:imageUrl,active,updatedAt:now,createdAt:product.createdAt};
+  const publicProduct={id:productId,sellerUid:currentUser.uid,seller:product.seller,name,category,quantity,unit,price,stock,stockUnit,description,imageUrl,image:imageUrl,img:imageUrl,active,sellerPaused:sellerProfile.shopPaused===true,updatedAt:now,createdAt:product.createdAt};
   const updates={};updates["sellerPrivateProducts/"+currentUser.uid+"/"+productId]=product;updates["sellerProducts/"+productId]=active?publicProduct:null;
   await db.ref().update(updates);
   showMsg("productMsg",id?"Product updated successfully.":"Product saved and published to the customer store.","success");resetProductForm();switchTab("mine");
@@ -618,8 +619,33 @@ $("productForm").addEventListener("submit",async e=>{
  }finally{btn.disabled=false;}
 });
 window.editProduct=id=>{const p=myProducts[id];if(!p)return;switchTab("add");$("productId").value=id;$("productName").value=p.name||"";$("category").value=p.category||"Grocery";$("quantity").value=p.quantity||"1";$("unit").value=p.unit||"Piece";$("price").value=Number(p.price||0);$("stock").value=Number(p.stock||0);$("stockUnit").value=p.stockUnit||"Piece";$("description").value=p.description||"";$("publish").checked=p.active!==false;$("formTitle").textContent="Product Edit Karein";$("saveProductBtn").textContent="Update Product";if(p.imageUrl){$("imagePreview").src=p.imageUrl;$("imagePreviewWrap").classList.remove("hidden");}else $("imagePreviewWrap").classList.add("hidden");window.scrollTo({top:0,behavior:"smooth"});};
-window.togglePublish=async id=>{if(!currentUser||!myProducts[id])return;const p=myProducts[id],active=p.active===false;const now=new Date().toISOString();const pub={...p,id,sellerUid:currentUser.uid,seller:sellerProfile.shopName||p.seller||"Seller",active,updatedAt:now};const updates={};updates["sellerPrivateProducts/"+currentUser.uid+"/"+id+"/active"]=active;updates["sellerPrivateProducts/"+currentUser.uid+"/"+id+"/updatedAt"]=now;updates["sellerProducts/"+id]=active?{id,sellerUid:currentUser.uid,seller:pub.seller,name:p.name,category:p.category,quantity:p.quantity,unit:p.unit,price:p.price,stock:p.stock,stockUnit:p.stockUnit,description:p.description,imageUrl:p.imageUrl||"",image:p.imageUrl||"",img:p.imageUrl||"",active,updatedAt:now,createdAt:p.createdAt||now}:null;try{await db.ref().update(updates);}catch(e){alert("Publish status save nahi hua: "+e.message);}};
+window.togglePublish=async id=>{if(!currentUser||!myProducts[id])return;const p=myProducts[id],active=p.active===false;const now=new Date().toISOString();const pub={...p,id,sellerUid:currentUser.uid,seller:sellerProfile.shopName||p.seller||"Seller",active,updatedAt:now};const updates={};updates["sellerPrivateProducts/"+currentUser.uid+"/"+id+"/active"]=active;updates["sellerPrivateProducts/"+currentUser.uid+"/"+id+"/updatedAt"]=now;updates["sellerProducts/"+id]=active?{id,sellerUid:currentUser.uid,seller:pub.seller,name:p.name,category:p.category,quantity:p.quantity,unit:p.unit,price:p.price,stock:p.stock,stockUnit:p.stockUnit,description:p.description,imageUrl:p.imageUrl||"",image:p.imageUrl||"",img:p.imageUrl||"",active,sellerPaused:sellerProfile.shopPaused===true,updatedAt:now,createdAt:p.createdAt||now}:null;try{await db.ref().update(updates);}catch(e){alert("Publish status save nahi hua: "+e.message);}};
 window.deleteProduct=async id=>{const p=myProducts[id];if(!currentUser||!p)return;if(!confirm('Kya aap "'+(p.name||"Product")+'" ko apni listing se delete karna chahte hain?'))return;const updates={};updates["sellerPrivateProducts/"+currentUser.uid+"/"+id]=null;updates["sellerProducts/"+id]=null;try{await db.ref().update(updates);}catch(e){alert("Delete nahi hua: "+e.message);}};
+
+// Seller can temporarily pause/resume the whole shop without deleting listings.
+function updatePauseUi(){const paused=sellerProfile.shopPaused===true;const b=$("sellerPauseBtn");if(!b)return;b.textContent=paused?"Resume My Shop":"Pause My Shop";b.className=paused?"primary":"danger";$("sellerPauseInfo").textContent=paused?"Shop paused hai. Customers ko aapke products unavailable dikh rahe hain.":"Shop active hai. Products customers ko dikh rahe hain.";}
+$("sellerPauseBtn").onclick=async()=>{
+ if(!currentUser)return;
+ const next=!(sellerProfile.shopPaused===true);
+ const btn=$("sellerPauseBtn");btn.disabled=true;
+ try{
+  const now=new Date().toISOString();
+  const updates={};
+  updates["sellerProfiles/"+currentUser.uid+"/shopPaused"]=next;
+  updates["sellerProfiles/"+currentUser.uid+"/shopPausedAt"]=next?now:null;
+  for(const [id,p0] of Object.entries(myProducts||{})){
+   const p=p0||{};
+   if(p.active!==false){
+    updates["sellerProducts/"+id+"/sellerPaused"]=next;
+    updates["sellerProducts/"+id+"/updatedAt"]=now;
+   }
+  }
+  await db.ref().update(updates);
+  sellerProfile.shopPaused=next;updatePauseUi();
+  showSellerNotice(next?"Your shop is paused. Customers cannot order your products until you resume.":"Your shop is active again. Published products with available stock are visible.","success");
+ }catch(err){showSellerNotice("Shop status update nahi hua: "+(err.message||err),"error");}
+ finally{btn.disabled=false;}
+};
 $("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const shop=$("profileShop").value.trim(),phone=$("profilePhone").value.trim();if(!shop||!/^\d{10}$/.test(phone)){showMsg("profileMsg","Shop name aur sahi 10-digit mobile number bharein.","error");return;}try{sellerProfile={...sellerProfile,uid:currentUser.uid,email:currentUser.email||"",shopName:shop,phone,updatedAt:new Date().toISOString(),accountType:"seller"};await db.ref("sellerProfiles/"+currentUser.uid).update(sellerProfile);$("sellerHeading").textContent=shop;showMsg("profileMsg","Account details save ho gayi.","success");}catch(e2){showMsg("profileMsg","Save nahi hua: "+e2.message,"error");}});
 </script>
 </body>
