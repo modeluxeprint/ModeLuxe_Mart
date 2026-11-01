@@ -2219,4 +2219,28 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
  .hero p{font-size:clamp(16px,4.4vw,20px)!important;margin:12px 0 24px!important;}
  .hero>button{padding:13px 36px!important;font-size:18px!important;}
 }
+
+/* Hero banner: blue background ends just below the Shop Now button */
+.hero{
+  height:auto!important;
+  min-height:0!important;
+  padding:34px 8px 14px!important;
+  margin-bottom:18px!important;
+}
+.hero p{
+  margin:12px 0 14px!important;
+}
+.hero>button{
+  margin-bottom:0!important;
+}
+@media(max-width:600px){
+  .hero{
+    height:auto!important;
+    min-height:0!important;
+    padding:30px 8px 12px!important;
+  }
+  .hero p{
+    margin:10px 0 12px!important;
+  }
+}
 </style>
