@@ -15,6 +15,24 @@
 :root{--blue:#075fc4;--navy:#062b78;--bg:#f4f7fb;--text:#111827;--muted:#687386;--line:#dbe5f1;--panel:#fff;--pale:#e7f2ff;--green:#166534;--red:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:11px 14px;font-weight:750}.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:#164e84}.danger{background:#fee2e2;color:#991b1b}.hidden{display:none!important}.top{background:var(--navy);color:white;padding:16px}.topinner{max-width:1100px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-size:12px;letter-spacing:.2em;font-weight:800;color:#bcdcff}.top h1{font-size:24px;margin:3px 0}.wrap{max-width:1100px;margin:auto;padding:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #122b4508}.card h2{margin:0 0 12px;font-size:20px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:var(--text)}.field textarea{resize:vertical}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button.active{background:var(--blue);color:#fff}.tabs button:not(.active){background:var(--pale);color:#164e84}.msg{padding:11px 12px;border-radius:10px;background:#eff6ff;color:#164e84;margin:10px 0;line-height:1.5;overflow-wrap:anywhere}.msg.error{background:#fee2e2;color:#991b1b}.msg.success{background:#dcfce7;color:#166534}.product{display:grid;grid-template-columns:86px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:13px;padding:12px;margin:10px 0;background:white}.product img{width:86px;height:100px;object-fit:cover;background:#eef2f7;border-radius:9px}.product h3{margin:0 0 5px;overflow-wrap:anywhere}.product .meta{font-size:13px;color:var(--muted);line-height:1.5}.product .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.product .actions button{padding:8px 11px;font-size:13px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.stat{background:#eff6ff;border-radius:12px;padding:13px}.stat b{display:block;font-size:24px;color:var(--blue)}.hint{font-size:12px;color:var(--muted);line-height:1.5}.divider{height:1px;background:var(--line);margin:14px 0}
 @media(max-width:560px){.wrap{padding:10px}.topinner{align-items:flex-start}.top h1{font-size:21px}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.stats{grid-template-columns:1fr 1fr}.product{grid-template-columns:72px minmax(0,1fr);gap:9px;padding:9px}.product img{width:72px;height:88px}.card{padding:13px}}
+
+
+/* Wallet withdrawal form spacing */
+#sellerWithdrawAmount{
+ display:block;
+ width:100%;
+ max-width:380px;
+ margin:8px 0 0;
+ padding:11px 12px;
+ border:1px solid var(--line);
+ border-radius:10px;
+ background:#fff;
+ color:var(--text);
+}
+#sellerWithdrawBtn{
+ display:block;
+ margin-top:10px;
+}
 </style>
 <script>
 /* Volatile-only state adapter. Cleared on refresh or page close. */
@@ -318,17 +336,22 @@ $("sellerWithdrawBtn").onclick=async()=>{
  try{
   const balanceSnap=await db.ref("sellerWallets/"+currentUser.uid+"/balance").once("value");
   const balance=Number(balanceSnap.val()||0);
-  if(!Number.isFinite(balance)||balance<=0)throw Error("Aapke wallet mein balance nahi hai. Balance aane ke baad hi withdrawal request bhej sakte hain.");
-  if(amount>balance+0.000001)throw Error("Wallet balance ₹"+balance.toLocaleString("en-IN")+" hai. Isse zyada withdrawal request submit nahi ho sakti.");
+  if(!Number.isFinite(balance)||balance<=0)throw Error("Your wallet balance is ₹0. A withdrawal request cannot be submitted until your wallet has sufficient funds.");
+  if(amount>balance+0.000001)throw Error("Insufficient wallet balance. Your available balance is ₹"+balance.toLocaleString("en-IN")+". Please enter an amount within your available balance.");
   const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;
   await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({
    id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",
    processingHours:48,createdAt:new Date().toISOString()
   });
   $("sellerWithdrawAmount").value="";
-  showSellerNotice("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.","success");
+  showSellerNotice("Your withdrawal request has been submitted successfully. Processing may take up to 48 hours.","success");
  }catch(e){
-  showSellerNotice(e.message||"Withdrawal request submit nahi hui.","error");
+  const message=String(e&&e.message||"");
+  if(message.includes("PERMISSION_DENIED")||message.includes("permission_denied")){
+   showSellerNotice("Your wallet balance could not be verified because database access is blocked. Please ask the administrator to allow this seller account to read its own wallet balance.","error");
+  }else{
+   showSellerNotice(message||"Your withdrawal request could not be submitted. Please try again.","error");
+  }
  }finally{btn.disabled=false;}
 };
 
