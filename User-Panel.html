@@ -657,7 +657,7 @@ function startCartCloudSync(user){
       }));
       mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));
       renderCart();
-      showToast("Cart cloud se sync ho gaya");
+      // Keep background cloud sync silent; addCart() already shows the single user-facing popup.
     }else if(!snap.exists()){
       // First login on a new device: seed the cloud cart from this session's current cart.
       writeCartCloudNow();
@@ -980,7 +980,12 @@ $("orderForm").addEventListener("submit",async e=>{
     $("orderMsg").innerHTML='';
     e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
   }catch(err){
-    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर पूरा नहीं हो पाया। कृपया दोबारा कोशिश करें। '+esc(err.message||"")+'</div>';
+    console.error("Customer order save failed:",err);
+    const detail=String(err&&err.message||"");
+    const rulesHint=/PERMISSION_DENIED|permission denied/i.test(detail)
+      ? "Firebase Database Rules में /orders पर authenticated customer को write permission नहीं मिल रही है।"
+      : detail;
+    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर सेव नहीं हो पाया। '+esc(rulesHint||"कृपया दोबारा कोशिश करें।")+'</div>';
   }
 });
 
@@ -1218,9 +1223,16 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     createdAt:order.createdAt||new Date().toISOString(),
     dateTime:order.date||new Date().toLocaleString()
   };
+  // Save the customer's canonical order first. This is the write required to place the order.
+  // Seller-specific copies are a secondary fan-out and must not make a saved customer order
+  // appear to have failed if sellerOrders rules are more restrictive.
   await db.ref("orders/"+order.id).set(firebaseOrder);
   const groups={};(order.items||[]).forEach(item=>{const sid=String(item.sellerUid||"");if(sid){(groups[sid]||(groups[sid]=[])).push(item);}});
-  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{sellerUpdates["sellerOrders/"+sid+"/"+order.id]={orderId:order.id,sellerUid:sid,items,customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||"",total:items.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0),status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()};});if(Object.keys(sellerUpdates).length)await db.ref().update(sellerUpdates);
+  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{sellerUpdates["sellerOrders/"+sid+"/"+order.id]={orderId:order.id,sellerUid:sid,items,customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||"",total:items.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0),status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()};});
+  if(Object.keys(sellerUpdates).length){
+    try{await db.ref().update(sellerUpdates);}
+    catch(sellerSyncError){console.error("Customer order was saved, but seller order fan-out was denied:",sellerSyncError);order.sellerSyncPending=true;}
+  }
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
   order.razorpayPaymentId=paymentId;
