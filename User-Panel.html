@@ -412,7 +412,7 @@ window.mlmVolatileStore = (() => {
 
 
 </div><nav aria-label="Store navigation" class="mainnav"><button onclick="mainNavClick('categories',this)" type="button">☰   All Categories</button><button class="navactive" onclick="mainNavClick('home',this)" type="button">Home</button><button onclick="mainNavClick('about',this)" type="button">About Us</button><button onclick="mainNavClick('contact',this)" type="button">Contact Us</button></nav></header>
-<div id="modeluxeServiceAreaBanner" role="status" aria-live="polite" style="position:relative;z-index:20;margin:0;padding:9px 12px;text-align:center;background:#e8f2ff;color:#064b91;border-bottom:1px solid #bfd8f5;font-size:13px;font-weight:800;line-height:1.45">🚚 ModeLuxe Mart: Delivery sirf Jawan Sikandarpur centre se 10 KM ke andar. Order se pehle apni GPS location check karein.</div>
+<div id="modeluxeServiceAreaBanner" role="status" aria-live="polite" style="position:relative;z-index:20;margin:0;padding:9px 12px;text-align:center;background:#e8f2ff;color:#064b91;border-bottom:1px solid #bfd8f5;font-size:13px;font-weight:800;line-height:1.45">🚚 Fast Food, Grocery, Fruits aur Vegetables ki delivery Jawan Sikandarpur centre se 10 KM ke andar. Baaki sabhi categories par All India delivery available hai.</div>
 <main class="wrap">
 <section class="hero"><h2>Welcome to</h2><h1><span>Vaishu</span><br/><span>ModeLuxe</span> Mart</h1><p>Everything You Need In One Place</p><button onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now</button></section>
 <section class="category-showcase"><div class="showcase-title"><h2>🛍️ Shop by Category</h2><button onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">View All →</button></div><div class="category-cards"><button onclick="filterCategoryGroup('fashion')"><span>👕</span><b>Fashion</b></button><button onclick="filterCategoryGroup('beauty')"><span>💄</span><b>Beauty</b></button><button onclick="filterCategoryGroup('electronics')"><span>📱</span><b>Electronics</b></button><button onclick="filterCategoryGroup('home')"><span>🏠</span><b>Home</b></button></div></section>
@@ -421,7 +421,7 @@ window.mlmVolatileStore = (() => {
 <div class="grow"><input id="pincode" inputmode="numeric" maxlength="6" placeholder="Enter your 6-digit PIN Code"/></div>
 <button onclick="checkArea()">Check</button>
 </section>
-<p id="deliveryRadiusNotice" style="margin:10px 2px 8px;padding:0;color:#075fc4;font-size:14px;font-weight:700;line-height:1.5">🚚 Delivery available within a 10 km radius of our service area.</p>
+<p id="deliveryRadiusNotice" style="margin:10px 2px 8px;padding:0;color:#075fc4;font-size:14px;font-weight:700;line-height:1.5">📍 10 KM local delivery sirf Fast Food, Grocery, Fruits aur Vegetables ke liye hai. Baaki categories par All India delivery hai.</p>
 <p class="muted" id="deliveryThresholdNotice" style="margin:0 0 16px;padding:0 2px">Delivery charges apply to purchases below ₹199.</p>
 <div aria-live="polite" id="areaMsg"></div>
 <div class="categories-wrap"><nav aria-label="प्रोडक्ट कैटेगरी" class="categories" id="categories"></nav></div>
@@ -867,6 +867,11 @@ function modeluxeCheckDeliveryRadius(lat,lng){
  const distance=modeluxeDistanceKm(Number(lat),Number(lng));
  return {allowed:Number.isFinite(distance)&&distance<=MODELUXE_MAX_DELIVERY_KM,distanceKm:distance};
 }
+// Only these everyday/local categories use the 10 KM service radius.
+function modeluxeIsLocalDeliveryCategory(category){
+ const c=String(category||"").trim().toLowerCase().replace(/&/g,"and").replace(/[\\/_-]+/g," ").replace(/\\s+/g," ");
+ return ["fast food","fastfood","grocery","fruit","fruits","vegetable","vegetables"].includes(c);
+}
 function checkArea(){
  const pin=$("pincode").value.trim(),msg=$("areaMsg");
  if(!/^[0-9]{6}$/.test(pin)){msg.innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
@@ -877,8 +882,8 @@ function checkArea(){
    return;
  }
  msg.innerHTML=result.allowed
-  ?'<div class="notice success">आपके पते पर डिलीवरी उपलब्ध है। Centre से दूरी: '+result.distanceKm.toFixed(2)+' KM</div>'
-  :'<div class="notice error">क्षमा करें, आपका पता 10 KM delivery area से बाहर है ('+result.distanceKm.toFixed(2)+' KM)। यहाँ ऑर्डर स्वीकार नहीं होगा।</div>';
+  ?'<div class="notice success">Fast Food, Grocery, Fruits और Vegetables के लिए आपके पते पर local delivery उपलब्ध है। Centre से दूरी: '+result.distanceKm.toFixed(2)+' KM। बाकी categories पर All India delivery है।</div>'
+  :'<div class="notice error">आपका पता 10 KM local delivery area से बाहर है ('+result.distanceKm.toFixed(2)+' KM)। Fast Food, Grocery, Fruits और Vegetables यहाँ deliver नहीं होंगे; बाकी categories पर All India delivery उपलब्ध है।</div>';
 }
 function handleStoreSearch(){
  const query=$("search").value.trim();
@@ -898,9 +903,12 @@ $("orderForm").addEventListener("submit",async e=>{
   if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
   if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
-  const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
-  if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">ऑर्डर से पहले “My Current Location” या “Choose on Map” से delivery location चुनना अनिवार्य है।</div>';return;}
-  if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">आपका delivery address 10 KM सीमा से बाहर है ('+areaCheck.distanceKm.toFixed(2)+' KM)। इस क्षेत्र में ऑर्डर नहीं लिया जा सकता।</div>';return;}
+  const hasLocalDeliveryItems=cart.some(item=>modeluxeIsLocalDeliveryCategory(item.category));
+  if(hasLocalDeliveryItems){
+    const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
+    if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">आपके Cart में Fast Food, Grocery, Fruits या Vegetables हैं। इनकी delivery के लिए “My Current Location” या “Choose on Map” से location चुनना अनिवार्य है। बाकी categories पर All India delivery है।</div>';return;}
+    if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">आपका address 10 KM local delivery area से बाहर है ('+areaCheck.distanceKm.toFixed(2)+' KM)। Fast Food, Grocery, Fruits और Vegetables का order यहाँ स्वीकार नहीं होगा। बाकी categories पर All India delivery उपलब्ध है।</div>';return;}
+  }
   const order={
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
     address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
