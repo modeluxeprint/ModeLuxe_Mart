@@ -676,7 +676,7 @@ function showWishlistNotice(){showWishlist()}
 saveWishlist();
 function filterCategoryGroup(group){const choices={fashion:["Men's Wear","Women's Wear","Kids / Baby Wear","Jewellery"],beauty:["Cosmetics"],electronics:["Electronics"],home:["Home & Kitchen","Grocery"]};const found=(choices[group]||[]).find(c=>products.some(p=>String(p.category||"").toLowerCase()===c.toLowerCase()));if(found){setCategory(found);document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}else{activeCategory="All";categories();renderProducts();showToast("इस category में अभी कोई live product उपलब्ध नहीं है।");document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}}
 function handleProductImageError(img){img.onerror=null;img.style.display="none";const fallback=document.createElement("div");fallback.className="image-fallback";fallback.textContent="📦 Photo not available";img.insertAdjacentElement("afterend",fallback)}
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>`<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div><div class="actions"><button data-add-cart="${esc(p.id)}" type="button">${mlmVolatileStore.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button">${mlmVolatileStore.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>{const unavailable=Number(p.stock||0)<=0||p.sellerPaused===true;const status=p.sellerPaused?"SHOP TEMPORARILY PAUSED":"OUT OF STOCK";return `<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div>${unavailable?`<div class="msg error" style="margin:8px 0;font-weight:800;text-align:center">${status}</div>`:""}<div class="actions"><button data-add-cart="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${mlmVolatileStore.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${mlmVolatileStore.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`}).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
 function openProductDetails(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
  const en=mlmVolatileStore.getItem("mlm_language")==="en";
@@ -685,7 +685,7 @@ function openProductDetails(id){
  const description=p.description||p.details||p.productDescription||"";
  const seller=p.seller||p.sellerName||"";
  const content=$("productDetailContent");
- content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="muted" id="productDeliveryChargeNotice" style="margin:0 0 8px;color:var(--muted)">${en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" data-add-cart="${esc(p.id)}" data-close-details="true">${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" data-buy-now="${esc(p.id)}" data-close-details="true">${en?"Buy Now":"अभी खरीदें"}</button></div>`;
+ content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="muted" id="productDeliveryChargeNotice" style="margin:0 0 8px;color:var(--muted)">${en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${p.sellerPaused?`<div class="msg error">SHOP TEMPORARILY PAUSED</div>`:stock<=0?`<div class="msg error">OUT OF STOCK</div>`:""}${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" data-add-cart="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" data-buy-now="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${en?"Buy Now":"अभी खरीदें"}</button></div>`;
  $("productDetailOverlay").classList.remove("hidden");document.body.style.overflow="hidden";
 }
 function closeProductDetails(){$("productDetailOverlay").classList.add("hidden");document.body.style.overflow=""}
@@ -724,6 +724,7 @@ function addCart(id){
   const key=String(id);
   const p=products.find(x=>String(x.id)===key);
   if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return false;}
+  if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return false;}
   const item=cart.find(x=>String(x.id)===key);
   if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";}
   else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
@@ -739,6 +740,7 @@ function buyNow(id){
     showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");
     return;
   }
+  if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return;}
 
   // Buy Now के लिए सिर्फ चुना हुआ प्रोडक्ट Checkout में दिखाएँ।
   const previousCart = cart;
@@ -949,7 +951,7 @@ function startUserProductsListener(){
   if(userProductsListener)db.ref("sellerProducts").off("value",userProductsListener);
   userProductsListener=snap=>{
     const raw=snap.val()||{};
-    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||"")};}).filter(p=>p.name && p.stock>0);
+    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||""),sellerPaused:p.sellerPaused===true};}).filter(p=>p.name);
     if(activeCategory!=="All"&&!products.some(p=>p.category===activeCategory))activeCategory="All";
     categories();renderProducts();
   };
@@ -960,8 +962,8 @@ let userOrdersListener=null;
 let firebaseOrdersForUser=[];
 
 function stopUserOrdersListener(){
-  if(db && userOrdersListener) db.ref("orders").off("value",userOrdersListener);
-  userOrdersListener=null;
+  if(userOrdersQuery && userOrdersListener) userOrdersQuery.off("value",userOrdersListener);
+  userOrdersQuery=null;userOrdersListener=null;
   firebaseOrdersForUser=[];
 }
 
@@ -1000,7 +1002,8 @@ function startUserOrdersListener(phone){
     mergeAndRenderUserOrders();
   };
 
-  db.ref("orders").on("value",userOrdersListener,error=>{
+  userOrdersQuery=db.ref("orders").orderByChild("customerUid").equalTo(orderUid);
+  userOrdersQuery.on("value",userOrdersListener,error=>{
     console.error("User order status live sync failed:",error);
     const list=$("myOrdersList");
     if(list && activeUserPhone===digits){
@@ -1123,6 +1126,7 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
   if(!db) throw new Error("Firebase SDK load नहीं हुआ");
   const firebaseOrder={
     id:order.id,
+    customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
     product:(order.items||[]).map(i=>i.name).join(", "),
     items:order.items||[],
     price:Number(order.total||0),
