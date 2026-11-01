@@ -73,21 +73,19 @@ window.mlmVolatileStore = (() => {
 
 
 <style>
-.seller-modal{
- position:fixed;inset:0;z-index:9999;
+.seller-notice-backdrop{
+ position:fixed;inset:0;background:rgba(10,25,50,.48);
  display:flex;align-items:center;justify-content:center;
- padding:18px;background:rgba(5,20,45,.58);
+ padding:20px;z-index:9999;
 }
-.seller-modal.hidden{display:none!important}
-.seller-modal-card{
- width:min(100%,440px);background:#fff;color:#111827;
- border:1px solid #cfe0f5;border-radius:18px;
- padding:22px;box-shadow:0 18px 55px rgba(0,25,70,.24);
+.seller-notice-box{
+ width:min(100%,390px);background:#fff;color:#111827;
+ border:1px solid #cfe0f4;border-radius:18px;padding:22px;
+ box-shadow:0 18px 55px rgba(0,25,70,.24);
 }
-.seller-modal-card h2{margin:0 0 12px;color:#075fc4;font-size:22px}
-.seller-modal-card p{margin:0 0 20px;line-height:1.55;color:#334155;overflow-wrap:anywhere}
-.seller-modal-card button{min-width:90px}
-#sellerWallet{font-variant-numeric:tabular-nums}
+.seller-notice-box h3{margin:0 0 10px;color:#075fc4;font-size:20px}
+.seller-notice-box p{margin:0 0 18px;line-height:1.5;color:#34445b}
+.seller-notice-box button{min-width:100px;background:#075fc4;color:#fff}
 </style>
 
 </head>
@@ -96,7 +94,6 @@ window.mlmVolatileStore = (() => {
 <button id="logoutBtn" class="secondary hidden" type="button">Logout</button>
 <button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
 </div></div></header>
-<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
 <main class="wrap">
 <section id="authCard" class="card">
 <h2 id="authTitle">Seller Login</h2>
@@ -134,6 +131,8 @@ window.mlmVolatileStore = (() => {
 </section>
 <section id="pendingApplication" class="card hidden"><h2>Application Status</h2><div id="applicationStatus" class="msg">Aapki application admin approval ke liye pending hai.</div><p class="muted">Approval hone tak listing, wallet aur orders dashboard locked rahenge.</p><button id="pendingRefresh" class="secondary" type="button">Refresh Status</button><button id="pendingLogout" class="secondary" type="button">Logout</button></section>
 <section id="sellerApp" class="hidden">
+<section id="walletSection" class="card hidden"><h2>Seller Wallet</h2><div class="stats"><div class="stat"><span class="muted">Available Balance</span><b id="sellerWallet">₹0</b></div><div class="stat"><span class="muted">Commission</span><b id="sellerCommission">0%</b></div></div><label class="muted">Withdrawal Amount (₹)</label><input id="sellerWithdrawAmount" type="number" min="1" step="0.01" placeholder="Amount"><button id="sellerWithdrawBtn" class="primary" type="button">Submit Withdrawal Request</button><p class="hint">Processing time up to 48 hours. Status Wallet History mein dikhega.</p><div id="sellerWithdrawHistory"></div></section>
+
 <div class="card">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap"><div><div class="muted">Logged in seller</div><h2 id="sellerHeading" style="margin:3px 0">Seller</h2><div id="sellerEmail" class="muted"></div></div><span class="msg success" style="margin:0">Private seller view</span></div>
 <div class="stats" style="margin-top:14px"><div class="stat"><span class="muted">My Products</span><b id="productCount">0</b></div><div class="stat"><span class="muted">Active Listings</span><b id="activeCount">0</b></div><div class="stat"><span class="muted">Low / Out of Stock</span><b id="lowStockCount">0</b></div></div>
@@ -146,7 +145,6 @@ window.mlmVolatileStore = (() => {
 <button id="mineTab" type="button">My Products</button>
 <button id="profileTab" type="button">My Account</button>
 </div>
-
 
 <section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrdersList" class="muted">Orders load ho rahe hain…</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
 <section id="addSection" class="card">
@@ -206,19 +204,25 @@ async function uploadImageToR2(file){
 
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.error("Auth persistence setup failed:",e));
 const $=id=>document.getElementById(id);
-let authMode="login",currentUser=null,sellerProfile={},myProducts={},productListener=null,sellerAvailableBalance=0;
+let authMode="login",currentUser=null,sellerProfile={},myProducts={},productListener=null;
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?("msg "+type):"muted";}
-function sellerNotice(message,title="ModeLuxe Mart"){
- $("sellerNoticeTitle").textContent=title;
- $("sellerNoticeText").textContent=message;
- $("sellerNoticeModal").classList.remove("hidden");
-}
-$("sellerNoticeOk").onclick=()=>$("sellerNoticeModal").classList.add("hidden");
-$("sellerNoticeModal").addEventListener("click",e=>{
- if(e.target===$("sellerNoticeModal"))$("sellerNoticeModal").classList.add("hidden");
-});
 
+function showSellerNotice(message,type="success"){
+ const old=document.getElementById("sellerNoticeBackdrop");
+ if(old)old.remove();
+ const backdrop=document.createElement("div");
+ backdrop.id="sellerNoticeBackdrop";
+ backdrop.className="seller-notice-backdrop";
+ backdrop.innerHTML=`<div class="seller-notice-box" role="dialog" aria-modal="true" aria-labelledby="sellerNoticeTitle">
+  <h3 id="sellerNoticeTitle">${type==="error"?"Request not submitted":"ModeLuxe Mart"}</h3>
+  <p>${esc(message)}</p><div style="text-align:right"><button type="button" id="sellerNoticeOk">OK</button></div>
+ </div>`;
+ document.body.appendChild(backdrop);
+ document.getElementById("sellerNoticeOk").onclick=()=>backdrop.remove();
+ backdrop.addEventListener("click",e=>{if(e.target===backdrop)backdrop.remove();});
+}
+
+function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?("msg "+type):"muted";}
 function setAuthMode(mode){authMode=mode;const registering=mode==="register";$("registerFields").classList.toggle("hidden",!registering);$("shopName").required=registering;$("sellerPhone").required=registering;$("authTitle").textContent=registering?"Naya Seller Account":"Seller Login";$("authSubmit").textContent=registering?"Create Seller Account":"Login";$("loginTab").classList.toggle("active",!registering);$("registerTab").classList.toggle("active",registering);$("password").autocomplete=registering?"new-password":"current-password";$("authMsg").textContent="";}
 $("loginTab").onclick=()=>setAuthMode("login");$("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").addEventListener("submit",async e=>{
@@ -255,7 +259,7 @@ auth.onAuthStateChanged(async user=>{
  if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
  productListener=null;currentUser=user;myProducts={};
  $("sellerApp").classList.add("hidden");$("pendingApplication").classList.add("hidden");$("completeSellerApplication").classList.add("hidden");
- if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");$("walletSection").classList.add("hidden");return;}
+ if(!user){sellerProfile={};$("authCard").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("walletHeaderBtn").classList.add("hidden");return;}
  $("authCard").classList.add("hidden");$("logoutBtn").classList.remove("hidden");$("walletHeaderBtn").classList.add("hidden");$("sellerEmail").textContent=user.email||"";
  try{
   const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
@@ -299,25 +303,28 @@ $("completeSellerForm").addEventListener("submit",async e=>{
  finally{btn.disabled=false;}
 });
 $("pendingRefresh").onclick=()=>auth.currentUser&&auth.currentUser.getIdToken(true).then(()=>auth.currentUser&&auth.currentUser.reload()).then(()=>location.reload());$("pendingLogout").onclick=()=>auth.signOut();
-function startSellerWallet(){if(!currentUser)return;db.ref("sellerWallets/"+currentUser.uid+"/balance").on("value",s=>{sellerAvailableBalance=Math.max(0,Number(s.val()||0));$("sellerWallet").textContent="₹"+sellerAvailableBalance.toLocaleString("en-IN");});db.ref("sellerCommission/"+currentUser.uid).on("value",s=>$("sellerCommission").textContent=Number(s.val()??10)+"%");db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{const v=s.val()||{};$("sellerWithdrawHistory").innerHTML=Object.entries(v).map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests yet.";});}
+function startSellerWallet(){if(!currentUser)return;db.ref("sellerWallets/"+currentUser.uid+"/balance").on("value",s=>$("sellerWallet").textContent="₹"+Number(s.val()||0).toLocaleString("en-IN"));db.ref("sellerCommission/"+currentUser.uid).on("value",s=>$("sellerCommission").textContent=Number(s.val()??10)+"%");db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{const v=s.val()||{};$("sellerWithdrawHistory").innerHTML=Object.entries(v).map(([id,x])=>`<div class="msg">₹${Number(x.amount||0)} · ${esc(x.status||"Pending")} · ${esc(x.createdAt||"")}</div>`).join("")||"No requests yet.";});}
 $("sellerWithdrawBtn").onclick=async()=>{
  if(!currentUser)return;
+ const btn=$("sellerWithdrawBtn");
  const amount=Number($("sellerWithdrawAmount").value);
- if(!Number.isFinite(amount)||amount<=0){sellerNotice("Kripya valid withdrawal amount enter karein.","Invalid Amount");return;}
- const btn=$("sellerWithdrawBtn");btn.disabled=true;
+ if(!Number.isFinite(amount)||amount<=0)return showSellerNotice("Sahi withdrawal amount enter karein.","error");
+ btn.disabled=true;
  try{
   const balanceSnap=await db.ref("sellerWallets/"+currentUser.uid+"/balance").once("value");
-  const balance=Math.max(0,Number(balanceSnap.val()||0));
-  sellerAvailableBalance=balance;
-  $("sellerWallet").textContent="₹"+balance.toLocaleString("en-IN");
-  if(balance<=0){sellerNotice("Aapke wallet mein abhi balance nahi hai. Balance aane ke baad hi withdrawal request submit kar sakte hain.","Insufficient Wallet Balance");return;}
-  if(amount>balance){sellerNotice("Aapke wallet mein ₹"+balance.toLocaleString("en-IN")+" hi available hain. Isse zyada amount ki request submit nahi ho sakti.","Insufficient Wallet Balance");return;}
+  const balance=Number(balanceSnap.val()||0);
+  if(balance<=0)throw Error("Aapke wallet mein balance nahi hai. Balance aane ke baad hi withdrawal request bhej sakte hain.");
+  if(amount>balance)throw Error("Wallet balance ₹"+balance.toLocaleString("en-IN")+" hai. Isse zyada withdrawal request submit nahi ho sakti.");
   const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;
-  await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",processingHours:48,createdAt:new Date().toISOString()});
+  await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({
+   id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",
+   processingHours:48,createdAt:new Date().toISOString()
+  });
   $("sellerWithdrawAmount").value="";
-  sellerNotice("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.","Request Submitted");
- }catch(err){sellerNotice("Withdrawal request submit nahi hui: "+(err.message||err),"Request Failed");}
- finally{btn.disabled=false;}
+  showSellerNotice("Withdrawal request successfully submit ho gayi. Processing time 48 hours tak.","success");
+ }catch(e){
+  showSellerNotice(e.message||"Withdrawal request submit nahi hui.","error");
+ }finally{btn.disabled=false;}
 };
 
 let activeCourierPartners={};
@@ -332,16 +339,8 @@ $("walletHeaderBtn").onclick=()=>{
  const wallet=$("walletSection");
  const willOpen=wallet.classList.contains("hidden");
  wallet.classList.toggle("hidden",!willOpen);
- $("walletHeaderBtn").setAttribute("aria-expanded",String(willOpen));
- if(willOpen)window.scrollTo({top:0,behavior:"smooth"});
-};
-$("sellerOrdersTab").onclick=()=>showSellerExtra("orders");
-function showSellerExtra(which){
- $("walletSection").classList.add("hidden");
- $("walletHeaderBtn").setAttribute("aria-expanded","false");
- ["sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));
- $(which==="wallet"?"walletSection":"sellerOrdersSection").classList.remove("hidden");
-}
+ if(willOpen) wallet.scrollIntoView({behavior:"smooth",block:"start"});
+};$("sellerOrdersTab").onclick=()=>showSellerExtra("orders");function showSellerExtra(which){["walletSection","sellerOrdersSection","addSection","mineSection","profileSection"].forEach(id=>$(id).classList.add("hidden"));$(which==="wallet"?"walletSection":"sellerOrdersSection").classList.remove("hidden");}
 $("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
 function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
 function listenMyProducts(){if(!currentUser)return;const ref=db.ref("sellerPrivateProducts/"+currentUser.uid);if(productListener)ref.off("value",productListener);productListener=snap=>{myProducts=snap.val()||{};renderMyProducts();updateStats();};ref.on("value",productListener,e=>showMsg("productsMsg","Products load nahi hue: "+e.message,"error"));}
@@ -379,14 +378,5 @@ window.togglePublish=async id=>{if(!currentUser||!myProducts[id])return;const p=
 window.deleteProduct=async id=>{const p=myProducts[id];if(!currentUser||!p)return;if(!confirm('Kya aap "'+(p.name||"Product")+'" ko apni listing se delete karna chahte hain?'))return;const updates={};updates["sellerPrivateProducts/"+currentUser.uid+"/"+id]=null;updates["sellerProducts/"+id]=null;try{await db.ref().update(updates);}catch(e){alert("Delete nahi hua: "+e.message);}};
 $("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const shop=$("profileShop").value.trim(),phone=$("profilePhone").value.trim();if(!shop||!/^\d{10}$/.test(phone)){showMsg("profileMsg","Shop name aur sahi 10-digit mobile number bharein.","error");return;}try{sellerProfile={...sellerProfile,uid:currentUser.uid,email:currentUser.email||"",shopName:shop,phone,updatedAt:new Date().toISOString(),accountType:"seller"};await db.ref("sellerProfiles/"+currentUser.uid).update(sellerProfile);$("sellerHeading").textContent=shop;showMsg("profileMsg","Account details save ho gayi.","success");}catch(e2){showMsg("profileMsg","Save nahi hua: "+e2.message,"error");}});
 </script>
-
-<div id="sellerNoticeModal" class="seller-modal hidden" role="dialog" aria-modal="true" aria-labelledby="sellerNoticeTitle">
- <div class="seller-modal-card">
-  <h2 id="sellerNoticeTitle">ModeLuxe Mart</h2>
-  <p id="sellerNoticeText"></p>
-  <button id="sellerNoticeOk" class="primary" type="button">OK</button>
- </div>
-</div>
-
 </body>
 </html>
