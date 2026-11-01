@@ -439,13 +439,6 @@ window.mlmVolatileStore = (() => {
 }
 </style>
 
-
-<style id="modeluxe-hero-bottom-tight-only">
-/* Keep the existing 3D title and font sizes; remove only excess empty space below Shop Now. */
-.hero{min-height:0!important;padding-bottom:18px!important;margin-bottom:18px!important;}
-@media(max-width:600px){.hero{min-height:0!important;padding-bottom:16px!important;margin-bottom:18px!important;}}
-</style>
-
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
@@ -1993,6 +1986,18 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
  if(content){const observer=new MutationObserver(()=>{scale=1;const imgs=content.querySelectorAll('.product-detail-image');imgs.forEach(im=>{if(!im.parentElement.classList.contains('product-detail-image-viewport')){const v=document.createElement('div');v.className='product-detail-image-viewport';im.parentNode.insertBefore(v,im);v.appendChild(im);}apply(im.parentElement);});});observer.observe(content,{childList:true,subtree:true});}
 })();
 </script>
+
+
+<style id="modeluxe-hero-end-at-shop-button-final">
+/* Reduce only the unused lower hero area; preserve the existing 3D title sizes. */
+.hero{min-height:0!important;height:auto!important;padding-bottom:12px!important;}
+.hero>button{margin-bottom:0!important;}
+@media(max-width:600px){
+  .hero{min-height:0!important;height:auto!important;padding:26px 8px 12px!important;margin-bottom:18px!important;}
+  .hero p{margin-bottom:16px!important;}
+  .hero>button{padding:13px 36px!important;font-size:18px!important;}
+}
+</style>
 
 </body>
 </html>
