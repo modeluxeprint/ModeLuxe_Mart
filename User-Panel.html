@@ -1023,6 +1023,7 @@ function startUserProductsListener(){
   db.ref("sellerProducts").on("value",userProductsListener,err=>console.warn("Product catalogue sync failed:",err&&err.message));
 }
 let pendingOtpRequestId=null, pendingOtpPhone=null;
+let userOrdersQuery=null;
 let userOrdersListener=null;
 let firebaseOrdersForUser=[];
 
@@ -1067,6 +1068,8 @@ function startUserOrdersListener(phone){
     mergeAndRenderUserOrders();
   };
 
+  const orderUid=String((auth&&auth.currentUser&&auth.currentUser.uid)||"");
+  if(!orderUid){console.warn("User order sync skipped: Firebase UID is not available yet.");return;}
   userOrdersQuery=db.ref("orders").orderByChild("customerUid").equalTo(orderUid);
   userOrdersQuery.on("value",userOrdersListener,error=>{
     console.error("User order status live sync failed:",error);
