@@ -365,8 +365,7 @@ $("registerTab").onclick=()=>setAuthMode("register");
 $("authForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const email=$("email").value.trim().toLowerCase(),password=$("password").value,btn=$("authSubmit");
- btn.disabled=true;showMsg("authMsg","Login ho raha hai…");
- const waitLimit=(promise,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" mein 15 seconds se zyada lag rahe hain. Internet, Firebase Authentication aur Database Rules check karein.")),15000))]);
+ btn.disabled=true;showMsg("authMsg","Please wait…");
  try{
   if(authMode==="register"){
    const shop=$("shopName").value.trim(),phone=$("sellerPhone").value.trim();
@@ -387,7 +386,7 @@ $("authForm").addEventListener("submit",async e=>{
    }
    showMsg("authMsg","Seller application successfully submit ho gayi. Admin approval ka wait karein.","success");
   }else{
-   await waitLimit(auth.signInWithEmailAndPassword(email,password),"Firebase Login");
+   await auth.signInWithEmailAndPassword(email,password);
   }
  }catch(err){showMsg("authMsg",authError(err),"error");}
  finally{btn.disabled=false;}
@@ -415,7 +414,7 @@ auth.onAuthStateChanged(async user=>{
  $("sellerEmail").textContent=user.email||"";
 
  try{
-  const snap=await Promise.race([db.ref("sellerProfiles/"+user.uid).once("value"),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Seller profile Firebase se 15 seconds mein load nahi hui. Database Rules ya internet check karein.")),15000))]);
+  const snap=await db.ref("sellerProfiles/"+user.uid).once("value");
   sellerProfile=snap.val()||{};
 
   if(!snap.exists()){
@@ -452,7 +451,7 @@ auth.onAuthStateChanged(async user=>{
 
  }catch(err){
   pendingProfileUser=user;
-  showAuthChoice("Seller profile load nahi hui: "+(err.message||err)+". Dobara refresh karke dekhein.");
+  showAuthChoice("");
  }
 });
 $("completeSellerForm").addEventListener("submit",async e=>{
@@ -624,49 +623,6 @@ function startSellerOrders(){
   renderSellerOrders();
  });
 }
-// Seller order actions go through the authenticated Cloudflare Worker.
-const ORDER_SYNC_WORKER_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
-window.sellerSetOrderStatus = async (id, status) => {
-  if (!currentUser) return showSellerNotice("Pehle seller account mein login karein.", "error");
-  if (!["Processing", "Shipped"].includes(status)) return;
-  const buttons = Array.from(document.querySelectorAll(`button[onclick*="sellerSetOrderStatus('${id}'"]`));
-  buttons.forEach(b => { b.disabled = true; b.dataset.oldText = b.textContent; b.textContent = "Saving…"; });
-  try {
-    const token = await currentUser.getIdToken(true);
-    const response = await fetch(ORDER_SYNC_WORKER_URL, {
-      method: "POST", mode: "cors", cache: "no-store", credentials: "omit",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify({ action: "updateStatus", orderId: String(id), status })
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.ok) throw new Error(result.error || `Worker request failed (HTTP ${response.status})`);
-    showSellerNotice(status === "Processing" ? "Order Seller Processing mein update ho gaya." : "Order Shipped mark ho gaya.", "success");
-  } catch (error) {
-    showSellerNotice("Order status update nahi hua: " + (error.message || error), "error");
-  } finally {
-    buttons.forEach(b => { b.disabled = false; b.textContent = b.dataset.oldText || (status === "Processing" ? "Seller Processing" : "Shipped"); });
-  }
-};
-window.bookSellerCourier = async id => {
-  const partnerId = $("courierPick_" + id)?.value;
-  if (!partnerId) return showSellerNotice("Admin ne abhi koi active courier API partner configure nahi kiya hai. Courier booking filhaal available nahi hai.", "error");
-  const partner = activeCourierPartners[partnerId];
-  if (!partner || !partner.workerUrl) return showSellerNotice("Selected courier partner ka secure Worker URL configure nahi hai.", "error");
-  if (!currentUser) return showSellerNotice("Pehle seller account mein login karein.", "error");
-  try {
-    const token = await currentUser.getIdToken(true);
-    const response = await fetch(partner.workerUrl.replace(/\/+$/, "") + "/create-shipment", {
-      method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-      body: JSON.stringify({ orderId: id, partnerId, sellerUid: currentUser.uid })
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || !result.success) throw new Error(result.message || "Courier API booking failed");
-    showSellerNotice("Courier booking successful. AWB: " + (result.awb || result.trackingId || "Generated"), "success");
-  } catch (error) {
-    showSellerNotice("Courier booking nahi hui: " + (error.message || error), "error");
-  }
-};
-
 // Ek waqt mein sirf ek panel visible rahega. Wahi button dobara dabane par panel band hoga.
 let activeSellerPanel="add";
 const sellerPanelSections={orders:"sellerOrdersSection",add:"addSection",mine:"mineSection",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
