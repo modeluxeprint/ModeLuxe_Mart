@@ -1194,6 +1194,7 @@ async function logoutPhoneUser(){
 const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
 const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
+const SELLER_ORDER_SYNC_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev";
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
   if(!db) throw new Error("Firebase SDK load नहीं हुआ");
@@ -1227,11 +1228,24 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
   // Seller-specific copies are a secondary fan-out and must not make a saved customer order
   // appear to have failed if sellerOrders rules are more restrictive.
   await db.ref("orders/"+order.id).set(firebaseOrder);
-  const groups={};(order.items||[]).forEach(item=>{const sid=String(item.sellerUid||"");if(sid){(groups[sid]||(groups[sid]=[])).push(item);}});
-  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{sellerUpdates["sellerOrders/"+sid+"/"+order.id]={orderId:order.id,sellerUid:sid,items,customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||"",total:items.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0),status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()};});
-  if(Object.keys(sellerUpdates).length){
-    try{await db.ref().update(sellerUpdates);}
-    catch(sellerSyncError){console.error("Customer order was saved, but seller order fan-out was denied:",sellerSyncError);order.sellerSyncPending=true;}
+  // Ask the trusted Cloudflare Worker to fan out seller-specific copies.
+  // The Worker verifies this Firebase user and reads the canonical order with Admin credentials.
+  try{
+    const currentUser=auth&&auth.currentUser;
+    if(!currentUser)throw new Error("Firebase login session missing");
+    const idToken=await currentUser.getIdToken();
+    const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},
+      body:JSON.stringify({orderId:String(order.id)})
+    });
+    const syncResult=await syncResponse.json().catch(()=>({}));
+    if(!syncResponse.ok||syncResult.ok!==true)throw new Error(syncResult.error||"Seller order sync failed");
+    order.sellerSyncPending=false;
+    console.info("Seller order sync complete:",syncResult);
+  }catch(sellerSyncError){
+    console.error("Customer order was saved, but secure seller sync is pending:",sellerSyncError);
+    order.sellerSyncPending=true;
   }
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
