@@ -557,33 +557,17 @@ function startSellerOrders(){
 }
 window.bookSellerCourier=async id=>{if(!currentUser)return;const partnerId=$("courierPick_"+id)?.value;if(!partnerId)return alert("Courier partner select karein.");const partner=activeCourierPartners[partnerId];if(!partner)return alert("Courier partner active nahi hai.");const order=(await db.ref("sellerOrders/"+currentUser.uid+"/"+id).once("value")).val();if(!order)return alert("Order not found.");if(order.courierTracking)return alert("Is order ki courier booking pehle se maujood hai.");try{const token=await currentUser.getIdToken(true);const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:result.awb||result.trackingId||"",courierShipmentId:result.shipmentId||"",courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",courierBookedAt:new Date().toISOString()};await db.ref("sellerOrders/"+currentUser.uid+"/"+id).update(patch);await db.ref("orders/"+id).update(patch);alert("Courier booking successful. AWB: "+(patch.courierTracking||"Generated"));}catch(e){alert("Courier booking nahi hui: "+e.message);}};
 window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);const order=(await ref.once("value")).val();if(!order)return alert("Not your order");await ref.update({status,sellerUpdatedAt:new Date().toISOString()});const allSnap=await db.ref("sellerOrders").once("value"),all=allSnap.val()||{};const siblings=Object.values(all).map(x=>x&&x[id]).filter(Boolean);if(siblings.length&&siblings.every(x=>x.status==="Shipped")){await db.ref("orders/"+id).update({status:"Shipped",sellerShippedAt:new Date().toISOString()});}else{await db.ref("orders/"+id).update({status:"Seller Processing",sellerProgressUpdatedAt:new Date().toISOString()});}};
+// Ek waqt mein sirf ek panel visible rahega. Wahi button dobara dabane par panel band hoga.
 let activeSellerPanel="add";
-const sellerPanelIds={
- orders:"sellerOrdersSection",
- add:"addSection",
- mine:"mineSection",
- profile:"profileSection",
- support:"supportSection",
- wallet:"walletSection"
-};
-const sellerPanelButtons={
- orders:"sellerOrdersTab",
- add:"addTab",
- mine:"mineTab",
- profile:"profileTab",
- support:"supportTab",
- wallet:"walletHeaderBtn"
-};
-function showSellerPanel(panel){
- const next=activeSellerPanel===panel?null:panel;
- Object.values(sellerPanelIds).forEach(id=>$(id).classList.add("hidden"));
+const sellerPanelSections={orders:"sellerOrdersSection",add:"addSection",mine:"mineSection",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
+const sellerPanelButtons={orders:"sellerOrdersTab",add:"addTab",mine:"mineTab",profile:"profileTab",support:"supportTab",wallet:"walletHeaderBtn"};
+function showSellerPanel(panel,toggle=true){
+ const next=(toggle&&activeSellerPanel===panel)?null:panel;
+ Object.values(sellerPanelSections).forEach(id=>$(id).classList.add("hidden"));
  Object.values(sellerPanelButtons).forEach(id=>$(id).classList.remove("active"));
  activeSellerPanel=next;
- if(!next){
-  $("walletHeaderBtn").setAttribute("aria-expanded","false");
-  return;
- }
- $(sellerPanelIds[next]).classList.remove("hidden");
+ if(!next){$("walletHeaderBtn").setAttribute("aria-expanded","false");return;}
+ $(sellerPanelSections[next]).classList.remove("hidden");
  $(sellerPanelButtons[next]).classList.add("active");
  $("walletHeaderBtn").setAttribute("aria-expanded",String(next==="wallet"));
  if(next==="mine")renderMyProducts();
@@ -591,27 +575,20 @@ function showSellerPanel(panel){
  if(next==="support")startSellerSupportTickets();
  if(next==="wallet")window.scrollTo({top:0,behavior:"smooth"});
 }
-function closeWalletPanel(){
- if(activeSellerPanel==="wallet")activeSellerPanel=null;
- $("walletSection").classList.add("hidden");
- $("walletHeaderBtn").classList.remove("active");
- $("walletHeaderBtn").setAttribute("aria-expanded","false");
-}
+function closeWalletPanel(){if(activeSellerPanel==="wallet")activeSellerPanel=null;$("walletSection").classList.add("hidden");$("walletHeaderBtn").classList.remove("active");$("walletHeaderBtn").setAttribute("aria-expanded","false");}
 $("walletHeaderBtn").onclick=()=>showSellerPanel("wallet");
 $("sellerOrdersTab").onclick=()=>showSellerPanel("orders");
+$("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
+function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
+function listenMyProducts(){if(!currentUser)return;const ref=db.ref("sellerPrivateProducts/"+currentUser.uid);if(productListener)ref.off("value",productListener);productListener=snap=>{myProducts=snap.val()||{};renderMyProducts();updateStats();};ref.on("value",productListener,e=>showMsg("productsMsg","Products load nahi hue: "+e.message,"error"));}
+function updateStats(){const list=Object.values(myProducts||{});$("productCount").textContent=list.length;$("activeCount").textContent=list.filter(p=>p&&p.active!==false&&Number(p.stock||0)>0).length;$("lowStockCount").textContent=list.filter(p=>p&&Number(p.stock||0)<=0).length;}
+function renderMyProducts(){const q=$("productSearch").value.trim().toLowerCase();const list=Object.entries(myProducts||{}).filter(([id,p])=>{p=p||{};return [id,p.name,p.category,p.description].join(" ").toLowerCase().includes(q)}).sort((a,b)=>String((a[1]||{}).name||"").localeCompare(String((b[1]||{}).name||"")));$("myProductsList").innerHTML=list.length?list.map(([id,p0])=>{const p=p0||{},img=p.imageUrl||p.image||"";return `<article class="product">${img?`<img src="${esc(img)}" alt="">`:`<div style="width:86px;height:100px;background:#eff6ff;border-radius:9px;display:grid;place-items:center">📦</div>`}<div><h3>${esc(p.name||"Product")}</h3><div class="meta">${esc(p.category||"Other")} · ${esc(p.quantity||"1")} ${esc(p.unit||"Piece")}</div><div style="font-weight:800;color:var(--blue);margin:4px 0">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="meta">Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")} · ${p.active===false?"Not published":"Published"}</div>${Number(p.stock||0)<=0?'<div class="msg error" style="margin:7px 0;font-weight:800">OUT OF STOCK · Customer store par product dikhega, order nahi hoga</div>':''}<div class="actions"><button class="secondary" onclick="editProduct('${esc(id)}')">Edit</button><button class="secondary" onclick="togglePublish('${esc(id)}')">${p.active===false?"Publish":"Unpublish"}</button><button class="danger" onclick="deleteProduct('${esc(id)}')">Delete</button></div></div></article>`}).join(""):'<div class="msg">Abhi aapke account mein koi product nahi hai.</div>';$("productsMsg").textContent=list.length?list.length+" aapke product(s).":"Aapka product list khaali hai.";}
+$("productSearch").oninput=renderMyProducts;
+function switchTab(tab){showSellerPanel(tab,false);}
 $("addTab").onclick=()=>showSellerPanel("add");
 $("mineTab").onclick=()=>showSellerPanel("mine");
 $("profileTab").onclick=()=>showSellerPanel("profile");
 $("supportTab").onclick=()=>showSellerPanel("support");
-function switchTab(tab){
- const panel=tab==="orders"?"orders":tab;
- Object.values(sellerPanelIds).forEach(id=>$(id).classList.add("hidden"));
- Object.values(sellerPanelButtons).forEach(id=>$(id).classList.remove("active"));
- activeSellerPanel=panel;
- if(sellerPanelIds[panel])$(sellerPanelIds[panel]).classList.remove("hidden");
- if(sellerPanelButtons[panel])$(sellerPanelButtons[panel]).classList.add("active");
- $("walletHeaderBtn").setAttribute("aria-expanded",String(panel==="wallet"));
-}
 $("clearFormBtn").onclick=resetProductForm;
 $("fillTestProductBtn").onclick=()=>{
   $("productId").value="";
