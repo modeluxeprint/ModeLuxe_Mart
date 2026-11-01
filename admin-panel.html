@@ -560,15 +560,15 @@ function showAdminTab(tab){
  const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
  if(tab==='deliverySettings')loadDeliverySettingsForm();
  if(tab==='applications'){
-   // Opening Seller Applications now opens Pending directly and starts a fresh Firebase read.
-   if(typeof window.openSellerStatusPage==='function') window.openSellerStatusPage('pending',document.querySelector('#applicationsTab [data-status="pending"]'));
-   else {
-     const diag=$('sellerApplicationsDiagnostics');
-     if(diag)diag.textContent='JAVASCRIPT ERROR: Seller Applications function load nahi hui. Page ko hard refresh karein; agar issue rahe to neeche SDK status dekhein.';
-     const home=$('sellerApplicationsHome'),page=$('sellerStatusPage');
-     if(home)home.classList.add('hidden');if(page)page.classList.remove('hidden');
-     const list=$('sellerApplicationsList');if(list)list.innerHTML='<div class="order-card"><b style="color:#b91c1c">Seller Applications script load nahi hui.</b><p class="small">Admin HTML/JavaScript error. Browser refresh karke dobara try karein.</p></div>';
-   }
+   // Show the four application-status choices first. Do not auto-open Pending.
+   const home=$('sellerApplicationsHome');
+   const page=$('sellerStatusPage');
+   if(home)home.classList.remove('hidden');
+   if(page)page.classList.add('hidden');
+   document.querySelectorAll('#applicationsTab .seller-status-tab').forEach(b=>{
+     b.classList.remove('seller-tab-active');
+     b.setAttribute('aria-pressed','false');
+   });
  }
  if(tab==='withdrawals')renderWithdrawals();if(tab==='couriers')loadCourierPartners();
 }
