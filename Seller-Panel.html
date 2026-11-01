@@ -238,16 +238,45 @@ async function uploadImageToR2(file){
   if(!currentUser)throw new Error("Pehle seller login karein.");
   if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Valid image select karein.");
   if(file.size>8*1024*1024)throw new Error("Photo 8 MB se chhoti rakhein.");
-  const token = await currentUser.getIdToken(true);
-  const form=new FormData();form.append("file",file,file.name||"product-image");
+
+  // Refresh the Firebase ID token before sending it to the Worker.
+  const token=await currentUser.getIdToken(true);
+  const form=new FormData();
+  form.append("file",file,file.name||"product-image");
+
   let res;
   try{
-    res=await fetch(R2_UPLOAD_URL,{method:"POST",headers:{Authorization:"Bearer "+token},body:form});
+    res=await fetch(R2_UPLOAD_URL,{
+      method:"POST",
+      mode:"cors",
+      cache:"no-store",
+      credentials:"omit",
+      headers:{"Authorization":"Bearer "+token},
+      body:form
+    });
   }catch(networkError){
-    throw new Error("Photo upload service could not be reached. Cloudflare Worker CORS / network settings need to be checked.");
+    // A plain GET health check helps distinguish Worker reachability from
+    // the authenticated POST/preflight path on mobile browsers.
+    let healthDetail="";
+    try{
+      const health=await fetch(R2_UPLOAD_URL.replace(/\/upload$/,"/health"),{
+        method:"GET",mode:"cors",cache:"no-store",credentials:"omit"
+      });
+      const healthBody=await health.json().catch(()=>({}));
+      healthDetail=health.ok&&healthBody.success
+        ? " Worker /health reachable hai; upload POST/preflight ya mobile network ko check karna hoga."
+        : " Worker health check HTTP "+health.status+" de raha hai.";
+    }catch(healthError){
+      healthDetail=" Worker /health bhi mobile se nahi khul raha; internet, DNS, VPN/ad-blocker ya Worker domain check karein. ("+(healthError&&healthError.message||healthError)+")";
+    }
+    throw new Error("Mobile browser upload request Worker tak nahi pahunchi: "+(networkError&&networkError.message||networkError)+"."+healthDetail);
   }
+
   const result=await res.json().catch(()=>({}));
-  if(!res.ok||!result.success||!result.url)throw new Error(result.error||("Photo upload failed (HTTP "+res.status+"). Check the Cloudflare Worker response."));
+  if(!res.ok||!result.success||!result.url){
+    const detail=result.error||("Photo upload failed (HTTP "+res.status+").");
+    throw new Error(detail);
+  }
   return result.url;
 }
 
