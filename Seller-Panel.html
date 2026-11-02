@@ -8,9 +8,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#062b78">
 <title>ModeLuxe Mart | Seller Panel</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script>
 <style>
 :root{--blue:#075fc4;--navy:#062b78;--bg:#f4f7fb;--text:#111827;--muted:#687386;--line:#dbe5f1;--panel:#fff;--pale:#e7f2ff;--green:#166534;--red:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:11px 14px;font-weight:750}.primary{background:var(--blue);color:white}.secondary{background:var(--pale);color:#164e84}.danger{background:#fee2e2;color:#991b1b}.hidden{display:none!important}.top{background:var(--navy);color:white;padding:16px}.topinner{max-width:1100px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-size:12px;letter-spacing:.2em;font-weight:800;color:#bcdcff}.top h1{font-size:24px;margin:3px 0}.wrap{max-width:1100px;margin:auto;padding:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #122b4508}.card h2{margin:0 0 12px;font-size:20px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{min-width:0}.field.full{grid-column:1/-1}.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;color:var(--text)}.field textarea{resize:vertical}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button.active{background:var(--blue);color:#fff}.tabs button:not(.active){background:var(--pale);color:#164e84}.msg{padding:11px 12px;border-radius:10px;background:#eff6ff;color:#164e84;margin:10px 0;line-height:1.5;overflow-wrap:anywhere}.msg.error{background:#fee2e2;color:#991b1b}.msg.success{background:#dcfce7;color:#166534}.product{display:grid;grid-template-columns:86px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:13px;padding:12px;margin:10px 0;background:white}.product img{width:86px;height:100px;object-fit:cover;background:#eef2f7;border-radius:9px}.product h3{margin:0 0 5px;overflow-wrap:anywhere}.product .meta{font-size:13px;color:var(--muted);line-height:1.5}.product .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.product .actions button{padding:8px 11px;font-size:13px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.stat{background:#eff6ff;border-radius:12px;padding:13px}.stat b{display:block;font-size:24px;color:var(--blue)}.hint{font-size:12px;color:var(--muted);line-height:1.5}.divider{height:1px;background:var(--line);margin:14px 0}
@@ -301,6 +301,9 @@ async function uploadImageToR2(file){
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.error("Auth persistence setup failed:",e));
 const $=id=>document.getElementById(id);
 let authMode="login",currentUser=null,sellerProfile={},myProducts={},productListener=null;
+let sellerRealtimeSubscriptions=[];
+function sellerListen(path,event,callback,errorCallback){const ref=db.ref(path);ref.on(event,callback,errorCallback);sellerRealtimeSubscriptions.push({ref,event,callback});return ref;}
+function stopSellerRealtimeListeners(){sellerRealtimeSubscriptions.forEach(x=>{try{x.ref.off(x.event,x.callback);}catch(e){}});sellerRealtimeSubscriptions=[];sellerOrderRootListeners={};sellerOrderRootRows={};sellerOrderRows={};activeCourierPartners={};sellerSupportListener=null;}
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function showSellerNotice(message,type="success"){
@@ -393,6 +396,7 @@ $("authForm").addEventListener("submit",async e=>{
 });
 function authError(e){const c=e&&e.code||"";if(c.includes("email-already-in-use"))return"Is email se account pehle se bana hai. Login karein.";if(c.includes("weak-password"))return"Password kamzor hai; kam se kam 6 characters rakhein.";if(c.includes("invalid-email"))return"Email address sahi nahi hai.";if(c.includes("user-not-found")||c.includes("wrong-password")||c.includes("invalid-credential"))return"Email ya password sahi nahi hai.";if(c.includes("operation-not-allowed"))return"Firebase Console mein Authentication > Sign-in method > Email/Password enable karein.";if(c.includes("permission-denied"))return"Firebase Database Rules ne access roka hai. Seller security rules configure karne honge.";return e&&e.message||"Login/register nahi ho paya.";}
 auth.onAuthStateChanged(async user=>{
+ stopSellerRealtimeListeners();
  if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);
  productListener=null;currentUser=user;myProducts={};
  $("sellerApp").classList.add("hidden");
@@ -476,16 +480,18 @@ $("completeSellerForm").addEventListener("submit",async e=>{
 $("pendingRefresh").onclick=()=>auth.currentUser&&auth.currentUser.getIdToken(true).then(()=>auth.currentUser&&auth.currentUser.reload()).then(()=>location.reload());$("pendingLogout").onclick=()=>auth.signOut();
 function startSellerWallet(){
  if(!currentUser)return;
- db.ref("sellerWallets/"+currentUser.uid+"/balance").on("value",s=>{
+ sellerListen("sellerWallets/"+currentUser.uid+"/balance","value",s=>{
   $("sellerWallet").textContent="₹"+Number(s.val()||0).toLocaleString("en-IN");
  },e=>{
   $("sellerWallet").textContent="Unavailable";
   console.error("Seller wallet read failed:",e);
  });
- db.ref("sellerCommission/"+currentUser.uid).on("value",s=>{
-  $("sellerCommission").textContent=Number(s.val()??10)+"%";
+ sellerListen("commissionSettings/defaultCommission","value",s=>{
+  const value=Number(s.val());
+  $("sellerCommission").textContent=(Number.isFinite(value)&&value>=0&&value<=100?value:10)+"%";
  },e=>{
   console.error("Seller commission read failed:",e);
+  $("sellerCommission").textContent="Unavailable";
  });
  let sellerWithdrawalRows={},sellerWithdrawalFilter=null;
  function renderSellerWithdrawalRows(){
@@ -512,7 +518,7 @@ function startSellerWallet(){
  $("withdrawApprovedBtn").onclick=()=>toggleSellerWithdrawalFilter("approved");
  $("withdrawPendingBtn").onclick=()=>toggleSellerWithdrawalFilter("pending");
  $("withdrawCancelBtn").onclick=()=>toggleSellerWithdrawalFilter("cancelled");
- db.ref("withdrawalRequests/seller/"+currentUser.uid).on("value",s=>{
+ sellerListen("withdrawalRequests/seller/"+currentUser.uid,"value",s=>{
   sellerWithdrawalRows=s.val()||{};
   renderSellerWithdrawalRows();
  },e=>{
@@ -522,41 +528,89 @@ function startSellerWallet(){
 }
 $("sellerWithdrawBtn").onclick=async()=>{
  if(!currentUser)return;
- const btn=$("sellerWithdrawBtn");
- const amount=Number($("sellerWithdrawAmount").value);
+ const btn=$("sellerWithdrawBtn"),amount=Math.round(Number($("sellerWithdrawAmount").value)*100)/100;
  if(!Number.isFinite(amount)||amount<=0)return showSellerNotice("Sahi withdrawal amount enter karein.","error");
- if(!Number.isInteger(Math.round(amount*100)))return showSellerNotice("Withdrawal amount sahi enter karein.","error");
  btn.disabled=true;
+ const uid=currentUser.uid,now=new Date().toISOString(),requestRef=db.ref("withdrawalRequests/seller/"+uid).push(),id=requestRef.key;
+ const walletRef=db.ref("sellerWallets/"+uid);
+ let reserved=false;
  try{
-  const balanceSnap=await db.ref("sellerWallets/"+currentUser.uid+"/balance").once("value");
-  const balance=Number(balanceSnap.val()||0);
-  if(!Number.isFinite(balance)||balance<=0)throw Error("Your wallet balance is ₹0. A withdrawal request cannot be submitted until your wallet has sufficient funds.");
-  if(amount>balance+0.000001)throw Error("Insufficient wallet balance. Your available balance is ₹"+balance.toLocaleString("en-IN")+". Please enter an amount within your available balance.");
-  const id=db.ref("withdrawalRequests/seller/"+currentUser.uid).push().key;
-  await db.ref("withdrawalRequests/seller/"+currentUser.uid+"/"+id).set({
-   id,uid:currentUser.uid,shopName:sellerProfile.shopName,amount,status:"pending",
-   processingHours:48,createdAt:new Date().toISOString()
+  const result=await walletRef.transaction(current=>{
+   current=current||{balance:0,totalEarned:0};
+   const balance=Math.round(Number(current.balance||0)*100)/100;
+   if(!Number.isFinite(balance)||balance<amount)return;
+   current.balance=Math.round((balance-amount)*100)/100;
+   current.withdrawals=current.withdrawals||{};
+   current.withdrawals[id]={amount,status:"pending",createdAt:now};
+   return current;
   });
+  if(!result.committed)throw Error("Wallet balance kam hai ya withdrawal reserve nahi ho saka.");
+  reserved=true;
+  await requestRef.set({id,uid,shopName:sellerProfile.shopName||"Seller",amount,status:"pending",walletReserved:true,processingHours:48,createdAt:now});
   $("sellerWithdrawAmount").value="";
-  showSellerNotice("Your withdrawal request has been submitted successfully. Processing may take up to 48 hours.","success");
+  showSellerNotice("Request submit ho gayi. ₹"+amount.toLocaleString("en-IN")+" wallet se reserve kar diye gaye hain. Admin cancel karega to amount wapas milega.","success");
  }catch(e){
-  const message=String(e&&e.message||"");
-  if(message.includes("PERMISSION_DENIED")||message.includes("permission_denied")){
-   showSellerNotice("Your wallet balance could not be verified because database access is blocked. Please ask the administrator to allow this seller account to read its own wallet balance.","error");
-  }else{
-   showSellerNotice(message||"Your withdrawal request could not be submitted. Please try again.","error");
+  if(reserved){
+   try{await walletRef.transaction(current=>{if(!current)return current;const hold=current.withdrawals&&current.withdrawals[id];if(hold&&hold.status==="pending"){current.balance=Math.round((Number(current.balance||0)+amount)*100)/100;delete current.withdrawals[id];}return current;});}catch(rollbackError){console.error("Withdrawal reserve rollback failed",rollbackError);}
   }
+  showSellerNotice((e&&e.message)||"Withdrawal request submit nahi hui.","error");
  }finally{btn.disabled=false;}
 };
 
 let activeCourierPartners={};
+let sellerOrderRows={},sellerOrderRootRows={},sellerOrderRootListeners={};
+function renderSellerOrders(){
+ const rows=Object.entries(sellerOrderRows||{});
+ $("sellerOrdersList").innerHTML=rows.map(([id,base])=>{
+  const root=sellerOrderRootRows[id]||{},o={...base,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
+  const items=Array.isArray(o.items)?o.items:Object.values(o.items||{});
+  const status=String(o.status||"Order Placed");
+  const canUpdate=!o.adminStatusLocked&&!['Delivered','Cancelled','Refunded'].includes(status);
+  return `<article class="product"><div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(status)}</div><div class="meta">${esc(items.map(i=>(i.name||i.productName||"Item")+' × '+(i.qty||i.quantity||1)).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:canUpdate?`<div class="actions"><select id="courierPick_${esc(id)}"><option value="">Select courier partner</option>${Object.entries(activeCourierPartners).map(([pid,p])=>`<option value="${esc(pid)}">${esc(p.name)}</option>`).join("")}</select><button class="primary" onclick="bookSellerCourier('${esc(id)}')">Book Courier via API</button></div>`:""}${canUpdate?`<div class="actions"><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Processing')">Seller Processing</button><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')">Shipped</button></div>`:'<div class="hint">Order status locked / completed.</div>'}</div></article>`;
+ }).join("")||"No seller orders.";
+}
 function startSellerOrders(){
  if(!currentUser)return;
- db.ref("courierPartners").on("value",s=>{activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));$("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";});
- db.ref("sellerOrders/"+currentUser.uid).on("value",s=>{const rows=Object.entries(s.val()||{});$("sellerOrdersList").innerHTML=rows.map(([id,o])=>`<article class="product"><div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(o.status||"Order Placed")}</div><div class="meta">${esc((o.items||[]).map(i=>i.name).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:`<div class="actions"><select id="courierPick_${esc(id)}"><option value="">Select courier partner</option>${Object.entries(activeCourierPartners).map(([pid,p])=>`<option value="${esc(pid)}">${esc(p.name)}</option>`).join("")}</select><button class="primary" onclick="bookSellerCourier('${esc(id)}')">Book Courier via API</button></div>`}<div class="actions"><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Processing')">Seller Processing</button><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')">Shipped</button></div></div></article>`).join("")||"No seller orders.";});
+ sellerListen("courierPartners","value",s=>{activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));$("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";renderSellerOrders();});
+ const ownRef=sellerListen("sellerOrders/"+currentUser.uid,"value",s=>{
+  sellerOrderRows=s.val()||{};
+  Object.keys(sellerOrderRootListeners).forEach(id=>{if(!sellerOrderRows[id]){db.ref("orders/"+id).off("value",sellerOrderRootListeners[id]);sellerRealtimeSubscriptions=sellerRealtimeSubscriptions.filter(x=>!(x.event==="value"&&x.callback===sellerOrderRootListeners[id]));delete sellerOrderRootListeners[id];delete sellerOrderRootRows[id];}});
+  Object.keys(sellerOrderRows).forEach(id=>{if(!sellerOrderRootListeners[id]){const fn=snap=>{sellerOrderRootRows[id]=snap.val()||{};renderSellerOrders();};sellerOrderRootListeners[id]=fn;sellerListen("orders/"+id,"value",fn,err=>console.warn("Seller order status sync failed",id,err&&err.message));}});
+  renderSellerOrders();
+ },e=>$("sellerOrdersList").textContent="Seller orders load nahi hue: "+e.message);
 }
-window.bookSellerCourier=async id=>{if(!currentUser)return;const partnerId=$("courierPick_"+id)?.value;if(!partnerId)return alert("Courier partner select karein.");const partner=activeCourierPartners[partnerId];if(!partner)return alert("Courier partner active nahi hai.");const order=(await db.ref("sellerOrders/"+currentUser.uid+"/"+id).once("value")).val();if(!order)return alert("Order not found.");if(order.courierTracking)return alert("Is order ki courier booking pehle se maujood hai.");try{const token=await currentUser.getIdToken(true);const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});const result=await response.json().catch(()=>({}));if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:result.awb||result.trackingId||"",courierShipmentId:result.shipmentId||"",courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",courierBookedAt:new Date().toISOString()};await db.ref("sellerOrders/"+currentUser.uid+"/"+id).update(patch);await db.ref("orders/"+id).update(patch);alert("Courier booking successful. AWB: "+(patch.courierTracking||"Generated"));}catch(e){alert("Courier booking nahi hui: "+e.message);}};
-window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id);const order=(await ref.once("value")).val();if(!order)return alert("Not your order");await ref.update({status,sellerUpdatedAt:new Date().toISOString()});const allSnap=await db.ref("sellerOrders").once("value"),all=allSnap.val()||{};const siblings=Object.values(all).map(x=>x&&x[id]).filter(Boolean);if(siblings.length&&siblings.every(x=>x.status==="Shipped")){await db.ref("orders/"+id).update({status:"Shipped",sellerShippedAt:new Date().toISOString()});}else{await db.ref("orders/"+id).update({status:"Seller Processing",sellerProgressUpdatedAt:new Date().toISOString()});}};
+window.bookSellerCourier=async id=>{
+ if(!currentUser)return;
+ const partnerId=$("courierPick_"+id)?.value;
+ if(!partnerId)return alert("Courier partner select karein.");
+ const partner=activeCourierPartners[partnerId];
+ if(!partner)return alert("Courier partner active nahi hai.");
+ const sellerRef=db.ref("sellerOrders/"+currentUser.uid+"/"+id),rootRef=db.ref("orders/"+id);
+ const order=(await sellerRef.once("value")).val(),root=(await rootRef.once("value")).val();
+ if(!order||!root)return alert("Order not found.");
+ if(root.adminStatusLocked||["Delivered","Cancelled","Refunded"].includes(String(root.status||"")))return alert("Is order ka status lock ho chuka hai.");
+ if(order.courierTracking||order.courierShipmentId)return alert("Is order ki courier booking pehle se maujood hai.");
+ try{
+  const token=await currentUser.getIdToken(true);
+  const response=await fetch(partner.workerUrl.replace(/\/+$/,'')+"/create-shipment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId:id,partnerId,sellerUid:currentUser.uid})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.success)throw Error(result.message||"Courier API booking failed. Secure Worker/API adapter check karein.");
+  const tracking=String(result.awb||result.trackingId||"").trim(),shipmentId=String(result.shipmentId||"").trim();
+  if(!tracking&&!shipmentId)throw Error("Courier Worker ne AWB/Tracking ID ya Shipment ID nahi diya. Order ko Shipped mark nahi kiya gaya.");
+  const now=new Date().toISOString();
+  const patch={courierPartnerId:partnerId,courierName:partner.name,courierTracking:tracking,courierShipmentId:shipmentId,courierLabelUrl:result.labelUrl||"",courierStatus:result.status||"Booked",status:"Shipped",sellerUpdatedAt:now,courierBookedAt:now};
+  await sellerRef.update(patch);
+  await db.ref("sellerOrderStatuses/"+id+"/"+currentUser.uid).set({status:"Shipped",updatedAt:now,updatedBy:currentUser.uid,source:"courier-booking"});
+  const rawItems=Array.isArray(root.items)?root.items:Object.values(root.items||{});
+  const expected=[...new Set(rawItems.map(x=>String((x||{}).sellerUid||"")).filter(Boolean))];
+  if(!expected.length)expected.push(currentUser.uid);
+  const statusSnap=await db.ref("sellerOrderStatuses/"+id).once("value"),statuses=statusSnap.val()||{};
+  const allShipped=expected.every(uid=>String((statuses[uid]||{}).status||"").toLowerCase()==="shipped");
+  await rootRef.update(allShipped?{status:"Shipped",sellerShippedAt:now}:{status:"Seller Processing",sellerProgressUpdatedAt:now});
+  alert("Courier booking successful. "+(allShipped?"All sellers shipped; order is Shipped.":"Shipment saved for your products. Order will become Shipped after every seller ships.")+" AWB: "+(patch.courierTracking||"Generated"));
+ }catch(e){alert("Courier booking nahi hui: "+e.message);}
+}
+window.sellerSetOrderStatus=async(id,status)=>{if(!currentUser)return;const ref=db.ref("sellerOrders/"+currentUser.uid+"/"+id),rootRef=db.ref("orders/"+id);try{const order=(await ref.once("value")).val(),root=(await rootRef.once("value")).val();if(!order||!root)return alert("Order not found / not assigned to your seller account.");if(root.adminStatusLocked||["Delivered","Cancelled","Refunded"].includes(String(root.status||"")))return alert("Is order ka status ab update nahi ho sakta.");if(!["Processing","Shipped"].includes(status))return alert("Invalid status");const now=new Date().toISOString();await ref.update({status,sellerUpdatedAt:now,sellerUpdatedBy:currentUser.uid});await db.ref("sellerOrderStatuses/"+id+"/"+currentUser.uid).set({status,updatedAt:now,updatedBy:currentUser.uid});const rawItems=Array.isArray(root.items)?root.items:Object.values(root.items||{}),expected=[...new Set(rawItems.map(x=>String((x||{}).sellerUid||"")).filter(Boolean))];if(!expected.length)expected.push(currentUser.uid);const statusSnap=await db.ref("sellerOrderStatuses/"+id).once("value"),statuses=statusSnap.val()||{};const allShipped=expected.every(uid=>String((statuses[uid]||{}).status||"").toLowerCase()==="shipped");await rootRef.update(allShipped?{status:"Shipped",sellerShippedAt:now}:{status:"Seller Processing",sellerProgressUpdatedAt:now});}catch(e){alert("Order status save nahi hua: "+(e.message||e));}};
 // Ek waqt mein sirf ek panel visible rahega. Wahi button dobara dabane par panel band hoga.
 let activeSellerPanel="add";
 const sellerPanelSections={orders:"sellerOrdersSection",add:"addSection",mine:"mineSection",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
@@ -578,7 +632,7 @@ function showSellerPanel(panel,toggle=true){
 function closeWalletPanel(){if(activeSellerPanel==="wallet")activeSellerPanel=null;$("walletSection").classList.add("hidden");$("walletHeaderBtn").classList.remove("active");$("walletHeaderBtn").setAttribute("aria-expanded","false");}
 $("walletHeaderBtn").onclick=()=>showSellerPanel("wallet");
 $("sellerOrdersTab").onclick=()=>showSellerPanel("orders");
-$("logoutBtn").onclick=async()=>{if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
+$("logoutBtn").onclick=async()=>{stopSellerRealtimeListeners();if(productListener&&currentUser)db.ref("sellerPrivateProducts/"+currentUser.uid).off("value",productListener);productListener=null;await auth.signOut();};
 function fillProfile(){$("profileShop").value=sellerProfile.shopName||"";$("profilePhone").value=sellerProfile.phone||"";$("profileEmail").value=currentUser?.email||sellerProfile.email||"";}
 function listenMyProducts(){if(!currentUser)return;const ref=db.ref("sellerPrivateProducts/"+currentUser.uid);if(productListener)ref.off("value",productListener);productListener=snap=>{myProducts=snap.val()||{};renderMyProducts();updateStats();};ref.on("value",productListener,e=>showMsg("productsMsg","Products load nahi hue: "+e.message,"error"));}
 function updateStats(){const list=Object.values(myProducts||{});$("productCount").textContent=list.length;$("activeCount").textContent=list.filter(p=>p&&p.active!==false&&Number(p.stock||0)>0).length;$("lowStockCount").textContent=list.filter(p=>p&&Number(p.stock||0)<=0).length;}
@@ -676,7 +730,7 @@ function startSellerSupportTickets(){
   const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||"").localeCompare(String((a[1]||{}).createdAt||"")));
   $("mySupportTickets").innerHTML=rows.length?rows.map(([id,t])=>'<article class="msg" style="background:#f8fafc;border:1px solid var(--line);color:var(--text)"><b>'+esc(t.ticketNo||id)+'</b> · <b>'+esc(t.status||"Pending")+'</b><div class="hint">'+esc(t.subject||"Other")+' · '+esc(t.createdAt||"")+'</div><p style="margin:7px 0">'+esc(t.message||"")+'</p>'+(t.adminReply?'<div class="msg success"><b>Admin Reply:</b> '+esc(t.adminReply)+'</div>':'<span class="hint">Admin reply ka wait hai.</span>')+'</article>').join(""):'<div class="msg">Abhi koi support ticket nahi hai.</div>';
  };
- ref.on("value",sellerSupportListener,err=>$("mySupportTickets").textContent="Tickets load nahi hue: "+err.message);
+ sellerListen("supportTickets/seller/"+currentUser.uid,"value",sellerSupportListener,err=>$("mySupportTickets").textContent="Tickets load nahi hue: "+err.message);
 }
 
 $("supportEmailBtn").onclick=()=>{if(!SUPPORT_EMAIL)return showSellerNotice("Official support email abhi configure nahi hua. Filhaal Raise Support Ticket ka use karein.","error");location.href="mailto:"+SUPPORT_EMAIL;};
