@@ -196,7 +196,7 @@ window.mlmVolatileStore = (() => {
 </div>
 <section id="sellerGraphPanel" class="card hidden" style="margin:0 0 14px"><h3 class="graph-title">Daily Orders (Last 7 Days)</h3><div id="sellerDailyGraph" aria-live="polite"></div></section>
 
-<section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrdersList" class="muted">Orders load ho rahe hain…</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
+<section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrderFilterTabs" class="tabs" style="margin:0 0 12px"><button type="button" data-order-filter="received" class="secondary">Received Order</button><button type="button" data-order-filter="rto" class="secondary">RTO Order</button><button type="button" data-order-filter="delivered" class="secondary">Delivered Order</button><button type="button" data-order-filter="return" class="secondary">Return Order</button></div><div id="sellerOrdersList" class="muted">Order category select karein.</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
 <section id="addSection" class="card">
 <h2 id="formTitle">Naya Product List Karein</h2>
 <p class="muted">Product ki details bharein. Sirf aapke account ke products is panel mein edit/delete honge.</p>
@@ -578,16 +578,32 @@ function renderSellerDailyGraph(){
  host.innerHTML='<div class="daily-chart" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:190px;padding:12px 6px 5px;border-bottom:1px solid #dbe5f1">'+Object.entries(counts).map(([day,n])=>{const h=Math.max(n?8:2,Math.round(n/max*132));return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:6px;min-width:0"><b style="font-size:12px">${n}</b><div title="${day}: ${n} orders" style="width:22px;max-width:75%;height:${h}px;background:linear-gradient(180deg,#3b82f6,#075fc4);border-radius:7px 7px 2px 2px"></div><span style="font-size:11px;line-height:1.2;white-space:nowrap;color:#64748b">${day.slice(8,10)}/${day.slice(5,7)}</span></div>`}).join('')+'</div><p class="hint" style="margin:9px 0 0">Total: '+Object.values(counts).reduce((a,b)=>a+b,0)+' orders</p>';
 }
 document.getElementById("sellerGraphToggle")?.addEventListener("click",()=>{const p=document.getElementById("sellerGraphPanel");p.classList.toggle("hidden");if(!p.classList.contains("hidden"))renderSellerDailyGraph();});
+let activeSellerOrderFilter="";
+function sellerOrderCategory(status){
+ const s=String(status||"").trim().toLowerCase();
+ if(/rto|return to origin|returned to origin/.test(s))return "rto";
+ if(/return|refund/.test(s))return "return";
+ if(s==="delivered")return "delivered";
+ if(["cancelled","canceled"].includes(s))return "other";
+ return "received";
+}
+document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(btn=>btn.addEventListener("click",()=>{
+ activeSellerOrderFilter=btn.dataset.orderFilter;
+ document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(b=>{b.classList.toggle("active",b===btn);b.classList.toggle("primary",b===btn);b.classList.toggle("secondary",b!==btn);});
+ renderSellerOrders();
+}));
 function renderSellerOrders(){
  renderSellerDailyGraph();
  const rows=Object.entries(sellerOrderRows||{});
- $("sellerOrdersList").innerHTML=rows.map(([id,base])=>{
+ if(!activeSellerOrderFilter){$("sellerOrdersList").textContent="Upar se Received, RTO, Delivered ya Return Order select karein.";return;}
+ const filteredRows=rows.filter(([id,base])=>{const root=sellerOrderRootRows[id]||{};return sellerOrderCategory(root.status||base.status)===activeSellerOrderFilter;});
+ $("sellerOrdersList").innerHTML=filteredRows.map(([id,base])=>{
   const root=sellerOrderRootRows[id]||{},o={...base,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
   const items=Array.isArray(o.items)?o.items:Object.values(o.items||{});
   const status=String(o.status||"Order Placed");
   const canUpdate=!o.adminStatusLocked&&!['Delivered','Cancelled','Refunded'].includes(status);
   return `<article class="product"><div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(status)}</div><div class="meta">${esc(items.map(i=>(i.name||i.productName||"Item")+' × '+(i.qty||i.quantity||1)).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:canUpdate?`<div class="actions"><select id="courierPick_${esc(id)}"><option value="">Select courier partner</option>${Object.entries(activeCourierPartners).map(([pid,p])=>`<option value="${esc(pid)}">${esc(p.name)}</option>`).join("")}</select><button class="primary" onclick="bookSellerCourier('${esc(id)}')">Book Courier via API</button></div>`:""}${canUpdate?`<div class="actions"><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Processing')">Seller Processing</button><button class="secondary" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')">Shipped</button></div>`:'<div class="hint">Order status locked / completed.</div>'}</div></article>`;
- }).join("")||"No seller orders.";
+ }).join("")||"Is category mein abhi koi order nahi hai.";
 }
 function startSellerOrders(){
  if(!currentUser)return;
