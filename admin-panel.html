@@ -221,9 +221,9 @@ const firebaseConfig = {
             appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
             measurementId: "G-HZEKJT5YZX"
         };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
-const auth=firebase.auth();
+const panelFirebaseApp = firebase.apps.find(app=>app.name==="modeluxe-admin-panel") || firebase.initializeApp(firebaseConfig,"modeluxe-admin-panel");
+const db=panelFirebaseApp.database();
+const auth=panelFirebaseApp.auth();
 const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
 async function uploadImageToR2(file){
   if(!auth.currentUser)throw new Error("Admin Firebase login missing hai. Dobara login karein.");
