@@ -577,7 +577,7 @@ function renderSellerDailyGraph(){
  const max=Math.max(1,...Object.values(counts));
  host.innerHTML='<div class="daily-chart" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:190px;padding:12px 6px 5px;border-bottom:1px solid #dbe5f1">'+Object.entries(counts).map(([day,n])=>{const h=Math.max(n?8:2,Math.round(n/max*132));return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:6px;min-width:0"><b style="font-size:12px">${n}</b><div title="${day}: ${n} orders" style="width:22px;max-width:75%;height:${h}px;background:linear-gradient(180deg,#3b82f6,#075fc4);border-radius:7px 7px 2px 2px"></div><span style="font-size:11px;line-height:1.2;white-space:nowrap;color:#64748b">${day.slice(8,10)}/${day.slice(5,7)}</span></div>`}).join('')+'</div><p class="hint" style="margin:9px 0 0">Total: '+Object.values(counts).reduce((a,b)=>a+b,0)+' orders</p>';
 }
-document.getElementById("sellerGraphToggle")?.addEventListener("click",()=>{const p=document.getElementById("sellerGraphPanel");p.classList.toggle("hidden");if(!p.classList.contains("hidden"))renderSellerDailyGraph();});
+document.getElementById("sellerGraphToggle")?.addEventListener("click",()=>{const p=document.getElementById("sellerGraphPanel"),btn=document.getElementById("sellerGraphToggle");const opening=p.classList.contains("hidden");p.classList.toggle("hidden",!opening);btn.classList.toggle("active",opening);btn.setAttribute("aria-expanded",String(opening));if(opening)renderSellerDailyGraph();});
 let activeSellerOrderFilter="";
 function sellerOrderCategory(status){
  const s=String(status||"").trim().toLowerCase();
@@ -588,9 +588,10 @@ function sellerOrderCategory(status){
  return "received";
 }
 document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(btn=>btn.addEventListener("click",()=>{
- activeSellerOrderFilter=btn.dataset.orderFilter;
- document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(b=>{b.classList.toggle("active",b===btn);b.classList.toggle("primary",b===btn);b.classList.toggle("secondary",b!==btn);});
- renderSellerOrders();
+ const isSame=activeSellerOrderFilter===btn.dataset.orderFilter;
+ activeSellerOrderFilter=isSame?"":btn.dataset.orderFilter;
+ document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(b=>{const selected=!isSame&&b===btn;b.classList.toggle("active",selected);b.classList.toggle("primary",selected);b.classList.toggle("secondary",!selected);});
+ if(isSame){$("sellerOrdersList").textContent="Order category select karein.";}else{renderSellerOrders();}
 }));
 function renderSellerOrders(){
  renderSellerDailyGraph();
