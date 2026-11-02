@@ -1010,14 +1010,10 @@ const firebaseConfig = {
   appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
   measurementId: "G-HZEKJT5YZX"
 };
-// Give the User Panel its own named Firebase app so its Auth session is isolated
-// from Seller, Admin, and Delivery panels on the same GitHub Pages origin.
-const panelFirebaseApp = (typeof firebase!=="undefined")
-  ? (firebase.apps.find(app=>app.name==="modeluxe-user-panel") || firebase.initializeApp(firebaseConfig,"modeluxe-user-panel"))
-  : null;
-const db = panelFirebaseApp ? panelFirebaseApp.database() : null;
+if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 window.MLM_CART_DB=db;
-const auth = panelFirebaseApp ? panelFirebaseApp.auth() : null;
+const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
 // Require Firebase LOCAL persistence. Do not silently continue with session-only auth.
 const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence)
   ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(err=>{
@@ -1052,13 +1048,11 @@ let pendingOtpRequestId=null, pendingOtpPhone=null;
 let userOrdersQuery=null;
 let userOrdersListener=null;
 let firebaseOrdersForUser=[];
-const sellerSyncAttemptedOrderIds=new Set();
 
 function stopUserOrdersListener(){
   if(userOrdersQuery && userOrdersListener) userOrdersQuery.off("value",userOrdersListener);
   userOrdersQuery=null;userOrdersListener=null;
   firebaseOrdersForUser=[];
-  sellerSyncAttemptedOrderIds.clear();
 }
 
 function startUserOrdersListener(phone){
@@ -1082,26 +1076,21 @@ function startUserOrdersListener(phone){
         latitude:raw.lat||raw.latitude||"",
         longitude:raw.lng||raw.longitude||"",
         items:Array.isArray(raw.items)?raw.items:[],
-        total:Number(raw.totalAmount??raw.price??raw.total??0),
+        subtotal:Number(raw.productSubtotal??raw.subtotal??0),
+        productSubtotal:Number(raw.productSubtotal??raw.subtotal??0),
+        deliveryFee:Number(raw.deliveryFee??raw.deliveryCharges??raw.shippingCharge??0),
+        deliveryCharges:Number(raw.deliveryFee??raw.deliveryCharges??raw.shippingCharge??0),
+        total:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
+        totalAmount:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
+        grandTotal:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
         date:raw.dateTime||raw.date||raw.createdAt||"",
         createdAt:raw.createdAt||"",
         status:String(raw.status||"Order Placed"),
         updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
         payment:raw.paymentMethod||raw.payment||"",
         paymentStatus:raw.paymentStatus||"Pending",
-        razorpayPaymentId:raw.razorpayPaymentId||"",
-        sellerSyncPending:raw.sellerSyncPending===true
+        razorpayPaymentId:raw.razorpayPaymentId||""
       });
-      // Re-sync old as well as pending orders once per login session. The Worker
-      // uses PATCH, so repeating this request safely refreshes seller-specific copies.
-      const paymentMethod=String(raw.paymentMethod||raw.payment||"");
-      const paymentVerified=!/^Razorpay/i.test(paymentMethod)||raw.paymentStatus==="Verified";
-      if(paymentVerified&&!sellerSyncAttemptedOrderIds.has(String(id))){
-        sellerSyncAttemptedOrderIds.add(String(id));
-        syncVerifiedSellerOrder(id).then(ok=>{
-          if(!ok)console.warn("Seller order sync remains pending:",id);
-        });
-      }
     });
     firebaseOrdersForUser=remote;
     mergeAndRenderUserOrders();
@@ -1246,7 +1235,6 @@ async function syncVerifiedSellerOrder(orderId){
     const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},body:JSON.stringify({action:"syncOrder",orderId:String(orderId)})});
     const syncResult=await syncResponse.json().catch(()=>({}));
     if(!syncResponse.ok||(syncResult.ok!==true&&syncResult.success!==true))throw new Error(syncResult.error||syncResult.message||"Seller order sync failed");
-    if(Number(syncResult.sellerCount||0)<1)throw new Error(syncResult.message||"Order ke items mein sellerUid nahi mila. Product listing ka seller UID check karein.");
     await db.ref("orders/"+orderId).update({sellerSyncPending:false,sellerSyncUpdatedAt:new Date().toISOString()});
     return true;
   }catch(e){
@@ -1275,9 +1263,13 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     })),
     price:Number(order.total||0),
     subtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
-    deliveryFee:Number(order.deliveryFee||0),
-    totalAmount:Number(order.total||0),
-    total:Number(order.total||0),
+    productSubtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
+    deliveryFee:Number(order.deliveryFee??0),
+    deliveryCharges:Number(order.deliveryFee??0),
+    totalAmount:Number(order.total??0),
+    grandTotal:Number(order.total??0),
+    total:Number(order.total??0),
+    billVersion:1,
     payment:paymentMethod,
     paymentMethod:paymentMethod,
     paymentStatus:paymentStatus,
@@ -1976,7 +1968,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 (function(){
   if(!db || !firebase || !firebase.database) return;
   try {
-    const connectedRef = db.ref('.info/connected');
+    const connectedRef = firebase.database().ref('.info/connected');
     connectedRef.on('value', snap => {
       const online = snap.val() === true;
       const el = document.getElementById('firebaseConnectionStatus');
