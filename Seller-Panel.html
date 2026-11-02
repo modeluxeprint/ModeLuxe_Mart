@@ -454,8 +454,13 @@ auth.onAuthStateChanged(async user=>{
   startSellerOrders();
 
  }catch(err){
-  pendingProfileUser=user;
-  showAuthChoice("");
+  // Keep the Firebase session intact. A profile-read failure is not a logout
+  // and must not be treated as a missing seller profile.
+  pendingProfileUser=null;
+  showAuthChoice("Firebase se seller profile load nahi hua: "+(err&&err.message?err.message:String(err))+". Aapka login session sign out nahi hua hai. Error theek hone ke baad Retry karein.");
+  $("choiceApplyBtn").classList.add("hidden");
+  $("choiceLoginBtn").textContent="Retry";
+  $("choiceLoginBtn").onclick=()=>location.reload();
  }
 });
 $("completeSellerForm").addEventListener("submit",async e=>{
