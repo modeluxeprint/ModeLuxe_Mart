@@ -1246,6 +1246,12 @@ async function syncVerifiedSellerOrder(orderId){
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
   if(!db) throw new Error("Firebase SDK load नहीं हुआ");
+  const itemSubtotal=(order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty??i.quantity??1),0);
+  const productSubtotal=Number(order.subtotal??itemSubtotal);
+  // Grand Total is the amount actually charged/shown at checkout. Delivery is the difference,
+  // so it remains dynamic per order and is never hard-coded.
+  const grandTotal=Number(order.total??(productSubtotal+Number(order.deliveryFee||0)));
+  const deliveryFee=Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
   const firebaseOrder={
     id:order.id,
     customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
@@ -1261,14 +1267,14 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
       sellerUid:String(i.sellerUid||''),
       seller:String(i.seller||'')
     })),
-    price:Number(order.total||0),
-    subtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
-    productSubtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
-    deliveryFee:Number(order.deliveryFee??0),
-    deliveryCharges:Number(order.deliveryFee??0),
-    totalAmount:Number(order.total??0),
-    grandTotal:Number(order.total??0),
-    total:Number(order.total??0),
+    price:grandTotal,
+    subtotal:productSubtotal,
+    productSubtotal,
+    deliveryFee,
+    deliveryCharges:deliveryFee,
+    totalAmount:grandTotal,
+    grandTotal,
+    total:grandTotal,
     billVersion:1,
     payment:paymentMethod,
     paymentMethod:paymentMethod,
