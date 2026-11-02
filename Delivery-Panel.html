@@ -30,8 +30,8 @@ const firebaseConfig = {
             appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
             measurementId: "G-HZEKJT5YZX"
         };
-if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-const db=firebase.database(),auth=firebase.auth();
+const panelFirebaseApp=firebase.apps.find(app=>app.name==="modeluxe-delivery-panel")||firebase.initializeApp(firebaseConfig,"modeluxe-delivery-panel");
+const db=panelFirebaseApp.database(),auth=panelFirebaseApp.auth();
 // Keep Firebase sign-in across page refreshes on this device.
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
 const ADMIN_PHONE='7818995955',ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
