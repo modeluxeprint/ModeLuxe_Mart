@@ -1014,7 +1014,13 @@ if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeAp
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 window.MLM_CART_DB=db;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
-const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence) ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err=>{console.warn("Auth persistence setup failed",err&&err.message);}) : Promise.resolve();
+// Require Firebase LOCAL persistence. Do not silently continue with session-only auth.
+const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence)
+  ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(err=>{
+      console.error("Firebase LOCAL persistence could not be enabled:",err);
+      throw new Error("This browser could not save your login session. Enable site storage/cookies for this website and try again.");
+    })
+  : Promise.reject(new Error("Firebase Auth persistence is unavailable in this browser."));
 // Delivery fee settings are shared with Admin Panel through Firebase.
 let deliverySettings={freeAbove:199,charge:49};
 let deliverySettingsListener=null;
@@ -1579,7 +1585,8 @@ function setLanguage(lang){
   const otpInput=document.getElementById("loginOtp");if(otpInput)otpInput.placeholder=t.otpPlaceholder;
   const orderSubmit=document.querySelector('#orderForm button[type="submit"]');if(orderSubmit)orderSubmit.textContent=t.placeOrder;
   const paymentSelect=document.getElementById("payment");if(paymentSelect&&paymentSelect.options.length>1)paymentSelect.options[1].textContent=t.paymentOption;
-  showAuthState(null);
+  // Language changes must never clear the current authenticated account.
+  if(auth) showAuthState(auth.currentUser || null);
   const tiles=document.querySelectorAll("#accountSection .accounttile");
   if(tiles[0]){tiles[0].querySelector("strong").textContent=t.profile;tiles[0].querySelector("small").textContent=t.profileHint}
   if(tiles[1]){tiles[1].querySelector("strong").textContent=t.orders;tiles[1].querySelector("small").textContent=t.ordersHint}
@@ -1942,7 +1949,8 @@ function renderMyOrders(){
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();mlmVolatileStore.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
+$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();mlmVolatileStore.setItem("mlm_language","en");setLanguage("en");
+// Firebase onAuthStateChanged below owns the initial login state; do not overwrite it here.
 
 
 // Live connection indicator for Firebase Realtime Database.
@@ -2078,9 +2086,6 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 })();
 </script>
 
-
-</body>
-</html>
 
 <style>
 /* Header search and wishlist overlays: align with controls printed in the banner artwork. */
@@ -2314,3 +2319,6 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
   }
 }
 </style>
+
+</body>
+</html>
