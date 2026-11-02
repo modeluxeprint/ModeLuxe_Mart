@@ -1088,15 +1088,15 @@ function startUserOrdersListener(phone){
         razorpayPaymentId:raw.razorpayPaymentId||"",
         sellerSyncPending:raw.sellerSyncPending===true
       });
-      // Repair orders whose previous seller fan-out failed. Each order is attempted
-      // only once per page session so a failed request cannot create a retry loop.
-      if(raw.sellerSyncPending===true && !sellerSyncAttemptedOrderIds.has(String(id))){
+      // Re-sync old as well as pending orders once per login session. The Worker
+      // uses PATCH, so repeating this request safely refreshes seller-specific copies.
+      const paymentMethod=String(raw.paymentMethod||raw.payment||"");
+      const paymentVerified=!/^Razorpay/i.test(paymentMethod)||raw.paymentStatus==="Verified";
+      if(paymentVerified&&!sellerSyncAttemptedOrderIds.has(String(id))){
         sellerSyncAttemptedOrderIds.add(String(id));
-        if(!/^Razorpay/i.test(String(raw.paymentMethod||raw.payment||"")) || raw.paymentStatus==="Verified"){
-          syncVerifiedSellerOrder(id).then(ok=>{
-            if(!ok) console.warn("Seller order remains pending:",id);
-          });
-        }
+        syncVerifiedSellerOrder(id).then(ok=>{
+          if(!ok)console.warn("Seller order sync remains pending:",id);
+        });
       }
     });
     firebaseOrdersForUser=remote;
@@ -1242,6 +1242,7 @@ async function syncVerifiedSellerOrder(orderId){
     const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},body:JSON.stringify({action:"syncOrder",orderId:String(orderId)})});
     const syncResult=await syncResponse.json().catch(()=>({}));
     if(!syncResponse.ok||(syncResult.ok!==true&&syncResult.success!==true))throw new Error(syncResult.error||syncResult.message||"Seller order sync failed");
+    if(Number(syncResult.sellerCount||0)<1)throw new Error(syncResult.message||"Order ke items mein sellerUid nahi mila. Product listing ka seller UID check karein.");
     await db.ref("orders/"+orderId).update({sellerSyncPending:false,sellerSyncUpdatedAt:new Date().toISOString()});
     return true;
   }catch(e){
