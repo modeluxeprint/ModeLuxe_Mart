@@ -225,9 +225,9 @@ body{min-height:100%;height:auto!important;overflow-y:auto!important;overflow-x:
 .firebase-connection-status{display:block;text-align:center;font-size:11px;color:#687386;padding:4px 0}.firebase-connection-status.is-connected{color:#047857}.firebase-connection-status.is-disconnected{color:#b45309}
 </style>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <link crossorigin="" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
 <script crossorigin="" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>.topinner.banner-inner::before,.topinner.banner-inner::after{display:none!important}</style>
@@ -399,18 +399,8 @@ body.search-mode #products{scroll-margin-top:115px}
 <script>
 /* Volatile-only state adapter. Cleared on refresh or page close. */
 window.mlmVolatileStore = (() => {
- const prefix='modeluxe_mart_local:';
- const fallback=new Map();
- const storage=(()=>{try{const k=prefix+'__test__';localStorage.setItem(k,'1');localStorage.removeItem(k);return localStorage;}catch(e){return null;}})();
- const keys=()=>{if(!storage)return Array.from(fallback.keys());const out=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(k&&k.startsWith(prefix)&&k!==prefix+'__test__')out.push(k.slice(prefix.length));}return out;};
- return {
-  getItem(k){k=String(k);try{return storage?storage.getItem(prefix+k):(fallback.has(k)?fallback.get(k):null);}catch(e){return fallback.has(k)?fallback.get(k):null;}},
-  setItem(k,v){k=String(k);v=String(v);try{if(storage)storage.setItem(prefix+k,v);else fallback.set(k,v);}catch(e){fallback.set(k,v);}},
-  removeItem(k){k=String(k);try{if(storage)storage.removeItem(prefix+k);}catch(e){}fallback.delete(k);},
-  clear(){try{if(storage)keys().forEach(k=>storage.removeItem(prefix+k));}catch(e){}fallback.clear();},
-  key(i){return keys()[i]??null;},
-  get length(){return keys().length;}
- };
+ const data = new Map();
+ return { getItem(k){return data.has(String(k))?data.get(String(k)):null;}, setItem(k,v){data.set(String(k),String(v));}, removeItem(k){data.delete(String(k));}, clear(){data.clear();}, key(i){return Array.from(data.keys())[i]??null;}, get length(){return data.size;} };
 })();
 </script>
 
@@ -667,7 +657,7 @@ function startCartCloudSync(user){
       }));
       mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));
       renderCart();
-      // Keep background cloud sync silent; addCart() already shows the single user-facing popup.
+      showToast("Cart cloud se sync ho gaya");
     }else if(!snap.exists()){
       // First login on a new device: seed the cloud cart from this session's current cart.
       writeCartCloudNow();
@@ -980,17 +970,9 @@ $("orderForm").addEventListener("submit",async e=>{
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
     address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
     pin,payment:$("payment").value,items:cart.map(x=>({...x})),
-    subtotal:getCartSubtotal(),productSubtotal:getCartSubtotal(),
-    // Freeze the delivery charge at checkout. Later Admin free-delivery/charge changes
-    // must affect only NEW orders, never this already-created order.
-    deliveryFee:getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
+    subtotal:getCartSubtotal(),deliveryFee:getDeliveryFee(getCartSubtotal()),total:getCartSubtotal()+getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
     createdAt:new Date().toISOString(),status:"Order Placed",paymentStatus:$("payment").value==="COD"?"Pending":"Payment Pending"
   };
-  order.deliveryCharges=Number(order.deliveryFee||0);
-  order.total= Math.round((Number(order.productSubtotal||0)+Number(order.deliveryFee||0))*100)/100;
-  order.grandTotal=order.total;
-  order.totalAmount=order.total;
-  order.billVersion=2;
   if(order.payment==="RAZORPAY"){await startRazorpayPayment(order);return}
   try{
     await saveOrderToFirebase(order,"Cash on Delivery","Pending");
@@ -998,12 +980,7 @@ $("orderForm").addEventListener("submit",async e=>{
     $("orderMsg").innerHTML='';
     e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
   }catch(err){
-    console.error("Customer order save failed:",err);
-    const detail=String(err&&err.message||"");
-    const rulesHint=/PERMISSION_DENIED|permission denied/i.test(detail)
-      ? "Firebase Database Rules में /orders पर authenticated customer को write permission नहीं मिल रही है।"
-      : detail;
-    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर सेव नहीं हो पाया। '+esc(rulesHint||"कृपया दोबारा कोशिश करें।")+'</div>';
+    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर पूरा नहीं हो पाया। कृपया दोबारा कोशिश करें। '+esc(err.message||"")+'</div>';
   }
 });
 
@@ -1022,13 +999,6 @@ if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeAp
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 window.MLM_CART_DB=db;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
-// Require Firebase LOCAL persistence. Do not silently continue with session-only auth.
-const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence)
-  ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(err=>{
-      console.error("Firebase LOCAL persistence could not be enabled:",err);
-      throw new Error("This browser could not save your login session. Enable site storage/cookies for this website and try again.");
-    })
-  : Promise.reject(new Error("Firebase Auth persistence is unavailable in this browser."));
 // Delivery fee settings are shared with Admin Panel through Firebase.
 let deliverySettings={freeAbove:199,charge:49};
 let deliverySettingsListener=null;
@@ -1046,14 +1016,13 @@ function startUserProductsListener(){
   if(userProductsListener)db.ref("sellerProducts").off("value",userProductsListener);
   userProductsListener=snap=>{
     const raw=snap.val()||{};
-    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||""),sellerPaused:p.sellerPaused===true,active:p.active!==false};}).filter(p=>p.name && p.active!==false && p.sellerPaused!==true && Number(p.stock||0)>0);
+    products=Object.entries(raw).map(([id,p])=>{p=p||{};return {id:String(id),name:String(p.name||p.productName||""),price:Number(p.price||p.sellingPrice||0),category:String(p.category||"Other"),image:String(p.imageUrl||p.imageURL||p.image||p.img||p.photoUrl||p.photo||p.imageData||""),quantity:String(p.quantity||p.weight||"1"),unit:String(p.unit||"Piece"),stock:Number(p.stock??p.quantityInStock??0),stockUnit:String(p.stockUnit||p.unit||"Piece"),description:String(p.description||p.details||p.productDescription||""),size:p.size||p.sizes||p.variant||p.variants||p.productSize||"",seller:String(p.seller||p.sellerName||""),sellerUid:String(p.sellerUid||""),sellerPaused:p.sellerPaused===true};}).filter(p=>p.name);
     if(activeCategory!=="All"&&!products.some(p=>p.category===activeCategory))activeCategory="All";
     categories();renderProducts();
   };
   db.ref("sellerProducts").on("value",userProductsListener,err=>console.warn("Product catalogue sync failed:",err&&err.message));
 }
 let pendingOtpRequestId=null, pendingOtpPhone=null;
-let userOrdersQuery=null;
 let userOrdersListener=null;
 let firebaseOrdersForUser=[];
 
@@ -1063,6 +1032,39 @@ function stopUserOrdersListener(){
   firebaseOrdersForUser=[];
 }
 
+// Copy the immutable billing snapshot into each seller's private order record.
+// This also repairs older sellerOrders entries when the customer opens My Orders.
+// Only billing/address fields are updated; seller status and courier fields remain untouched.
+async function syncSellerBillingSnapshot(raw,orderId){
+  if(!db||!raw||!orderId)return;
+  const allItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
+  const groups={};
+  allItems.forEach(item=>{const sid=String(item&&item.sellerUid||"");if(sid)(groups[sid]||(groups[sid]=[])).push(item);});
+  const paymentMethod=String(raw.paymentMethod||raw.payment||raw.paymentMode||raw.paymentType||"").trim();
+  const paymentStatus=String(raw.paymentStatus||"Pending");
+  const grandTotal=Number(raw.totalAmount??raw.grandTotal??raw.total??raw.price??0);
+  const deliveryFee=Number(raw.deliveryFee??raw.deliveryCharges??raw.shippingCharge??0);
+  const updates={};
+  Object.entries(groups).forEach(([sid,items])=>{
+    const productSubtotal=items.reduce((sum,item)=>sum+(Number(item.price??item.sellerPrice??item.salePrice??0)||0)*(Number(item.qty??item.quantity??1)||1),0);
+    const path="sellerOrders/"+sid+"/"+orderId;
+    updates[path+"/productSubtotal"]=productSubtotal;
+    updates[path+"/subtotal"]=productSubtotal;
+    updates[path+"/deliveryFee"]=deliveryFee;
+    updates[path+"/deliveryCharges"]=deliveryFee;
+    updates[path+"/grandTotal"]=grandTotal;
+    updates[path+"/totalAmount"]=grandTotal;
+    updates[path+"/paymentMethod"]=paymentMethod;
+    updates[path+"/payment"]=paymentMethod;
+    updates[path+"/paymentStatus"]=paymentStatus;
+    updates[path+"/customerName"]=raw.customerName||raw.name||"";
+    updates[path+"/customerPhone"]=raw.customerPhone||raw.phone||"";
+    updates[path+"/shippingAddress"]=raw.shippingAddress||raw.address||"";
+    updates[path+"/pin"]=raw.pin||raw.shippingPin||raw.pincode||"";
+  });
+  if(Object.keys(updates).length)await db.ref().update(updates);
+}
+
 function startUserOrdersListener(phone){
   stopUserOrdersListener();
   const digits=String(phone||"").replace(/\D/g,"");
@@ -1070,11 +1072,13 @@ function startUserOrdersListener(phone){
 
   userOrdersListener=snapshot=>{
     const remote=[];
+    const billingRepairs=[];
     snapshot.forEach(child=>{
       const raw=child.val()||{};
       const orderPhone=String(raw.customerPhone||raw.phone||"").replace(/\D/g,"");
       if(orderPhone!==digits)return;
       const id=raw.id??child.key;
+      billingRepairs.push(syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message)));
       remote.push({
         id,
         name:raw.customerName||raw.name||"",
@@ -1084,13 +1088,7 @@ function startUserOrdersListener(phone){
         latitude:raw.lat||raw.latitude||"",
         longitude:raw.lng||raw.longitude||"",
         items:Array.isArray(raw.items)?raw.items:[],
-        subtotal:Number(raw.productSubtotal??raw.subtotal??0),
-        productSubtotal:Number(raw.productSubtotal??raw.subtotal??0),
-        deliveryFee:Number(raw.deliveryFee??raw.deliveryCharges??raw.shippingCharge??0),
-        deliveryCharges:Number(raw.deliveryFee??raw.deliveryCharges??raw.shippingCharge??0),
-        total:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
-        totalAmount:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
-        grandTotal:Number(raw.grandTotal??raw.totalAmount??raw.total??raw.price??0),
+        total:Number(raw.totalAmount??raw.price??raw.total??0),
         date:raw.dateTime||raw.date||raw.createdAt||"",
         createdAt:raw.createdAt||"",
         status:String(raw.status||"Order Placed"),
@@ -1104,8 +1102,6 @@ function startUserOrdersListener(phone){
     mergeAndRenderUserOrders();
   };
 
-  const orderUid=String((auth&&auth.currentUser&&auth.currentUser.uid)||"");
-  if(!orderUid){console.warn("User order sync skipped: Firebase UID is not available yet.");return;}
   userOrdersQuery=db.ref("orders").orderByChild("customerUid").equalTo(orderUid);
   userOrdersQuery.on("value",userOrdersListener,error=>{
     console.error("User order status live sync failed:",error);
@@ -1142,10 +1138,6 @@ function showAuthState(user){
   else if(authPhone.length===12 && authPhone.startsWith("91")) digits=authPhone.slice(2);
 
   // OTP Worker UID format: phone_91XXXXXXXXXX (or phone_XXXXXXXXXX).
-  if(!digits && user){
-    const savedPhone=String(mlmVolatileStore.getItem("mlm_logged_in_phone")||"").replace(/\D/g,"");
-    if(savedPhone.length===10) digits=savedPhone;
-  }
   if(!digits && user && user.uid){
     const match=String(user.uid).match(/^phone_(\d{10,13})$/);
     if(match){
@@ -1159,7 +1151,7 @@ function showAuthState(user){
     const phone="+91"+digits;
     switchUserData(digits);
     status.className="notice success";
-    status.textContent="Logged in: "+phone;
+    status.textContent=(mlmVolatileStore.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
     const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
     p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
@@ -1167,7 +1159,7 @@ function showAuthState(user){
   }else{
     switchUserData("");
     status.className="notice";
-    status.textContent="Not logged in. Request an SMS OTP to your mobile.";
+    status.textContent=mlmVolatileStore.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
     fields.classList.remove("hidden");logout.classList.add("hidden");
     $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
     renderProfileAvatar({name:"",avatar:""});
@@ -1177,27 +1169,27 @@ function showAuthState(user){
 if(auth){auth.onAuthStateChanged(user=>{if(user){showAuthState(user);startCartCloudSync(user);}else{stopCartCloudSync();showAuthState(null);}})}
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
-  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("Enter a valid 10-digit Indian mobile number.",true);return}
+  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय Mobile number डालें।",true);return}
   try{
-    $("sendOtpBtn").disabled=true;authMessage("Sending SMS OTP…");
+    $("sendOtpBtn").disabled=true;authMessage("SMS OTP भेजा जा रहा है…");
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({action:"send",phoneNumber:"+91"+phone})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||!result.requestId)throw new Error(result.message||"Failed to send OTP.");
+    if(!response.ok||result.success!==true||!result.requestId)throw new Error(result.message||"OTP भेजना असफल रहा।");
     pendingOtpRequestId=result.requestId;pendingOtpPhone=phone;
     $("otpVerifyArea").classList.remove("hidden");
-    authMessage("OTP sent by SMS. Enter the code you received.");
+    authMessage("OTP SMS से भेज दिया गया है। SMS में आया कोड डालें।");
   }catch(err){
-    authMessage("Could not send OTP: "+(err.message||"Error")+". Check the OTP service configuration.",true);
+    authMessage("OTP नहीं भेजा जा सका: "+(err.message||"त्रुटि")+". Worker और StartMessaging सेटिंग Check।",true);
   }finally{$("sendOtpBtn").disabled=false}
 }
 async function verifyLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   const code=$("loginOtp").value.trim();
-  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("Please request an OTP for this mobile number first.",true);return}
-  if(!/^\d{4,6}$/.test(code)){authMessage("Enter the 4–6 digit OTP received by SMS.",true);return}
+  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("पहले इसी Mobile number पर OTP भेजें।",true);return}
+  if(!/^\d{4,6}$/.test(code)){authMessage("SMS में आया 4–6 अंकों का OTP डालें।",true);return}
   try{
     $("verifyOtpBtn")&&($("verifyOtpBtn").disabled=true);
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
@@ -1205,23 +1197,20 @@ async function verifyLoginOTP(){
       body:JSON.stringify({action:"verify",requestId:pendingOtpRequestId,otpCode:code})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"The OTP is incorrect or has expired.");
+    if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"OTP गलत है या समाप्त हो गया है।");
     const customToken=result.customToken||(result.firebase&&result.firebase.customToken);
-    if(!customToken)throw new Error("The OTP service did not return a valid sign-in token. Please contact support.");
-    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Login service is temporarily unavailable.");
-    await authPersistenceReady;
+    if(!customToken)throw new Error("OTP Worker ne Firebase customToken nahi diya. Matching OTP Worker deploy hona zaroori hai.");
+    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Auth SDK उपलब्ध नहीं है।");
     const credential=await auth.signInWithCustomToken(customToken);
-    if(!credential||!credential.user)throw new Error("Login could not be completed.");
+    if(!credential||!credential.user)throw new Error("Firebase login complete nahi hua.");
     pendingOtpRequestId=null;pendingOtpPhone=null;
-    mlmVolatileStore.setItem("mlm_logged_in_phone",phone);
     $("otpVerifyArea").classList.add("hidden");
-    if($("authMsg"))$("authMsg").innerHTML="";
+    authMessage("Mobile OTP verified. Firebase login successful.");
     showAuthState(credential.user);startCartCloudSync(credential.user);
-  }catch(err){authMessage("OTP verification failed: "+(err.message||"Error"),true)}
+  }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
-  mlmVolatileStore.removeItem("mlm_logged_in_phone");
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
   mlmVolatileStore.removeItem("mlm_sms_verified_phone");
   pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);showSection("account");
@@ -1232,70 +1221,24 @@ async function logoutPhoneUser(){
 const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
 const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
-const SELLER_ORDER_SYNC_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev";
-
-
-async function syncVerifiedSellerOrder(orderId){
-  try{
-    const currentUser=auth&&auth.currentUser;
-    if(!currentUser)throw new Error("Firebase login session missing");
-    const idToken=await currentUser.getIdToken(true);
-    const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},body:JSON.stringify({action:"syncOrder",orderId:String(orderId)})});
-    const syncResult=await syncResponse.json().catch(()=>({}));
-    if(!syncResponse.ok||(syncResult.ok!==true&&syncResult.success!==true))throw new Error(syncResult.error||syncResult.message||"Seller order sync failed");
-    await db.ref("orders/"+orderId).update({sellerSyncPending:false,sellerSyncUpdatedAt:new Date().toISOString()});
-    return true;
-  }catch(e){
-    console.error("Verified order saved; seller sync pending:",e);
-    try{await db.ref("orders/"+orderId).update({sellerSyncPending:true,sellerSyncError:String(e.message||e)});}catch(ignore){}
-    return false;
-  }
-}
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
   if(!db) throw new Error("Firebase SDK load नहीं हुआ");
-  const itemSubtotal=(order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty??i.quantity??1),0);
-  const productSubtotal=Number(order.subtotal??itemSubtotal);
-  // Grand Total is the amount actually charged/shown at checkout. Delivery is the difference,
-  // so it remains dynamic per order and is never hard-coded.
-  const grandTotal=Number(order.total??(productSubtotal+Number(order.deliveryFee||0)));
-  const deliveryFee=Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
-  if(!Number.isFinite(productSubtotal)||!Number.isFinite(grandTotal)||grandTotal<productSubtotal){
-    throw new Error("Bill calculation invalid: Product Cost aur Grand Total dobara check karein.");
-  }
   const firebaseOrder={
     id:order.id,
     customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
     product:(order.items||[]).map(i=>i.name).join(", "),
-    items:(order.items||[]).map(i=>({
-      ...i,
-      id:String(i.id??i.productId??''),
-      name:String(i.name||i.productName||'Product'),
-      qty:Math.max(1,Math.floor(Number(i.qty??i.quantity??1))),
-      quantity:Math.max(1,Math.floor(Number(i.qty??i.quantity??1))),
-      price:Number(i.price||0),
-      sellerPrice:Number(i.sellerPrice??i.price??0),
-      sellerUid:String(i.sellerUid||''),
-      seller:String(i.seller||'')
-    })),
-    price:grandTotal,
-    subtotal:productSubtotal,
-    productSubtotal,
-    deliveryFee,
-    deliveryCharges:deliveryFee,
-    totalAmount:grandTotal,
-    grandTotal,
-    total:grandTotal,
-    billVersion:1,
-    payment:paymentMethod,
+    items:order.items||[],
+    price:Number(order.total||0),
+    subtotal:Number(order.subtotal??((order.items||[]).reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||1),0))),
+    deliveryFee:Number(order.deliveryFee||0),
+    totalAmount:Number(order.total||0),
     paymentMethod:paymentMethod,
     paymentStatus:paymentStatus,
     razorpayPaymentId:paymentId,
     customerName:order.name||"",
     customerPhone:order.phone||"",
-    phone:order.phone||"",
     shippingAddress:order.address||"",
-    address:order.address||"",
     shippingHouseNo:"",
     shippingStreetNo:"",
     lat:order.latitude||"",
@@ -1307,18 +1250,21 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     createdAt:order.createdAt||new Date().toISOString(),
     dateTime:order.date||new Date().toLocaleString()
   };
-  // Save the customer's canonical order first. This is the write required to place the order.
-  // Seller-specific copies are a secondary fan-out and must not make a saved customer order
-  // appear to have failed if sellerOrders rules are more restrictive.
   await db.ref("orders/"+order.id).set(firebaseOrder);
-  // Never expose a Razorpay order to sellers until the server has verified the signature.
-  // COD orders can be fanned out immediately; Razorpay orders are fanned out after verify.
-  if(!/^Razorpay/i.test(String(paymentMethod||"")) || paymentStatus==="Verified"){
-    order.sellerSyncPending=!(await syncVerifiedSellerOrder(order.id));
-  }else{
-    order.sellerSyncPending=true;
-    await db.ref("orders/"+order.id).update({sellerSyncPending:true});
-  }
+  const groups={};(order.items||[]).forEach(item=>{const sid=String(item.sellerUid||"");if(sid){(groups[sid]||(groups[sid]=[])).push(item);}});
+  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{
+    const sellerSubtotal=items.reduce((n,i)=>n+(Number(i.price??i.sellerPrice??i.salePrice??0)||0)*(Number(i.qty??i.quantity??1)||1),0);
+    sellerUpdates["sellerOrders/"+sid+"/"+order.id]={
+      orderId:order.id,sellerUid:sid,items,
+      customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,
+      latitude:order.latitude||"",longitude:order.longitude||"",
+      total:sellerSubtotal,productSubtotal:sellerSubtotal,subtotal:sellerSubtotal,
+      deliveryFee:Number(order.deliveryFee||0),deliveryCharges:Number(order.deliveryFee||0),
+      grandTotal:Number(order.total||0),totalAmount:Number(order.total||0),
+      paymentMethod:paymentMethod,payment:paymentMethod,paymentStatus:paymentStatus,
+      status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()
+    };
+  });if(Object.keys(sellerUpdates).length)await db.ref().update(sellerUpdates);
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
   order.razorpayPaymentId=paymentId;
@@ -1382,9 +1328,7 @@ function startRazorpayPayment(order){
             const verification=await verifyResponse.json().catch(()=>({}));
             if(!verifyResponse.ok||verification.verified!==true)throw new Error(verification.message||"Payment verification pending");
             await db.ref("orders/"+order.id).update({paymentStatus:"Verified",paymentMethod:order.payment,razorpayPaymentId:response.razorpay_payment_id});
-            order.paymentStatus="Verified";
-            const sellerSynced=await syncVerifiedSellerOrder(order.id);
-            order.sellerSyncPending=!sellerSynced;save();renderMyOrders();
+            order.paymentStatus="Verified";save();renderMyOrders();
             try{mlmVolatileStore.removeItem("mlm_pending_paid_order");}catch(storageErr){}
           }catch(verifyErr){
             $("orderMsg").innerHTML='<div class="notice">Your order is placed. Payment verification is pending; do not pay again. Payment ID: '+esc(response.razorpay_payment_id||"")+'.</div>';
@@ -1426,7 +1370,7 @@ async function retryPendingPaidOrder(){
     try{
       const vr=await fetch(RAZORPAY_VERIFY_PAYMENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({razorpay_order_id:response.razorpay_order_id,razorpay_payment_id:response.razorpay_payment_id,razorpay_signature:response.razorpay_signature})});
       const result=await vr.json().catch(()=>({}));
-      if(vr.ok&&result.verified===true){await ref.update({paymentStatus:"Verified"});const synced=await syncVerifiedSellerOrder(order.id);try{mlmVolatileStore.removeItem("mlm_pending_paid_order");}catch(e){} $("orderMsg").innerHTML='<div class="notice success">Order saved. Payment verified successfully.'+(synced?' Seller order sync complete.':' Seller sync is pending; admin can retry sync.')+'</div>';return;}
+      if(vr.ok&&result.verified===true){await ref.update({paymentStatus:"Verified"});try{mlmVolatileStore.removeItem("mlm_pending_paid_order");}catch(e){} $("orderMsg").innerHTML='<div class="notice success">Order saved. Payment verified successfully.</div>';return;}
     }catch(e){}
     $("orderMsg").innerHTML='<div class="notice success">Order saved and placed. Payment verification is still pending. Do not pay again.</div>';
   }catch(err){
@@ -1556,7 +1500,7 @@ function setLanguage(lang){
   document.documentElement.lang = lang;
   const en=lang==="en";
   const t=en?{
-    account:"👤 My Account",profile:"My Profile",orders:"My Orders",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
+    account:"👤 My Account",profile:"My Profile",orders:"My Orders",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 मोबाइल OTP लॉगिन",loggedIn:"लॉगिन है:",notLoggedIn:"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।",phoneIndia:"Mobile number (भारत)",phonePlaceholder:"10 अंकों का Mobile number",sendOtp:"OTP भेजें",otpSms:"SMS से मिला OTP",otpPlaceholder:"6 अंकों का OTP",verifyOtp:"OTP सत्यापित करके लॉगिन करें",logout:"लॉगआउट",languageLabel:"🌐 Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
     profileHint:"Name, mobile and address",ordersHint:"Orders and tracking",
     languageHint:"Choose your preferred language.",accountHint:"Choose an option to manage your profile or view orders.",
     profileTitle:"⚙️ My Profile",fullName:"Full name",mobile:"Mobile number",defaultAddress:"Default address",pin:"PIN Code",saveProfile:"Save Profile",
@@ -1612,8 +1556,7 @@ function setLanguage(lang){
   const otpInput=document.getElementById("loginOtp");if(otpInput)otpInput.placeholder=t.otpPlaceholder;
   const orderSubmit=document.querySelector('#orderForm button[type="submit"]');if(orderSubmit)orderSubmit.textContent=t.placeOrder;
   const paymentSelect=document.getElementById("payment");if(paymentSelect&&paymentSelect.options.length>1)paymentSelect.options[1].textContent=t.paymentOption;
-  // Language changes must never clear the current authenticated account.
-  if(auth) showAuthState(auth.currentUser || null);
+  showAuthState(null);
   const tiles=document.querySelectorAll("#accountSection .accounttile");
   if(tiles[0]){tiles[0].querySelector("strong").textContent=t.profile;tiles[0].querySelector("small").textContent=t.profileHint}
   if(tiles[1]){tiles[1].querySelector("strong").textContent=t.orders;tiles[1].querySelector("small").textContent=t.ordersHint}
@@ -1976,8 +1919,7 @@ function renderMyOrders(){
   }).join("");
 }
 
-$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();mlmVolatileStore.setItem("mlm_language","en");setLanguage("en");
-// Firebase onAuthStateChanged below owns the initial login state; do not overwrite it here.
+$("year").textContent=new Date().getFullYear();categories();renderProducts();startUserProductsListener();mlmVolatileStore.setItem("mlm_language","en");setLanguage("en");showAuthState(null);
 
 
 // Live connection indicator for Firebase Realtime Database.
@@ -2113,6 +2055,9 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 })();
 </script>
 
+
+</body>
+</html>
 
 <style>
 /* Header search and wishlist overlays: align with controls printed in the banner artwork. */
@@ -2321,31 +2266,4 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
  .hero p{font-size:clamp(16px,4.4vw,20px)!important;margin:12px 0 24px!important;}
  .hero>button{padding:13px 36px!important;font-size:18px!important;}
 }
-
-/* Hero banner: blue background ends just below the Shop Now button */
-.hero{
-  height:auto!important;
-  min-height:0!important;
-  padding:34px 8px 14px!important;
-  margin-bottom:18px!important;
-}
-.hero p{
-  margin:12px 0 14px!important;
-}
-.hero>button{
-  margin-bottom:0!important;
-}
-@media(max-width:600px){
-  .hero{
-    height:auto!important;
-    min-height:0!important;
-    padding:30px 8px 12px!important;
-  }
-  .hero p{
-    margin:10px 0 12px!important;
-  }
-}
 </style>
-
-</body>
-</html>
