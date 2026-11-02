@@ -788,30 +788,43 @@ function rememberDeliveryAddress(order){
   if(!activeUserPhone)return;mlmVolatileStore.setItem(userKey("mlm_saved_delivery_address"),JSON.stringify({name:order.name,phone:order.phone,address:order.address,pin:order.pin,latitude:order.latitude||"",longitude:order.longitude||""}));
 }
 function addCart(id){
-  const key=String(id),p=products.find(x=>String(x.id)===key);
+  const key=String(id);
+  const p=products.find(x=>String(x.id)===key);
   if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return false;}
-  const stock=Math.max(0,Math.floor(Number(p.stock||0)));
-  if(stock<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return false;}
+  if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return false;}
   const item=cart.find(x=>String(x.id)===key);
-  if(item){if(Number(item.qty||0)>=stock){showToast("उपलब्ध Stock से अधिक Quantity नहीं जोड़ सकते।");return false;}item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";item.category=p.category||item.category||"";item.sellerPrice=Number(p.sellerPrice??p.price??item.sellerPrice??0);}
-  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),sellerPrice:Number(p.sellerPrice??p.price??0),category:p.category||"",image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",stock,qty:1});
-  save();renderCart();showToast("Product added to Cart");return true;
-}
-function restoreBuyNowCart(){
-  const key=userKey("mlm_buy_now_backup"),raw=mlmVolatileStore.getItem(key);
-  if(raw!==null){try{cart=JSON.parse(raw)||[];}catch(e){cart=[];}mlmVolatileStore.removeItem(key);save();renderCart();return true;}
-  return false;
+  if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";}
+  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
+  save();renderCart();
+  showToast("Product added to Cart");
+  return true;
 }
 function buyNow(id){
-  const key=String(id),p=products.find(x=>String(x.id)===key);
-  if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return;}
+  const key = String(id);
+  const p = products.find(x => String(x.id) === key);
+
+  if (!p) {
+    showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");
+    return;
+  }
   if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return;}
-  if(mlmVolatileStore.getItem(userKey("mlm_buy_now_backup"))===null){mlmVolatileStore.setItem(userKey("mlm_buy_now_backup"),JSON.stringify(cart));}
-  cart=[{id:String(p.id),name:p.name,price:Number(p.price||0),sellerPrice:Number(p.sellerPrice??p.price??0),category:p.category||"",image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",stock:Number(p.stock||0),qty:1}];
-  save();renderCart();
-  if(typeof closeProductDetails==="function")closeProductDetails();
-  const detailOverlay=document.getElementById("productDetailOverlay");if(detailOverlay)detailOverlay.classList.add("hidden");
-  document.body.style.overflow="";showSection("checkout");window.scrollTo({top:0,behavior:"smooth"});
+
+  // Buy Now के लिए सिर्फ चुना हुआ प्रोडक्ट Checkout में दिखाएँ।
+  const previousCart = cart;
+
+  cart = [{
+    id: String(p.id), name: p.name, price: Number(p.price || 0), image: p.image || "", sellerUid:p.sellerUid||"", seller:p.seller||"", qty: 1
+  }];
+
+  save();
+  renderCart();
+  // Close the product-details popup first so Checkout/address page is not left behind it.
+  if (typeof closeProductDetails === "function") closeProductDetails();
+  const detailOverlay = document.getElementById("productDetailOverlay");
+  if (detailOverlay) detailOverlay.classList.add("hidden");
+  document.body.style.overflow = "";
+  showSection("checkout");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 // Register product-button clicks BEFORE startup/Firebase initialization so an initialization issue cannot disable them.
 document.addEventListener("click",function(event){
@@ -831,7 +844,7 @@ document.addEventListener("click",function(event){
 
 function renderCart(){
   const totalCartQty=cart.reduce((n,x)=>n+Number(x.qty||0),0);const cartCountBadge=$("cartCount");if(cartCountBadge)cartCountBadge.textContent=totalCartQty;const topCartBadge=$("cartTopCount");if(topCartBadge)topCartBadge.textContent=totalCartQty;
-  cart=cart.map(x=>{const p=products.find(p=>String(p.id)===String(x.id))||{};return {...x,image:x.image||p.image||"",category:x.category||p.category||"",sellerPrice:Number(x.sellerPrice??p.sellerPrice??p.price??x.price??0),stock:Number(p.stock??x.stock??0)};});
+  cart=cart.map(x=>({...x,image:x.image||(products.find(p=>p.id===x.id)||{}).image||""}));
   $("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility='hidden'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${mlmVolatileStore.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;
   save();const subtotal=getCartSubtotal(),fee=getDeliveryFee(subtotal),total=subtotal+fee;
   if($("cartSubtotal"))$("cartSubtotal").textContent="₹"+subtotal.toLocaleString("en-IN");
@@ -845,7 +858,7 @@ function renderCart(){
   if($("checkoutTotal"))$("checkoutTotal").textContent="₹"+total.toLocaleString("en-IN");
   if($("checkoutDeliveryNote"))$("checkoutDeliveryNote").textContent=feeNote;
 }
-function changeQty(id,d){const key=String(id),x=cart.find(y=>String(y.id)===key);if(!x)return;const next=Number(x.qty||0)+d;if(next<=0){cart=cart.filter(y=>String(y.id)!==key);}else{const p=products.find(y=>String(y.id)===key),stock=Math.max(0,Math.floor(Number((p&&p.stock)??x.stock??0)));if(next>stock){showToast("उपलब्ध Stock से अधिक Quantity नहीं जोड़ सकते।");return;}x.qty=next;}save();renderCart()}
+function changeQty(id,d){const key=String(id);const x=cart.find(y=>String(y.id)===key);if(!x)return;x.qty=Number(x.qty||0)+d;if(x.qty<=0)cart=cart.filter(y=>String(y.id)!==key);save();renderCart()}
 function bottomNavClick(target,button){
   document.querySelectorAll('.mainnav button').forEach(b=>b.classList.remove('navactive'));
   if(target==='store'){
@@ -887,7 +900,6 @@ function mainNavClick(target,button){
   showSection(target);
 }
 function showSection(s){
-  if(s!=="checkout"&&mlmVolatileStore.getItem(userKey("mlm_buy_now_backup"))!==null)restoreBuyNowCart();
   if(s!=="store")wishlistOnly=false;
   const navButtons=document.querySelectorAll(".bottom button");navButtons.forEach(b=>b.classList.remove("nav-selected"));
   const navIndex=(s==="account"||s==="profile"||s==="myorders"?3:(s==="categories"?1:(s==="store"?(wishlistOnly?2:0):-1)));if(navIndex>=0&&navButtons[navIndex])navButtons[navIndex].classList.add("nav-selected");
@@ -958,14 +970,6 @@ $("orderForm").addEventListener("submit",async e=>{
   if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
   if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
-  for(const item of cart){
-    const live=products.find(p=>String(p.id)===String(item.id));
-    if(!live||live.active===false||live.sellerPaused||Number(live.stock||0)<Number(item.qty||1)){
-      $("orderMsg").innerHTML='<div class="notice error">'+esc(item.name||"Product")+' का Stock बदल गया है या Product उपलब्ध नहीं है। Cart refresh करके Quantity दोबारा चुनें।</div>';return;
-    }
-    item.category=live.category||item.category||"";
-    item.sellerPrice=Number(live.sellerPrice??live.price??item.sellerPrice??item.price??0);
-  }
   const hasLocalDeliveryItems=cart.some(item=>modeluxeIsLocalDeliveryCategory(item.category));
   if(hasLocalDeliveryItems){
     const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
@@ -982,7 +986,7 @@ $("orderForm").addEventListener("submit",async e=>{
   if(order.payment==="RAZORPAY"){await startRazorpayPayment(order);return}
   try{
     await saveOrderToFirebase(order,"Cash on Delivery","Pending");
-    orders.unshift(order);save();rememberDeliveryAddress(order);if(!restoreBuyNowCart()){cart=[];save();}renderCart();renderMyOrders();
+    orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
     $("orderMsg").innerHTML='';
     e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
   }catch(err){
@@ -1010,6 +1014,7 @@ if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeAp
 const db = (typeof firebase!=="undefined") ? firebase.database() : null;
 window.MLM_CART_DB=db;
 const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
+const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence) ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err=>{console.warn("Auth persistence setup failed",err&&err.message);}) : Promise.resolve();
 // Delivery fee settings are shared with Admin Panel through Firebase.
 let deliverySettings={freeAbove:199,charge:49};
 let deliverySettingsListener=null;
@@ -1117,6 +1122,10 @@ function showAuthState(user){
   else if(authPhone.length===12 && authPhone.startsWith("91")) digits=authPhone.slice(2);
 
   // OTP Worker UID format: phone_91XXXXXXXXXX (or phone_XXXXXXXXXX).
+  if(!digits && user){
+    const savedPhone=String(mlmVolatileStore.getItem("mlm_logged_in_phone")||"").replace(/\D/g,"");
+    if(savedPhone.length===10) digits=savedPhone;
+  }
   if(!digits && user && user.uid){
     const match=String(user.uid).match(/^phone_(\d{10,13})$/);
     if(match){
@@ -1130,7 +1139,7 @@ function showAuthState(user){
     const phone="+91"+digits;
     switchUserData(digits);
     status.className="notice success";
-    status.textContent=(mlmVolatileStore.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
+    status.textContent="Logged in: "+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
     const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
     p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
@@ -1138,7 +1147,7 @@ function showAuthState(user){
   }else{
     switchUserData("");
     status.className="notice";
-    status.textContent=mlmVolatileStore.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
+    status.textContent="Not logged in. Request an SMS OTP to your mobile.";
     fields.classList.remove("hidden");logout.classList.add("hidden");
     $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
     renderProfileAvatar({name:"",avatar:""});
@@ -1148,27 +1157,27 @@ function showAuthState(user){
 if(auth){auth.onAuthStateChanged(user=>{if(user){showAuthState(user);startCartCloudSync(user);}else{stopCartCloudSync();showAuthState(null);}})}
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
-  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय Mobile number डालें।",true);return}
+  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("Enter a valid 10-digit Indian mobile number.",true);return}
   try{
-    $("sendOtpBtn").disabled=true;authMessage("SMS OTP भेजा जा रहा है…");
+    $("sendOtpBtn").disabled=true;authMessage("Sending SMS OTP…");
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({action:"send",phoneNumber:"+91"+phone})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||!result.requestId)throw new Error(result.message||"OTP भेजना असफल रहा।");
+    if(!response.ok||result.success!==true||!result.requestId)throw new Error(result.message||"Failed to send OTP.");
     pendingOtpRequestId=result.requestId;pendingOtpPhone=phone;
     $("otpVerifyArea").classList.remove("hidden");
-    authMessage("OTP SMS से भेज दिया गया है। SMS में आया कोड डालें।");
+    authMessage("OTP sent by SMS. Enter the code you received.");
   }catch(err){
-    authMessage("OTP नहीं भेजा जा सका: "+(err.message||"त्रुटि")+". Worker और StartMessaging सेटिंग Check।",true);
+    authMessage("Could not send OTP: "+(err.message||"Error")+". Check the OTP service configuration.",true);
   }finally{$("sendOtpBtn").disabled=false}
 }
 async function verifyLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   const code=$("loginOtp").value.trim();
-  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("पहले इसी Mobile number पर OTP भेजें।",true);return}
-  if(!/^\d{4,6}$/.test(code)){authMessage("SMS में आया 4–6 अंकों का OTP डालें।",true);return}
+  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("Please request an OTP for this mobile number first.",true);return}
+  if(!/^\d{4,6}$/.test(code)){authMessage("Enter the 4–6 digit OTP received by SMS.",true);return}
   try{
     $("verifyOtpBtn")&&($("verifyOtpBtn").disabled=true);
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
@@ -1176,20 +1185,23 @@ async function verifyLoginOTP(){
       body:JSON.stringify({action:"verify",requestId:pendingOtpRequestId,otpCode:code})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"OTP गलत है या समाप्त हो गया है।");
+    if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"The OTP is incorrect or has expired.");
     const customToken=result.customToken||(result.firebase&&result.firebase.customToken);
-    if(!customToken)throw new Error("OTP Worker ne Firebase customToken nahi diya. Matching OTP Worker deploy hona zaroori hai.");
-    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Auth SDK उपलब्ध नहीं है।");
+    if(!customToken)throw new Error("The OTP service did not return a valid sign-in token. Please contact support.");
+    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Login service is temporarily unavailable.");
+    await authPersistenceReady;
     const credential=await auth.signInWithCustomToken(customToken);
-    if(!credential||!credential.user)throw new Error("Firebase login complete nahi hua.");
+    if(!credential||!credential.user)throw new Error("Login could not be completed.");
     pendingOtpRequestId=null;pendingOtpPhone=null;
+    mlmVolatileStore.setItem("mlm_logged_in_phone",phone);
     $("otpVerifyArea").classList.add("hidden");
-    authMessage("Mobile OTP verified. Firebase login successful.");
+    if($("authMsg"))$("authMsg").innerHTML="";
     showAuthState(credential.user);startCartCloudSync(credential.user);
-  }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
+  }catch(err){authMessage("OTP verification failed: "+(err.message||"Error"),true)}
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
+  mlmVolatileStore.removeItem("mlm_logged_in_phone");
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
   mlmVolatileStore.removeItem("mlm_sms_verified_phone");
   pendingOtpRequestId=null;pendingOtpPhone=null;showAuthState(null);showSection("account");
@@ -1319,7 +1331,7 @@ function startRazorpayPayment(order){
           try{
             await saveOrderToFirebase(order,order.payment,"Verification Pending",response.razorpay_payment_id||"");
             orders=orders.filter(o=>String(o.id)!==String(order.id));
-            orders.unshift(order);save();rememberDeliveryAddress(order);if(!restoreBuyNowCart()){cart=[];save();}renderCart();renderMyOrders();
+            orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
             $("orderMsg").innerHTML='<div class="notice success">Payment received. Your order is placed. Payment verification is being completed.</div>';
             $("orderForm").reset();$("payment").value="COD";const paymentLabelEl=document.getElementById("paymentLabel");if(paymentLabelEl)paymentLabelEl.textContent="Cash on Delivery (COD)";renderSavedDeliveryAddress();
             showSection("store");showOrderSuccess();
@@ -1511,7 +1523,7 @@ function setLanguage(lang){
   document.documentElement.lang = lang;
   const en=lang==="en";
   const t=en?{
-    account:"👤 My Account",profile:"My Profile",orders:"My Orders",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 मोबाइल OTP लॉगिन",loggedIn:"लॉगिन है:",notLoggedIn:"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।",phoneIndia:"Mobile number (भारत)",phonePlaceholder:"10 अंकों का Mobile number",sendOtp:"OTP भेजें",otpSms:"SMS से मिला OTP",otpPlaceholder:"6 अंकों का OTP",verifyOtp:"OTP सत्यापित करके लॉगिन करें",logout:"लॉगआउट",languageLabel:"🌐 Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
+    account:"👤 My Account",profile:"My Profile",orders:"My Orders",searchPlaceholder:"प्रोडक्ट खोजें…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"ऑर्डर करें",paymentOption:"ऑनलाइन भुगतान (Razorpay · UPI / कार्ड)",searchPlaceholder:"Search products…",otpTitle:"📱 Mobile OTP Login",loggedIn:"Logged in:",notLoggedIn:"Not logged in. Request an SMS OTP to your mobile.",phoneIndia:"Mobile number (India)",phonePlaceholder:"10-digit mobile number",sendOtp:"Send OTP",otpSms:"OTP received by SMS",otpPlaceholder:"6-digit OTP",verifyOtp:"Verify OTP & Log In",logout:"Logout",languageLabel:"🌐 Language",placeOrder:"Place Order",paymentOption:"Online Payment (Razorpay · UPI / Card)",
     profileHint:"Name, mobile and address",ordersHint:"Orders and tracking",
     languageHint:"Choose your preferred language.",accountHint:"Choose an option to manage your profile or view orders.",
     profileTitle:"⚙️ My Profile",fullName:"Full name",mobile:"Mobile number",defaultAddress:"Default address",pin:"PIN Code",saveProfile:"Save Profile",
@@ -2067,6 +2079,9 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 </script>
 
 
+</body>
+</html>
+
 <style>
 /* Header search and wishlist overlays: align with controls printed in the banner artwork. */
 .topinner.banner-inner{position:relative!important;overflow:hidden!important;}
@@ -2299,6 +2314,3 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
   }
 }
 </style>
-
-</body>
-</html>
