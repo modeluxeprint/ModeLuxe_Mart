@@ -138,7 +138,7 @@ header{color:#111827}
 <header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p><p id="adminFirebaseUid" class="text-[11px] text-stone-500 mt-1 break-all">Firebase UID: checking…</p></div><div class="flex flex-col items-end gap-2 shrink-0"><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div><button id="headerScannerBtn" type="button" class="btn muted flex items-center justify-center gap-3" style="min-width:100%;padding:12px 16px;border-radius:18px;background:#e6f3ff;color:#174f7d;font-weight:800;box-shadow:0 3px 12px #00008" aria-label="Scan Delivery QR" title="Scan Delivery QR" onclick="openDeliveryScanner()"><span aria-hidden="true">📷</span><span>Scan QR</span></button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
-<div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
+<div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="deliveryAppsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliveryApplications')">Delivery Applications</button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
 <div id="ordersTab">
 <div class="panel p-3 mb-4"><input id="search" class="w-full" placeholder="Search by order ID, product, customer, phone, address or amount…" oninput="renderOrders()"></div>
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
@@ -147,6 +147,24 @@ header{color:#111827}
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
 <div id="applicationsTab" class="hidden panel p-4"><h2 class="text-xl font-bold gold mb-3">Seller Applications</h2><div id="sellerApplicationsHome"><p class="small text-stone-300 mb-3">Application ka status chun kar uski alag list dekhein.</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3"><button class="btn success seller-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('approved',this)">✓ Approve Application</button><button class="btn primary seller-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('pending',this)">◷ Pending Application</button><button class="btn danger seller-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('rejected',this)">✕ Cancel Application</button><button class="btn muted seller-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="window.openSellerStatusPage('suspended',this)">Ⅱ Suspend Application</button></div><button class="btn primary" type="button" onclick="window.loadSellerApplications(appStatusFilter||'pending',this)">↻ Refresh Applications</button></div><div id="sellerStatusPage" class="hidden"><div class="flex items-center gap-3 mb-3"><button class="btn muted" type="button" onclick="closeSellerStatusPage()">← Back</button><h3 id="sellerStatusTitle" class="text-lg font-bold gold">Pending Applications</h3></div><div id="sellerApplicationsDiagnostics" class="small mb-3" role="status" style="color:#475569">Seller applications: waiting for Firebase read…</div><div id="sellerApplicationsList" style="display:block;min-height:48px"></div></div></div>
+<div id="deliveryApplicationsTab" class="hidden panel p-4">
+ <h2 class="text-xl font-bold gold mb-3">Delivery Applications</h2>
+ <div id="deliveryApplicationsHome">
+  <p class="small text-stone-300 mb-3">Delivery Boy application ka status chun kar uski alag list dekhein.</p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+   <button class="btn success delivery-status-tab" data-status="approved" type="button" aria-pressed="false" onclick="window.openDeliveryStatusPage('approved',this)">✓ Approve Application</button>
+   <button class="btn primary delivery-status-tab" data-status="pending" type="button" aria-pressed="false" onclick="window.openDeliveryStatusPage('pending',this)">◷ Pending Application</button>
+   <button class="btn danger delivery-status-tab" data-status="rejected" type="button" aria-pressed="false" onclick="window.openDeliveryStatusPage('rejected',this)">✕ Cancel Application</button>
+   <button class="btn muted delivery-status-tab" data-status="suspended" type="button" aria-pressed="false" onclick="window.openDeliveryStatusPage('suspended',this)">Ⅱ Suspend Application</button>
+  </div>
+  <button class="btn primary" type="button" onclick="window.loadDeliveryApplications(deliveryAppStatusFilter||'pending',this)">↻ Refresh Applications</button>
+ </div>
+ <div id="deliveryStatusPage" class="hidden">
+  <div class="flex items-center gap-3 mb-3"><button class="btn muted" type="button" onclick="closeDeliveryStatusPage()">← Back</button><h3 id="deliveryStatusTitle" class="text-lg font-bold gold">Pending Applications</h3></div>
+  <div id="deliveryApplicationsDiagnostics" class="small mb-3" role="status" style="color:#475569">Delivery applications: waiting for Firebase read…</div>
+  <div id="deliveryApplicationsList" style="display:block;min-height:48px"></div>
+ </div>
+</div>
 <div id="sellerDetailsModal" class="hidden fixed inset-0 z-[140] bg-black/70 p-3 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="sellerDetailsTitle">
  <div class="panel max-w-2xl mx-auto p-4 md:p-6 my-5">
   <div class="flex items-center justify-between gap-3 mb-4">
@@ -221,9 +239,9 @@ const firebaseConfig = {
             appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
             measurementId: "G-HZEKJT5YZX"
         };
-const panelFirebaseApp = firebase.apps.find(app=>app.name==="modeluxe-admin-panel") || firebase.initializeApp(firebaseConfig,"modeluxe-admin-panel");
-const db=panelFirebaseApp.database();
-const auth=panelFirebaseApp.auth();
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+const auth=firebase.auth();
 const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
 async function uploadImageToR2(file){
   if(!auth.currentUser)throw new Error("Admin Firebase login missing hai. Dobara login karein.");
@@ -717,10 +735,10 @@ const PRODUCT_UNITS = [
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
 function showAdminTab(tab){
- const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
+ const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',deliveryApplications:'deliveryApplicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
  Object.values(ids).forEach(id=>$(id)?.classList.add('hidden'));
  const target=$(ids[tab]||ids.orders);if(target)target.classList.remove('hidden');
- const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
+ const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',deliveryApplications:'deliveryAppsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
  Object.values(buttons).forEach(id=>{if($(id)){$(id).classList.remove('primary');$(id).classList.add('muted');}});
  const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
  if(tab==='deliverySettings')loadDeliverySettingsForm();
@@ -739,6 +757,11 @@ function showAdminTab(tab){
      b.classList.remove('seller-tab-active');
      b.setAttribute('aria-pressed','false');
    });
+ }
+ if(tab==='deliveryApplications'){
+  $('deliveryApplicationsHome')?.classList.remove('hidden');
+  $('deliveryStatusPage')?.classList.add('hidden');
+  document.querySelectorAll('#deliveryApplicationsTab .delivery-status-tab').forEach(b=>{b.classList.remove('seller-tab-active','seller-action-active');b.setAttribute('aria-pressed','false');b.blur();});
  }
  if(tab==='withdrawals'){
   $('withdrawalHome')?.classList.remove('hidden');
@@ -1314,5 +1337,60 @@ async function loadCourierPartners(){const box=$('courierPartnersList');if(!box)
 window.editCourierPartner=async id=>{const p=(await db.ref(COURIER_PARTNERS_PATH+'/'+id).once('value')).val();if(!p)return;$('courierPartnerId').value=id;$('courierPartnerName').value=p.name||'';$('courierPartnerCode').value=p.code||'';$('courierWorkerUrl').value=p.workerUrl||'';$('courierPartnerMsg').textContent='Edit mode';};
 window.toggleCourierPartner=async(id,active)=>{try{await db.ref(COURIER_PARTNERS_PATH+'/'+id).update({active,updatedAt:new Date().toISOString()});loadCourierPartners();}catch(e){alert('Update fail: '+e.message);}};
 $('courierPartnerForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const id=$('courierPartnerId').value||db.ref(COURIER_PARTNERS_PATH).push().key;const name=$('courierPartnerName').value.trim(),code=$('courierPartnerCode').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');const workerUrl=$('courierWorkerUrl').value.trim().replace(/\/+$/,'');if(!/^https:\/\/.+/i.test(workerUrl))return $('courierPartnerMsg').textContent='HTTPS Worker URL required.';try{await db.ref(COURIER_PARTNERS_PATH+'/'+id).update({name,code,workerUrl,active:true,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});$('courierPartnerMsg').textContent='Courier partner saved. Secure Worker adapter deploy karna abhi zaroori hai.';resetCourierPartnerForm();loadCourierPartners();}catch(err){$('courierPartnerMsg').textContent='Save fail: '+err.message;}});
+
+
+
+// Delivery Boy application management — mirrors Seller Applications workflow.
+let deliveryAppCache={},deliveryAppStatusFilter='pending',deliveryAppReadErrors={};
+function deliveryApplicationStatus(record){
+ const d=record||{};const vals=[d.applicationStatus,d.approvalStatus,d.status].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);
+ for(const v of vals){if(v==='suspended')return 'suspended';if(v==='approved'||v==='active')return 'approved';if(['rejected','cancelled','canceled'].includes(v))return 'rejected';if(['pending','under_review','under review'].includes(v))return 'pending';}
+ return 'pending';
+}
+window.openDeliveryStatusPage=function(status,button){
+ status=String(status||'pending').toLowerCase();if(!['pending','approved','rejected','suspended'].includes(status))status='pending';
+ deliveryAppStatusFilter=status;$('deliveryApplicationsHome')?.classList.add('hidden');$('deliveryStatusPage')?.classList.remove('hidden');
+ const labels={pending:'Pending Applications',approved:'Approved Applications',rejected:'Cancelled Applications',suspended:'Suspended Applications'};
+ $('deliveryStatusTitle').textContent=labels[status];$('deliveryApplicationsDiagnostics').textContent=labels[status]+' · Firebase se records load ho rahe hain…';
+ document.querySelectorAll('#deliveryApplicationsTab .delivery-status-tab').forEach(b=>{const active=b.dataset.status===status;b.classList.toggle('seller-tab-active',active);b.setAttribute('aria-pressed',active?'true':'false');});
+ window.loadDeliveryApplications(status,button);
+};
+window.closeDeliveryStatusPage=function(){ $('deliveryStatusPage')?.classList.add('hidden');$('deliveryApplicationsHome')?.classList.remove('hidden');document.querySelectorAll('#deliveryApplicationsTab .delivery-status-tab').forEach(b=>{b.classList.remove('seller-tab-active','seller-action-active');b.setAttribute('aria-pressed','false');b.blur();});};
+function renderDeliveryApplications(status){
+ const list=$('deliveryApplicationsList');if(!list)return;const entries=Object.entries(deliveryAppCache),rows=entries.filter(([uid,a])=>deliveryApplicationStatus(a)===status);
+ const counts={pending:0,approved:0,rejected:0,suspended:0};entries.forEach(([uid,a])=>counts[deliveryApplicationStatus(a)]++);
+ const countLine=`<p class="small mb-3" style="color:#475569">Records: ${entries.length} · Pending: ${counts.pending} · Approved: ${counts.approved} · Cancelled: ${counts.rejected} · Suspended: ${counts.suspended}</p>`;
+ const cards=rows.map(([uid,a])=>`<article class="order-card mb-3"><b class="text-lg gold">${esc(a.name||a.fullName||a.deliveryName||'Delivery Boy')}</b><div class="small">${esc(a.email||'')} · ${esc(a.phone||a.mobile||'')}</div><div class="small">Status: ${esc(deliveryApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="flex gap-2 mt-2 flex-wrap">${status==='approved'?`<button class="btn muted" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','suspended',this)">Suspend</button>`:status==='suspended'?`<button class="btn success" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','approved',this)">Restore / Approve</button>`:status==='rejected'?`<button class="btn success" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','approved',this)">Approve</button>`:`<button class="btn success" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','approved',this)">Approve</button><button class="btn danger" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','rejected',this)">Cancel</button><button class="btn muted" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','suspended',this)">Suspend</button>`}</div><p id="delivery-action-${esc(uid)}" class="small mt-2" aria-live="polite">Actions ready · UID ${esc(uid)}</p></article>`).join('');
+ const errors=Object.entries(deliveryAppReadErrors).map(([k,v])=>k+': '+v).join(' | ');
+ list.innerHTML=countLine+(cards||`<div class="order-card"><p class="small">${entries.length?'Is status mein koi application nahi hai.':'Koi delivery application record nahi mila.'}</p></div>`)+(errors?`<div class="order-card mt-3"><b style="color:#b91c1c">Firebase source error</b><p class="small">${esc(errors)}</p></div>`:'');
+}
+window.loadDeliveryApplications=async function(status='pending'){
+ status=String(status||'pending').toLowerCase();if(!['pending','approved','rejected','suspended'].includes(status))status='pending';deliveryAppStatusFilter=status;
+ const list=$('deliveryApplicationsList'),diag=$('deliveryApplicationsDiagnostics');if(!list)return;
+ if(!auth.currentUser||auth.currentUser.uid!=='admin_7818995955'){diag.textContent='ERROR · Admin login session nahi mila.';return;}
+ list.innerHTML='<div class="order-card">Firebase records load ho rahe hain…</div>';diag.textContent='Admin UID: '+auth.currentUser.uid+' · /deliveryApplications aur /deliveryProfiles read ho rahe hain…';
+ try{
+  const results=await Promise.allSettled([db.ref('deliveryApplications').once('value'),db.ref('deliveryProfiles').once('value')]);deliveryAppReadErrors={};let apps=null,profiles=null;
+  results.forEach((r,i)=>{const key=i?'profiles':'applications';if(r.status==='fulfilled'){if(i)profiles=r.value.val()||{};else apps=r.value.val()||{};}else deliveryAppReadErrors[key]=r.reason?.message||String(r.reason);});
+  if(apps===null&&profiles===null)throw Error(Object.values(deliveryAppReadErrors).join(' | ')||'Firebase read failed');
+  deliveryAppCache={};for(const [uid,a] of Object.entries(apps||{}))deliveryAppCache[uid]={...(a||{})};
+  for(const [uid,p] of Object.entries(profiles||{})){deliveryAppCache[uid]={...(deliveryAppCache[uid]||{}),...(p||{})};}
+  renderDeliveryApplications(status);const count=Object.values(deliveryAppCache).filter(a=>deliveryApplicationStatus(a)===status).length;
+  diag.textContent='READ '+(Object.keys(deliveryAppReadErrors).length?'PARTIAL':'SUCCESS')+' · '+status+': '+count+' · Total: '+Object.keys(deliveryAppCache).length+' · /deliveryApplications '+(apps!==null?'OK':'ERROR')+' · /deliveryProfiles '+(profiles!==null?'OK':'ERROR');
+ }catch(e){diag.textContent='FIREBASE READ ERROR · '+e.message;list.innerHTML=`<div class="order-card"><b style="color:#b91c1c">Applications load nahi hui</b><p class="small">${esc(e.message)}</p><button class="btn primary mt-3" type="button" onclick="window.loadDeliveryApplications(deliveryAppStatusFilter)">Try Again</button></div>`;}
+};
+window.decideDeliveryApplication=async function(uid,status,button){
+ const allowed=['approved','rejected','suspended'];if(!uid||!allowed.includes(status))return alert('Invalid Delivery UID/status.');
+ const user=auth.currentUser;if(!user||user.uid!=='admin_7818995955')return alert('Admin login required.');
+ const card=button?.closest('article'),buttons=card?[...card.querySelectorAll('button')]:[];buttons.forEach(b=>b.disabled=true);const old=button?.textContent;if(button)button.textContent='Saving…';const result=$('delivery-action-'+uid);if(result)result.textContent='Firebase mein status save ho raha hai…';
+ const now=new Date().toISOString(),patch={status,applicationStatus:status,approvalStatus:status,reviewedAt:now,reviewedBy:user.uid,updatedAt:now};
+ try{
+  const outcomes=await Promise.allSettled([db.ref('deliveryApplications/'+uid).update(patch),db.ref('deliveryProfiles/'+uid).update(patch)]);
+  const paths=['/deliveryApplications/'+uid,'/deliveryProfiles/'+uid],failed=outcomes.map((o,i)=>o.status==='rejected'?paths[i]+': '+(o.reason?.message||String(o.reason)):null).filter(Boolean);
+  if(failed.length){const msg='SAVE FAILED/PARTIAL · '+failed.join(' | ');if(result)result.textContent=msg;alert(msg+' · Firebase Rules check karein.');return;}
+  if(result)result.textContent='SUCCESS · '+status+' saved in both Firebase paths.';addNotification('Delivery application '+status,uid,'success');await window.loadDeliveryApplications(status);
+ }catch(e){if(result)result.textContent='FIREBASE WRITE ERROR · '+e.message;alert('Status save nahi hua: '+e.message);}
+ finally{buttons.forEach(b=>b.disabled=false);if(button)button.textContent=old||status;}
+};
 
 </script></body></html>
