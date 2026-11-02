@@ -43,21 +43,15 @@ window.mlmVolatileStore = (() => {
 </script>
 
 <style>
-.seller-header-actions{
- display:flex;
- flex-direction:column;
- align-items:stretch;
- gap:8px;
- flex:0 0 auto;
-}
-.seller-header-actions button{
- min-width:112px;
- text-align:center;
-}
-#walletHeaderBtn{
- background:#e7f2ff;
- color:#164e84;
-}
+.seller-header-main{flex:1;min-width:0}
+.seller-brand-line{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px}
+.seller-brand-line #walletHeaderBtn{flex:0 0 auto;min-width:88px;padding:8px 13px;margin:0;background:#e7f2ff;color:#164e84}
+.seller-tagline{font-size:13px;color:#dbeafe;line-height:1.35}
+.seller-header-actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto}
+.seller-header-actions button{min-width:0;text-align:center;padding:9px 12px}
+.seller-header-actions #logoutBtn{white-space:nowrap}
+@media(max-width:560px){.top{padding:10px 12px}.topinner{align-items:center;gap:8px}.top h1{font-size:21px}.seller-header-main{min-width:0}.seller-header-actions{gap:6px}.seller-header-actions button{padding:8px 9px;font-size:13px}.seller-brand-line .brand{font-size:11px;letter-spacing:.14em}.seller-brand-line #walletHeaderBtn{min-width:74px;padding:7px 9px;font-size:13px}.seller-tagline{font-size:11px;max-width:250px}}
+#walletHeaderBtn{background:#e7f2ff;color:#164e84}
 .seller-nav-grid{
  display:grid;
  grid-template-columns:repeat(2,minmax(0,1fr));
@@ -132,14 +126,16 @@ window.mlmVolatileStore = (() => {
 .seller-notification-row:last-child{border-bottom:0}
 .seller-notification-popup{position:fixed;right:14px;top:90px;z-index:10000;width:min(360px,calc(100vw - 28px));background:#fff;border:1px solid #b8d4f4;border-left:5px solid #075fc4;border-radius:14px;padding:14px;box-shadow:0 14px 40px #0f172a33}
 .seller-notification-popup button{background:#075fc4;color:#fff;padding:7px 12px;margin-top:8px}
+.seller-order-total{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;margin-left:5px;border-radius:999px;background:#d5e9ff;color:#164e84;font-size:12px;font-weight:850;line-height:1;vertical-align:middle}
+#sellerOrderFilterTabs button.active .seller-order-total{background:#fff;color:#075fc4}
+#sellerOrderFilterTabs .seller-count-badge{top:-6px;right:-5px}
 </style>
 
 </head>
 <body>
-<header class="top"><div class="topinner"><div><div class="brand">MODELUXE MART</div><h1>Seller Panel</h1><div style="font-size:13px;color:#dbeafe">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
+<header class="top"><div class="topinner"><div class="seller-header-main"><div class="seller-brand-line"><div class="brand">MODELUXE MART</div><button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button></div><h1>Seller Panel</h1><div class="seller-tagline">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
 <div class="seller-notify-wrap"><button id="sellerBellBtn" class="seller-bell-btn hidden" type="button" aria-label="Notifications" aria-expanded="false">🔔 <span id="sellerBellBadge" class="seller-count-badge">0</span></button></div>
 <button id="logoutBtn" class="secondary hidden" type="button">Logout</button>
-<button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
 </div></div></header>
 <main class="wrap">
 <div id="sellerNotificationPanel" class="hidden" role="region" aria-label="Seller notifications"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="color:#075fc4">Notifications</b><button id="sellerNotificationClose" class="secondary" type="button" style="padding:5px 9px">Close</button></div><div id="sellerNotificationList" class="muted" style="margin-top:8px">Abhi koi notification nahi hai.</div></div>
@@ -213,7 +209,7 @@ window.mlmVolatileStore = (() => {
 </div>
 <section id="sellerGraphPanel" class="card hidden" style="margin:0 0 14px"><h3 class="graph-title">Daily Orders (Last 7 Days)</h3><div id="sellerDailyGraph" aria-live="polite"></div></section>
 
-<section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrderFilterTabs" class="tabs" style="margin:0 0 12px"><button type="button" data-order-filter="received" class="secondary">Received Order<span id="sellerBadgeReceived" class="seller-count-badge">0</span></button><button type="button" data-order-filter="rto" class="secondary">RTO Order<span id="sellerBadgeRto" class="seller-count-badge">0</span></button><button type="button" data-order-filter="delivered" class="secondary">Delivered Order<span id="sellerBadgeDelivered" class="seller-count-badge">0</span></button><button type="button" data-order-filter="return" class="secondary">Return Order<span id="sellerBadgeReturn" class="seller-count-badge">0</span></button></div><div id="sellerOrdersList" class="muted">Order category select karein.</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
+<section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrderFilterTabs" class="tabs" style="margin:0 0 12px"><button type="button" data-order-filter="received" class="secondary">Received Order <span id="sellerOrderTotalReceived" class="seller-order-total">0</span><span id="sellerBadgeReceived" class="seller-count-badge">0</span></button><button type="button" data-order-filter="rto" class="secondary">RTO Order <span id="sellerOrderTotalRto" class="seller-order-total">0</span><span id="sellerBadgeRto" class="seller-count-badge">0</span></button><button type="button" data-order-filter="delivered" class="secondary">Delivered Order <span id="sellerOrderTotalDelivered" class="seller-order-total">0</span><span id="sellerBadgeDelivered" class="seller-count-badge">0</span></button><button type="button" data-order-filter="return" class="secondary">Return Order <span id="sellerOrderTotalReturn" class="seller-order-total">0</span><span id="sellerBadgeReturn" class="seller-count-badge">0</span></button></div><div id="sellerOrdersList" class="muted">Order category select karein.</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
 <section id="addSection" class="card">
 <h2 id="formTitle">Naya Product List Karein</h2>
 <p class="muted">Product ki details bharein. Sirf aapke account ke products is panel mein edit/delete honge.</p>
@@ -621,14 +617,30 @@ function sellerRenderNotificationBadges(){
  Object.entries(map).forEach(([cat,id])=>{const el=document.getElementById(id);if(!el)return;const count=sellerNotifications.filter(n=>n.category===cat&&!n.seen).length;el.textContent=count>99?'99+':String(count);el.classList.toggle('show',count>0);});
 }
 function sellerRenderNotificationList(){const host=document.getElementById('sellerNotificationList');if(!host)return;host.innerHTML=sellerNotifications.length?sellerNotifications.map(n=>`<div class="seller-notification-row"><b>${esc(n.title)}</b><div>${esc(n.detail)}</div><div class="hint">${esc(n.time)}</div></div>`).join(''):'<p class="muted">Abhi koi notification nahi hai.</p>';}
-function sellerShowDashboardPopup(n){
+function sellerShowDashboardPopup(){
  if(!document.getElementById('sellerApp')||document.getElementById('sellerApp').classList.contains('hidden'))return;
- const old=document.getElementById('sellerNewOrderPopup');if(old)old.remove();
- const pop=document.createElement('div');pop.id='sellerNewOrderPopup';pop.className='seller-notification-popup';
- pop.innerHTML=`<b style="color:#075fc4">🔔 ${esc(n.title)}</b><div style="margin-top:5px">${esc(n.detail)}</div><button type="button" id="sellerPopupView">View</button> <button type="button" id="sellerPopupDismiss" style="background:#e7f2ff;color:#164e84">Dismiss</button>`;
- document.body.appendChild(pop);
- document.getElementById('sellerPopupView').onclick=()=>{pop.remove();document.getElementById('sellerNotificationPanel')?.classList.remove('hidden');};
- document.getElementById('sellerPopupDismiss').onclick=()=>pop.remove();
+ const unread=sellerNotifications.filter(n=>!n.seen);
+ const old=document.getElementById('sellerNewOrderPopup');
+ if(!unread.length){if(old)old.remove();return;}
+ const pop=old||document.createElement('div');pop.id='sellerNewOrderPopup';pop.className='seller-notification-popup';
+ const rows=unread.slice(0,12).map(n=>`<div class="seller-notification-row"><b>${esc(n.title)}</b><div>${esc(n.detail)}</div><div class="hint">${esc(n.time||'')}</div></div>`).join('');
+ pop.innerHTML=`<h3 style="margin:0 0 8px;color:#075fc4;font-size:18px">🔔 नई Notifications (${unread.length})</h3><div style="max-height:45vh;overflow:auto">${rows}${unread.length>12?`<div class="hint">और ${unread.length-12} notifications</div>`:''}</div><button type="button" id="sellerPopupOk" style="display:block;width:100%;margin-top:12px">OK</button>`;
+ if(!old)document.body.appendChild(pop);
+ document.getElementById('sellerPopupOk').onclick=sellerAcknowledgeAllNotifications;
+}
+async function sellerAcknowledgeAllNotifications(){
+ const unread=sellerNotifications.filter(n=>!n.seen);
+ if(!unread.length){document.getElementById('sellerNewOrderPopup')?.remove();return;}
+ const stamp=new Date().toISOString();
+ unread.forEach(n=>{n.seen=true;n.seenAt=stamp;});
+ sellerRenderNotificationBadges();sellerRenderNotificationList();
+ document.getElementById('sellerNewOrderPopup')?.remove();
+ if(currentUser&&currentUser.uid){
+  const writes=unread.map(n=>{const recordKey=encodeURIComponent(n.key).replace(/[.#$\[\]\/]/g,'_');return db.ref('sellerNotifications/'+currentUser.uid+'/'+recordKey).update({seen:true,seenAt:stamp});});
+  const results=await Promise.allSettled(writes);
+  const failed=results.some(r=>r.status==='rejected');
+  if(failed)console.warn('Some notification acknowledgements could not be saved.');
+ }
 }
 function sellerMarkCategorySeen(category){
  const matches=sellerNotifications.filter(n=>n.category===category&&!n.seen);
@@ -672,8 +684,14 @@ document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(
  document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(b=>{const selected=!isSame&&b===btn;b.classList.toggle("active",selected);b.classList.toggle("primary",selected);b.classList.toggle("secondary",!selected);});
  if(isSame){$("sellerOrdersList").textContent="Order category select karein.";}else{renderSellerOrders();}
 }));
+function sellerRenderOrderTotals(){
+ const counts={received:0,rto:0,delivered:0,return:0};
+ Object.entries(sellerOrderRows||{}).forEach(([id,base])=>{const root=sellerOrderRootRows[id]||{};const cat=sellerOrderCategory(root.status||base.status);if(Object.prototype.hasOwnProperty.call(counts,cat))counts[cat]++;});
+ const ids={received:'sellerOrderTotalReceived',rto:'sellerOrderTotalRto',delivered:'sellerOrderTotalDelivered',return:'sellerOrderTotalReturn'};
+ Object.entries(ids).forEach(([cat,id])=>{const el=document.getElementById(id);if(el)el.textContent=String(counts[cat]);});
+}
 function renderSellerOrders(){
- renderSellerDailyGraph();
+ renderSellerDailyGraph();sellerRenderOrderTotals();
  const rows=Object.entries(sellerOrderRows||{});
  if(!activeSellerOrderFilter){$("sellerOrdersList").textContent="Upar se Received, RTO, Delivered ya Return Order select karein.";return;}
  const filteredRows=rows.filter(([id,base])=>{const root=sellerOrderRootRows[id]||{};return sellerOrderCategory(root.status||base.status)===activeSellerOrderFilter;});
@@ -689,7 +707,7 @@ function startSellerOrders(){
  if(!currentUser)return;
  sellerNotificationWriteKeys.clear();
  if(sellerNotificationListener){db.ref('sellerNotifications/'+currentUser.uid).off('value',sellerNotificationListener);}
- sellerNotificationListener=snap=>{const raw=snap.val()||{};sellerNotifications=Object.entries(raw).map(([recordKey,n])=>({...n,key:n.key||decodeURIComponent(recordKey)})).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,200);sellerRenderNotificationBadges();sellerRenderNotificationList();};
+ sellerNotificationListener=snap=>{const raw=snap.val()||{};sellerNotifications=Object.entries(raw).map(([recordKey,n])=>({...n,key:n.key||decodeURIComponent(recordKey)})).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,200);sellerRenderNotificationBadges();sellerRenderNotificationList();if(sellerNotifications.some(n=>!n.seen))sellerShowDashboardPopup();};
  sellerListen('sellerNotifications/'+currentUser.uid,'value',sellerNotificationListener,err=>console.warn('Seller notifications load failed',err&&err.message));
  sellerListen("courierPartners","value",s=>{activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));$("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";renderSellerOrders();});
  const ownRef=sellerListen("sellerOrders/"+currentUser.uid,"value",s=>{
