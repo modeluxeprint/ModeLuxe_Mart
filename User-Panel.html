@@ -1048,11 +1048,13 @@ let pendingOtpRequestId=null, pendingOtpPhone=null;
 let userOrdersQuery=null;
 let userOrdersListener=null;
 let firebaseOrdersForUser=[];
+const sellerSyncAttemptedOrderIds=new Set();
 
 function stopUserOrdersListener(){
   if(userOrdersQuery && userOrdersListener) userOrdersQuery.off("value",userOrdersListener);
   userOrdersQuery=null;userOrdersListener=null;
   firebaseOrdersForUser=[];
+  sellerSyncAttemptedOrderIds.clear();
 }
 
 function startUserOrdersListener(phone){
@@ -1083,8 +1085,19 @@ function startUserOrdersListener(phone){
         updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
         payment:raw.paymentMethod||raw.payment||"",
         paymentStatus:raw.paymentStatus||"Pending",
-        razorpayPaymentId:raw.razorpayPaymentId||""
+        razorpayPaymentId:raw.razorpayPaymentId||"",
+        sellerSyncPending:raw.sellerSyncPending===true
       });
+      // Repair orders whose previous seller fan-out failed. Each order is attempted
+      // only once per page session so a failed request cannot create a retry loop.
+      if(raw.sellerSyncPending===true && !sellerSyncAttemptedOrderIds.has(String(id))){
+        sellerSyncAttemptedOrderIds.add(String(id));
+        if(!/^Razorpay/i.test(String(raw.paymentMethod||raw.payment||"")) || raw.paymentStatus==="Verified"){
+          syncVerifiedSellerOrder(id).then(ok=>{
+            if(!ok) console.warn("Seller order remains pending:",id);
+          });
+        }
+      }
     });
     firebaseOrdersForUser=remote;
     mergeAndRenderUserOrders();
@@ -1226,7 +1239,7 @@ async function syncVerifiedSellerOrder(orderId){
     const currentUser=auth&&auth.currentUser;
     if(!currentUser)throw new Error("Firebase login session missing");
     const idToken=await currentUser.getIdToken(true);
-    const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},body:JSON.stringify({orderId:String(orderId)})});
+    const syncResponse=await fetch(SELLER_ORDER_SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+idToken},body:JSON.stringify({action:"syncOrder",orderId:String(orderId)})});
     const syncResult=await syncResponse.json().catch(()=>({}));
     if(!syncResponse.ok||(syncResult.ok!==true&&syncResult.success!==true))throw new Error(syncResult.error||syncResult.message||"Seller order sync failed");
     await db.ref("orders/"+orderId).update({sellerSyncPending:false,sellerSyncUpdatedAt:new Date().toISOString()});
