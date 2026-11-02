@@ -589,6 +589,8 @@ let activeCourierPartners={};
 let sellerOrderRows={},sellerOrderRootRows={},sellerOrderRootListeners={};
 // Seller order notifications: new order/status changes create a bell entry, category badge and dashboard popup.
 let sellerNotifications=[];
+let sellerNotificationWriteKeys=new Set();
+let sellerNotificationListener=null;
 let sellerOrderInitialSnapshot=true;
 let sellerKnownOrderIds=new Set();
 let sellerKnownOrderStates={};
@@ -602,15 +604,21 @@ function sellerCategoryForNotification(status){
 function sellerNotificationLabel(category){return ({received:'Received Order',rto:'RTO Order',delivered:'Delivered Order',return:'Return Order'})[category]||'Order Update';}
 function sellerAddNotification(id,category,title,detail){
  const key=String(id)+'|'+category+'|'+String(title);
- if(sellerNotifications.some(n=>n.key===key))return;
- const item={key,id:String(id),category,title,detail,time:new Date().toLocaleString()};
+ if(sellerNotifications.some(n=>n.key===key)||sellerNotificationWriteKeys.has(key))return;
+ const now=new Date();
+ const item={key,id:String(id),orderId:String(id),category,title,detail,time:now.toLocaleString(),createdAt:now.toISOString(),seen:false};
  sellerNotifications.unshift(item);sellerNotifications=sellerNotifications.slice(0,100);
  sellerRenderNotificationBadges();sellerRenderNotificationList();sellerShowDashboardPopup(item);
+ if(currentUser&&currentUser.uid){
+  sellerNotificationWriteKeys.add(key);
+  const recordKey=encodeURIComponent(key).replace(/[.#$\[\]\/]/g,'_');
+  db.ref('sellerNotifications/'+currentUser.uid+'/'+recordKey).set(item).catch(err=>{sellerNotificationWriteKeys.delete(key);console.warn('Notification save failed',err&&err.message);});
+ }
 }
 function sellerRenderNotificationBadges(){
- const total=sellerNotifications.length;const bell=document.getElementById('sellerBellBadge');if(bell){bell.textContent=total>99?'99+':String(total);bell.classList.toggle('show',total>0);}
+ const total=sellerNotifications.filter(n=>!n.seen).length;const bell=document.getElementById('sellerBellBadge');if(bell){bell.textContent=total>99?'99+':String(total);bell.classList.toggle('show',total>0);}
  const map={received:'sellerBadgeReceived',rto:'sellerBadgeRto',delivered:'sellerBadgeDelivered',return:'sellerBadgeReturn'};
- Object.entries(map).forEach(([cat,id])=>{const el=document.getElementById(id);if(!el)return;const count=sellerNotifications.filter(n=>n.category===cat).length;el.textContent=count>99?'99+':String(count);el.classList.toggle('show',count>0);});
+ Object.entries(map).forEach(([cat,id])=>{const el=document.getElementById(id);if(!el)return;const count=sellerNotifications.filter(n=>n.category===cat&&!n.seen).length;el.textContent=count>99?'99+':String(count);el.classList.toggle('show',count>0);});
 }
 function sellerRenderNotificationList(){const host=document.getElementById('sellerNotificationList');if(!host)return;host.innerHTML=sellerNotifications.length?sellerNotifications.map(n=>`<div class="seller-notification-row"><b>${esc(n.title)}</b><div>${esc(n.detail)}</div><div class="hint">${esc(n.time)}</div></div>`).join(''):'<p class="muted">Abhi koi notification nahi hai.</p>';}
 function sellerShowDashboardPopup(n){
@@ -622,7 +630,12 @@ function sellerShowDashboardPopup(n){
  document.getElementById('sellerPopupView').onclick=()=>{pop.remove();document.getElementById('sellerNotificationPanel')?.classList.remove('hidden');};
  document.getElementById('sellerPopupDismiss').onclick=()=>pop.remove();
 }
-function sellerMarkCategorySeen(category){sellerNotifications=sellerNotifications.filter(n=>n.category!==category);sellerRenderNotificationBadges();sellerRenderNotificationList();}
+function sellerMarkCategorySeen(category){
+ const matches=sellerNotifications.filter(n=>n.category===category&&!n.seen);
+ matches.forEach(n=>{n.seen=true;});
+ sellerRenderNotificationBadges();sellerRenderNotificationList();
+ if(currentUser&&currentUser.uid){const updates={};matches.forEach(n=>{const recordKey=encodeURIComponent(n.key).replace(/[.#$\[\]\/]/g,'_');updates[recordKey+'/seen']=true;updates[recordKey+'/seenAt']=new Date().toISOString();});if(Object.keys(updates).length)db.ref('sellerNotifications/'+currentUser.uid).update(updates).catch(e=>console.warn('Notification seen update failed',e&&e.message));}
+}
 function sellerHandleIncomingOrder(id,base,root,isNew){
  const status=(root&&root.status)||base.status||'Order Placed';const cat=sellerCategoryForNotification(status);
  if(isNew){sellerAddNotification(id,'received','New order received','Order #'+id+' · '+(base.customerName||root.customerName||'Customer'));return;}
@@ -674,6 +687,10 @@ function renderSellerOrders(){
 }
 function startSellerOrders(){
  if(!currentUser)return;
+ sellerNotificationWriteKeys.clear();
+ if(sellerNotificationListener){db.ref('sellerNotifications/'+currentUser.uid).off('value',sellerNotificationListener);}
+ sellerNotificationListener=snap=>{const raw=snap.val()||{};sellerNotifications=Object.entries(raw).map(([recordKey,n])=>({...n,key:n.key||decodeURIComponent(recordKey)})).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,200);sellerRenderNotificationBadges();sellerRenderNotificationList();};
+ sellerListen('sellerNotifications/'+currentUser.uid,'value',sellerNotificationListener,err=>console.warn('Seller notifications load failed',err&&err.message));
  sellerListen("courierPartners","value",s=>{activeCourierPartners=Object.fromEntries(Object.entries(s.val()||{}).filter(([id,p])=>p&&p.active));$("sellerCourierPartnersStatus").textContent=Object.keys(activeCourierPartners).length?"Active courier API partners: "+Object.values(activeCourierPartners).map(p=>p.name).join(", "):"Admin ne abhi koi active courier API partner configure nahi kiya.";renderSellerOrders();});
  const ownRef=sellerListen("sellerOrders/"+currentUser.uid,"value",s=>{
   const incoming=s.val()||{};
