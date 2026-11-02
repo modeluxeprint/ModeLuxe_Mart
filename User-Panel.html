@@ -1972,7 +1972,7 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 (function(){
   if(!db || !firebase || !firebase.database) return;
   try {
-    const connectedRef = firebase.database().ref('.info/connected');
+    const connectedRef = db.ref('.info/connected');
     connectedRef.on('value', snap => {
       const online = snap.val() === true;
       const el = document.getElementById('firebaseConnectionStatus');
