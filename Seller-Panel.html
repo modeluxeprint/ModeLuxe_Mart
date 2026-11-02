@@ -793,7 +793,7 @@ window.downloadSellerInvoice = async function(id){
   // If a legacy/missing delivery field disagrees with the canonical paid total, derive it
   // from the actual total. This keeps each order's own delivery charge (not a fixed amount).
   const deliveryFee=Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
-  const paymentRaw=String(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||"").trim();
+  const paymentRaw=String(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||o.paymentName||"").trim();
   const payment=/(cod|cash on delivery|pay on delivery)/i.test(paymentRaw)?"Cash on Delivery (COD)":/(prepaid|online|upi|razorpay|phonepe|paytm|google pay|gpay|card|net banking)/i.test(paymentRaw)?(paymentRaw.match(/razorpay|phonepe|paytm|google pay|gpay|upi|card|net banking/i)?.[0]||"Prepaid")+" (Prepaid)":paymentRaw||"Not specified";
   const qr="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data="+encodeURIComponent(String(id));
   const date=new Date(o.createdAt||Date.now()).toLocaleString("en-IN");
