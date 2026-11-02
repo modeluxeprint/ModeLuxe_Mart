@@ -237,7 +237,9 @@ async function uploadImageToR2(file){
   return result.url;
 }
 
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
+// Keep the Firebase admin session across refreshes and browser restarts.
+// Do not fire-and-forget this: signInWithCustomToken must wait for LOCAL persistence.
+const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.warn('Auth persistence:',e);return false;});
 const ADMIN_PHONE='7818995955';
 const ADMIN_PHONE_ALLOWLIST=[ADMIN_PHONE];
 const ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
@@ -369,6 +371,11 @@ async function verifyOTP(){
     clearTimeout(fetchTimer);
     stage='Firebase custom token login';
     setMsg('चरण 2/2: OTP सही है। Firebase login हो रहा है…');
+
+    // Ensure Firebase LOCAL persistence is fully applied BEFORE exchanging the custom token.
+    // This prevents the admin session from behaving like a temporary tab/session login.
+    const persistenceOk=await adminPersistenceReady;
+    if(!persistenceOk)throw new Error('Firebase could not enable persistent login on this browser. Check browser storage/site-data settings and retry.');
 
     // Also time out Firebase sign-in; the previous timeout covered fetch only.
     await Promise.race([
