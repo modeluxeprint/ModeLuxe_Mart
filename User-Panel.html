@@ -1010,10 +1010,14 @@ const firebaseConfig = {
   appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
   measurementId: "G-HZEKJT5YZX"
 };
-if(typeof firebase!=="undefined" && !firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = (typeof firebase!=="undefined") ? firebase.database() : null;
+// Give the User Panel its own named Firebase app so its Auth session is isolated
+// from Seller, Admin, and Delivery panels on the same GitHub Pages origin.
+const panelFirebaseApp = (typeof firebase!=="undefined")
+  ? (firebase.apps.find(app=>app.name==="modeluxe-user-panel") || firebase.initializeApp(firebaseConfig,"modeluxe-user-panel"))
+  : null;
+const db = panelFirebaseApp ? panelFirebaseApp.database() : null;
 window.MLM_CART_DB=db;
-const auth = (typeof firebase!=="undefined" && firebase.auth) ? firebase.auth() : null;
+const auth = panelFirebaseApp ? panelFirebaseApp.auth() : null;
 // Require Firebase LOCAL persistence. Do not silently continue with session-only auth.
 const authPersistenceReady = (auth && firebase.auth.Auth && firebase.auth.Auth.Persistence)
   ? auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(err=>{
