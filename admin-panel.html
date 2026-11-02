@@ -140,8 +140,9 @@ header{color:#111827}
 <section id="dashboard" class="hidden">
 <div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
 <div id="ordersTab">
+<div class="panel p-3 mb-4"><input id="search" class="w-full" placeholder="Search by order ID, product, customer, phone, address or amount…" oninput="renderOrders()"></div>
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
-<div class="panel p-4 mb-4"><div class="grid md:grid-cols-[1fr_190px_auto] gap-3"><input id="search" placeholder="Order ID, customer name, phone search karein" oninput="renderOrders()"><select id="statusFilter" onchange="window.__ordersSummaryMode=this.value==='all'?'all':this.value;renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Seller Processing</option><option>Processing</option><option>Packed</option><option>Picked Up by Delivery Partner</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
+<div class="panel p-4 mb-4"><div class="grid grid-cols-1 md:grid-cols-[1fr_190px_auto] gap-3"><select id="statusFilter" onchange="window.__ordersSummaryMode=this.value==='all'?'all':this.value;renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Processing</option><option>Packed</option><option>Picked Up by Delivery Partner</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
 <div id="ordersList" class="space-y-3"></div>
 </div>
 <!-- Admin controls: seller approvals, charges/commission, withdrawals and delivery settings. -->
@@ -311,7 +312,8 @@ auth.onAuthStateChanged(user=>{
     $('adminDeviceLockModal').classList.remove('flex');
     $('dashboard').classList.remove('hidden');
     startOrders();
-      startDeliverySettingsAdminListener();
+    startProducts();
+    startDeliverySettingsAdminListener();
     startOwnerManagement();
     updateUnitChoices();
     setTimeout(processDeliveryQr,300);
@@ -434,14 +436,14 @@ async function submitDeviceLock(){
   $('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');
   $('dashboard').classList.remove('hidden');$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');
   addNotification('Admin login successful','Passkey verification complete.','success');
-  startOrders();startDeliverySettingsAdminListener();startOwnerManagement();updateUnitChoices();setTimeout(processDeliveryQr,300);
+  startOrders();startProducts();startDeliverySettingsAdminListener();startOwnerManagement();updateUnitChoices();setTimeout(processDeliveryQr,300);
  }catch(e){msg.textContent=e?.message||'Passkey verification fail ho gayi.';}
 }
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
 $('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
 async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);if(productListener)db.ref('sellerProducts').off('value',productListener);orderListener=null;productListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};showActualAdminUid();localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
-const statuses=['Order Placed','Seller Processing','Processing','Packed','Picked Up by Delivery Partner','Shipped','Out for Delivery','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded']; // Delivered is confirmed only by scanning the invoice QR.
+const statuses=['Order Placed','Processing','Packed','Picked Up by Delivery Partner','Shipped','Out for Delivery','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded']; // Delivered is confirmed only by scanning the invoice QR.
 function filterOrdersBySummary(filter){
   // First tap opens the selected order list; tapping the same box again closes it.
   const currentMode=window.__ordersSummaryMode||'closed';
@@ -460,7 +462,67 @@ function filterOrdersBySummary(filter){
 // A manual status/search change reopens the list and applies the selected dropdown filter.
 $('statusFilter').addEventListener('change',()=>{window.__ordersSummaryMode='dropdown';$('ordersList').classList.remove('hidden');renderOrders();});
 $('search').addEventListener('input',()=>{if(window.__ordersSummaryMode==='closed')window.__ordersSummaryMode='default';$('ordersList').classList.remove('hidden');renderOrders();});
-function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;const all=entries.map(([id,o])=>[id,o||{}]);$('totalCount').textContent=all.length;$('placedCount').textContent=all.filter(([id,o])=>['order placed','placed','order received'].includes(String(o.status||'Order Placed').toLowerCase())).length;$('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;$('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;$('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;const mode=window.__ordersSummaryMode||'default';if(mode==='closed'){$('ordersList').classList.add('hidden');return;}const shown=all.filter(([id,o])=>{const text=[id,o.customerName,o.customerPhone,o.product,o.shippingAddress,o.status].join(' ').toLowerCase();const statusValue=String(o.status||'Order Placed');const statusLower=statusValue.toLowerCase();const finalStatus=['delivered','cancelled','refunded'].includes(statusLower);const statusMatch=mode==='dropdown'?(filter==='all'||statusLower===String(filter).toLowerCase()):(mode==='all'?true:mode==='active'?!finalStatus:mode==='placed'?['order placed','placed','order received'].includes(statusLower):mode==='default'?['order placed','placed','order received'].includes(statusLower):statusLower===String(mode).toLowerCase());return (!q||text.includes(q))&&statusMatch;});$('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{const locked=!!o.adminStatusLocked;const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):'';return `<article class="order-card"><div class="flex flex-wrap justify-between gap-2"><div><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(o.product||'Order')}</h3><p class="text-sm text-stone-300">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</p></div><div class="text-right"><p class="text-xl font-black gold">₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><p class="small text-stone-300">Delivery charge: ₹${Number(o.deliveryFee||0).toLocaleString('en-IN')}</p><p class="small">Payment Method: <b class="text-stone-100">${esc(o.paymentMethod||o.payment||'Not available')}</b></p><p class="small text-stone-300">Payment Status: ${esc(o.paymentStatus||'Unknown')}</p></div></div><div class="grid md:grid-cols-2 gap-2 text-sm mt-3"><p><span class="text-stone-400">Address:</span> ${esc(o.shippingAddress||'Not provided')}</p><p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p><p><span class="text-stone-400">Items:</span> ${esc(items||o.product||'—')}</p><p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p></div><div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"><button class="btn primary" type="button" onclick="downloadInvoice('${esc(id)}')">⬇ Download Invoice / Bill</button><button class="btn muted" type="button" onclick="printInvoice('${esc(id)}')">🖨 Print Invoice / Bill</button></div><div class="mt-3 space-y-2"><select id="status-${esc(id)}" aria-label="Order status" onchange="updateStatus('${esc(id)}')" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn danger w-full" type="button" onclick="cancelOrder('${esc(id)}')" ${locked?'disabled':''}>Cancel Order</button></div>${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}</article>`;}).join(''):'<div class="panel p-6 text-center text-stone-300">Is filter ke liye koi order nahi mila.</div>';}
+window.__expandedAdminOrders=window.__expandedAdminOrders||new Set();
+window.toggleAdminOrder=function(id){
+ const key=String(id);
+ if(window.__expandedAdminOrders.has(key))window.__expandedAdminOrders.delete(key);
+ else window.__expandedAdminOrders.add(key);
+ renderOrders();
+};
+function renderOrders(){
+ const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));
+ const q=$('search').value.trim().toLowerCase(),filter=$('statusFilter').value;
+ const all=entries.map(([id,o])=>[id,o||{}]);
+ $('totalCount').textContent=all.length;
+ $('placedCount').textContent=all.filter(([id,o])=>['order placed','placed','order received'].includes(String(o.status||'Order Placed').toLowerCase())).length;
+ $('activeCount').textContent=all.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String(o.status||'').toLowerCase())).length;
+ $('deliveredCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='delivered').length;
+ $('cancelledCount').textContent=all.filter(([id,o])=>String(o.status||'').toLowerCase()==='cancelled').length;
+ const mode=window.__ordersSummaryMode||'default';
+ if(mode==='closed'&&!q){$('ordersList').classList.add('hidden');return;}
+ if(q)$('ordersList').classList.remove('hidden');
+ const shown=all.filter(([id,o])=>{
+  const itemsText=Array.isArray(o.items)?o.items.map(i=>[i.name,i.productName,i.title,i.product,i.sku,i.quantity,i.qty].join(' ')).join(' '):'';
+  const searchable=[id,o.customerName,o.name,o.customerPhone,o.phone,o.product,o.shippingAddress,o.address,o.status,o.paymentMethod,o.payment,o.paymentStatus,o.totalAmount,o.total,o.deliveryFee,itemsText].join(' ').toLowerCase();
+  const statusValue=String(o.status||'Order Placed'),statusLower=statusValue.toLowerCase();
+  const finalStatus=['delivered','cancelled','refunded'].includes(statusLower);
+  const statusMatch=mode==='dropdown'?(filter==='all'||statusLower===String(filter).toLowerCase()):(mode==='all'?true:mode==='active'?!finalStatus:mode==='placed'?['order placed','placed','order received'].includes(statusLower):mode==='default'?['order placed','placed','order received'].includes(statusLower):statusLower===String(mode).toLowerCase());
+  return (!q||searchable.includes(q))&&(q||statusMatch);
+ });
+ $('ordersList').innerHTML=shown.length?shown.map(([id,o])=>{
+  const locked=!!o.adminStatusLocked,expanded=window.__expandedAdminOrders.has(String(id));
+  const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||i.title||i.product||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):(o.product||'—');
+  const customer=o.customerName||o.name||'Customer';
+  const address=o.shippingAddress||o.address||'Address not provided';
+  const amount=Number(o.totalAmount??o.total??0);
+  return `<article class="order-card">
+   <button type="button" class="w-full text-left" aria-expanded="${expanded?'true':'false'}" onclick="toggleAdminOrder('${esc(id)}')">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+     <div class="min-w-0 flex-1"><p class="small gold font-bold">ORDER #${esc(id)}</p><h3 class="font-bold text-lg">${esc(items)}</h3><p class="text-sm text-stone-300">${esc(customer)}</p><p class="small text-stone-400 mt-1">${esc(address)}</p></div>
+     <div class="text-right shrink-0"><p class="text-xl font-black gold">₹${amount.toLocaleString('en-IN')}</p><p class="small text-stone-400 mt-1">${expanded?'Tap to close':'Tap to view details'}　${expanded?'▲':'▼'}</p></div>
+    </div>
+   </button>
+   ${expanded?`<div class="mt-4 pt-4 border-t border-white/10">
+    <div class="grid md:grid-cols-2 gap-2 text-sm">
+     <p><span class="text-stone-400">Customer:</span> ${esc(customer)}</p>
+     <p><span class="text-stone-400">Phone:</span> ${esc(o.customerPhone||o.phone||'Not provided')}</p>
+     <p><span class="text-stone-400">Address:</span> ${esc(address)}</p>
+     <p><span class="text-stone-400">Amount:</span> ₹${amount.toLocaleString('en-IN')}</p>
+     <p><span class="text-stone-400">Delivery charge:</span> ₹${Number(o.deliveryFee||0).toLocaleString('en-IN')}</p>
+     <p><span class="text-stone-400">Date:</span> ${esc(o.dateTime||o.createdAt||'')}</p>
+     <p><span class="text-stone-400">Items:</span> ${esc(items)}</p>
+     <p><span class="text-stone-400">Payment method:</span> ${esc(o.paymentMethod||o.payment||'Not available')}</p>
+     <p><span class="text-stone-400">Payment status:</span> ${esc(o.paymentStatus||'Unknown')}</p>
+     <p><span class="text-stone-400">Current status:</span> <b class="gold">${esc(o.status||'Order Placed')}</b> ${locked?'<span class="small text-amber-200">· Final status locked</span>':''}</p>
+    </div>
+    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"><button class="btn primary" type="button" onclick="downloadInvoice('${esc(id)}')">⬇ Download Invoice / Bill</button><button class="btn muted" type="button" onclick="printInvoice('${esc(id)}')">🖨 Print Invoice / Bill</button></div>
+    <div class="mt-3 space-y-2"><select id="status-${esc(id)}" aria-label="Order status" onchange="updateStatus('${esc(id)}')" ${locked?'disabled':''}>${statuses.map(st=>`<option ${String(o.status||'Order Placed')===st?'selected':''}>${st}</option>`).join('')}</select><button class="btn danger w-full" type="button" onclick="cancelOrder('${esc(id)}')" ${locked?'disabled':''}>Cancel Order</button></div>
+    ${o.returnRequest?`<p class="small text-amber-200 mt-3">Return request: ${esc(o.returnRequest)}</p>`:''}
+    ${o.cancellationRequest?`<p class="small text-amber-200 mt-1">Cancellation request: ${esc(o.cancellationRequest)}</p>`:''}
+   </div>`:''}
+  </article>`;
+ }).join(''):'<div class="panel p-6 text-center text-stone-300">No matching orders found.</div>';
+}
 function invoiceEscape(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function buildInvoiceHtml(id){
   const o=ordersData[id];if(!o){alert('Order nahi mila');return null;}
@@ -579,10 +641,8 @@ async function handleScannedDeliveryQr(value){
     const snap=await db.ref('orders/'+id).once('value'),order=snap.val();
     if(!order)throw new Error('Is QR ka order Firebase mein nahi mila.');
     const st=String(order.status||'').toLowerCase();
-    if(/^razorpay/i.test(String(order.paymentMethod||order.payment||''))&&String(order.paymentStatus||'').toLowerCase()!=='verified')throw new Error('Online payment server se Verified nahi hai. QR delivery confirm nahi ho sakti.');
     if(st==='delivered'){const seller=await creditSellerWalletsForAdminQr(id,order),delivery=await creditDeliveryWalletForAdminQr(id);alert('Yeh order pehle hi Delivered hai. Wallet check: Seller '+seller.creditedCount+' · Delivery '+(delivery.credited?'₹'+delivery.amount:'already credited / ₹0 payout')+'.');await closeDeliveryScanner();return;}
     if(['cancelled','refunded'].includes(st))throw new Error('Order '+order.status+' hai; Delivered nahi kiya ja sakta.');
-    if(/^razorpay/i.test(String(order.paymentMethod||order.payment||''))&&String(order.paymentStatus||'').toLowerCase()!=='verified')throw new Error('Online payment server se Verified nahi hai. Delivery confirm nahi ho sakti.');
     if(!['shipped','picked up by delivery partner','out for delivery'].includes(String(order.status||'').toLowerCase()))throw new Error('Seller ke sabhi products Shipped hone ke baad hi delivery confirm ho sakti hai.');
     const ok=confirm('Delivery Confirm?\nOrder #'+id+'\nCustomer: '+(order.customerName||'Customer')+'\nOK par Delivered mark hoga.');
     if(!ok){$('deliveryScannerMsg').textContent='Delivery confirmation cancel kar di gayi.';deliveryQrBusy=false;return;}
@@ -604,10 +664,8 @@ async function processDeliveryQr(){
   try{
     const snap=await db.ref('orders/'+id).once('value');const order=snap.val();
     if(!order){alert('इस QR का ऑर्डर नहीं मिला।');return;}
-    if(/^razorpay/i.test(String(order.paymentMethod||order.payment||''))&&String(order.paymentStatus||'').toLowerCase()!=='verified'){alert('Online payment server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');return;}
     if(String(order.status||'').toLowerCase()==='delivered'){const seller=await creditSellerWalletsForAdminQr(id,order),delivery=await creditDeliveryWalletForAdminQr(id);alert('यह ऑर्डर पहले ही Delivered है। Seller credits '+seller.creditedCount+' · Delivery ₹'+delivery.amount);return;}
     if(['cancelled','refunded'].includes(String(order.status||'').toLowerCase())){alert('यह ऑर्डर '+order.status+' है; Delivered नहीं किया जा सकता।');return;}
-    if(/^razorpay/i.test(String(order.paymentMethod||order.payment||''))&&String(order.paymentStatus||'').toLowerCase()!=='verified'){alert('Online payment server से Verified नहीं है। Delivery confirm नहीं हो सकती।');return;}
     if(!['shipped','picked up by delivery partner','out for delivery'].includes(String(order.status||'').toLowerCase())){alert('Seller के सभी products Shipped होने के बाद ही delivery confirm हो सकती है।');return;}
     if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(order.customerName||'Customer')+'\nOK दबाने पर ऑर्डर Delivered mark हो जाएगा।'))return;
     await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});
@@ -622,7 +680,6 @@ async function updateStatus(id){
   const o=ordersData[id];if(!o)return alert('Order nahi mila');
   if(o.adminStatusLocked)return alert('Is order ka final status pehle hi lock ho chuka hai.');
   const status=$('status-'+id).value;
-  if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified'&&['Seller Processing','Processing','Packed','Picked Up by Delivery Partner','Shipped','Out for Delivery'].includes(status)){alert('Online payment server se Verified hone ke baad hi order process ho sakta hai.');renderOrders();return;}
   if(status==='Delivered'){alert('Delivered status केवल Delivery QR scan से confirm होगा।');renderOrders();return;}
   if(status==='Cancelled' && !confirm('Order #'+id+' ko “'+status+'” mark karne par final lock ho jayega. Continue?')){
     renderOrders();return;
@@ -708,7 +765,11 @@ function updateProductPreview(){const q=$('productQty')?.value?.trim()||'—';co
 // Product listing UI admin panel se remove hai; optional chaining prevents a null-element error from stopping the remaining admin JavaScript.
 $('productQty')?.addEventListener('input',updateProductPreview);
 $('productUnit')?.addEventListener('change',updateProductPreview);
-function startProducts(){ /* Product management is intentionally seller-owned; no Admin product listener. */ }
+function startProducts(){
+  // Admin product listing was intentionally removed; sellers manage their own listings.
+  // Keep this compatibility stub so old startup calls cannot dereference removed DOM nodes.
+  if(productListener){db.ref('sellerProducts').off('value',productListener);productListener=null;}
+}
 function renderProducts(){ return; }
 function resetProductForm(){ $('productForm').reset();$('productEditId').value='';$('productQty').value='1';$('productStock').value='0';$('productStockUnit').value='kg';$('saveProductBtn').textContent='Save Product';$('productMsg').textContent='';$('productImagePreview').src='';$('productImagePreview').classList.add('hidden');updateUnitChoices(); }
 function previewProductImage(event){const file=event.target.files&&event.target.files[0];const img=$('productImagePreview');if(!file){img.src='';img.classList.add('hidden');return;}if(!file.type||!file.type.startsWith('image/')){alert('Image file select karein.');event.target.value='';return;}try{if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);const url=URL.createObjectURL(file);img.dataset.objectUrl=url;img.onload=()=>{img.classList.remove('hidden');};img.onerror=()=>{img.classList.add('hidden');};img.src=url;img.classList.remove('hidden');}catch(e){img.classList.add('hidden');}}
@@ -1218,7 +1279,27 @@ window.reviewWithdrawal=async(type,uid,id,status)=>{
   alert('Withdrawal update fail: '+(e&&e.message||String(e)));
  }
 };
-window.saveCommissionSettings=async()=>{if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);if(!Number.isFinite(defaultCommission)||defaultCommission<0||defaultCommission>100||!Number.isFinite(deliveryBoyPayout)||deliveryBoyPayout<0)return alert('Values check karein');const now=new Date().toISOString(),settings={defaultCommission,deliveryBoyPayout,updatedAt:now,updatedBy:signedInPhone};try{await db.ref().update({'commissionSettings':settings,'sellerSettings/commissionPercent':defaultCommission,'deliverySettings/deliveryBoyPayout':deliveryBoyPayout});$('commissionMsg').textContent='Commission aur delivery payout save ho gaye. Seller aur Delivery Panel par live update hoga.';addNotification('Commission settings updated',`Seller commission ${defaultCommission}% · Delivery payout ₹${deliveryBoyPayout}`,'success');}catch(e){$('commissionMsg').textContent='Settings save nahi hui: '+(e.message||e);}};
+window.saveCommissionSettings=async()=>{
+ if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+ const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);
+ if(!Number.isFinite(defaultCommission)||defaultCommission<0||defaultCommission>100||!Number.isFinite(deliveryBoyPayout)||deliveryBoyPayout<0){$('commissionMsg').textContent='Please enter valid values.';return;}
+ const now=new Date().toISOString(),settings={defaultCommission,deliveryBoyPayout,updatedAt:now,updatedBy:signedInPhone};
+ $('commissionMsg').textContent='Saving settings…';
+ const writes=[
+  ['commissionSettings',settings],
+  ['sellerSettings/commissionPercent',defaultCommission],
+  ['deliverySettings/deliveryBoyPayout',deliveryBoyPayout]
+ ];
+ const results=await Promise.all(writes.map(async([path,value])=>{try{await db.ref(path).set(value);return {path,ok:true};}catch(error){return {path,ok:false,error:error&&error.message||String(error)};}}));
+ const failed=results.filter(x=>!x.ok);
+ if(failed.length){
+  $('commissionMsg').textContent='Some settings could not be saved. Check Firebase Database Rules for: '+failed.map(x=>x.path+' ('+x.error+')').join(' · ');
+  addNotification('Commission settings partially saved',failed.map(x=>x.path).join(', '),'error');
+  return;
+ }
+ $('commissionMsg').textContent='Settings saved successfully. Seller and Delivery panels will receive the updated values.';
+ addNotification('Commission settings updated',`Seller commission ${defaultCommission}% · Delivery payout ₹${deliveryBoyPayout}`,'success');
+};
 
 const COURIER_PARTNERS_PATH='courierPartners';
 function resetCourierPartnerForm(){['courierPartnerId','courierPartnerName','courierPartnerCode','courierWorkerUrl'].forEach(id=>$(id).value='');$('courierPartnerMsg').textContent='';}
