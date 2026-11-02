@@ -45,12 +45,12 @@ window.mlmVolatileStore = (() => {
 <style>
 .seller-header-main{flex:1;min-width:0}
 .seller-brand-line{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px}
-.seller-brand-line #walletHeaderBtn{flex:0 0 auto;min-width:88px;padding:8px 13px;margin:0;background:#e7f2ff;color:#164e84}
+.seller-brand-line #walletHeaderBtn{display:none!important}
 .seller-tagline{font-size:13px;color:#dbeafe;line-height:1.35}
-.seller-header-actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;flex:0 0 auto}
-.seller-header-actions button{min-width:0;text-align:center;padding:9px 12px}
+.seller-header-actions{display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:8px;flex:0 0 auto;min-width:104px}
+.seller-header-actions button{min-width:0;width:100%;text-align:center;padding:9px 12px}
 .seller-header-actions #logoutBtn{white-space:nowrap}
-@media(max-width:560px){.top{padding:10px 12px}.topinner{align-items:center;gap:8px}.top h1{font-size:21px}.seller-header-main{min-width:0}.seller-header-actions{gap:6px}.seller-header-actions button{padding:8px 9px;font-size:13px}.seller-brand-line .brand{font-size:11px;letter-spacing:.14em}.seller-brand-line #walletHeaderBtn{min-width:74px;padding:7px 9px;font-size:13px}.seller-tagline{font-size:11px;max-width:250px}}
+@media(max-width:560px){.top{padding:10px 12px}.topinner{align-items:center;gap:8px}.top h1{font-size:21px}.seller-header-main{min-width:0}.seller-header-actions{gap:6px;min-width:104px}.seller-header-actions button{padding:8px 9px;font-size:13px}.seller-brand-line .brand{font-size:11px;letter-spacing:.14em}.seller-tagline{font-size:11px;max-width:250px}}
 #walletHeaderBtn{background:#e7f2ff;color:#164e84}
 .seller-nav-grid{
  display:grid;
@@ -133,8 +133,9 @@ window.mlmVolatileStore = (() => {
 
 </head>
 <body>
-<header class="top"><div class="topinner"><div class="seller-header-main"><div class="seller-brand-line"><div class="brand">MODELUXE MART</div><button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button></div><h1>Seller Panel</h1><div class="seller-tagline">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
+<header class="top"><div class="topinner"><div class="seller-header-main"><div class="seller-brand-line"><div class="brand">MODELUXE MART</div></div><h1>Seller Panel</h1><div class="seller-tagline">Apna account · Apne products · Apni stock details</div></div><div class="seller-header-actions">
 <div class="seller-notify-wrap"><button id="sellerBellBtn" class="seller-bell-btn hidden" type="button" aria-label="Notifications" aria-expanded="false">🔔 <span id="sellerBellBadge" class="seller-count-badge">0</span></button></div>
+<button id="walletHeaderBtn" class="secondary hidden" type="button">Wallet</button>
 <button id="logoutBtn" class="secondary hidden" type="button">Logout</button>
 </div></div></header>
 <main class="wrap">
