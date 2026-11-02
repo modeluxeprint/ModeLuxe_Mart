@@ -788,13 +788,14 @@ window.downloadSellerInvoice = async function(id){
   const lineRows=items.map((it,i)=>{const name=it.name||it.productName||it.title||"Product",qty=Number(it.qty??it.quantity??1)||1,price=Number(it.price??it.sellerPrice??it.salePrice??0)||0;return `<tr><td>${i+1}</td><td>${eh(name)}</td><td>${qty}</td><td>${money(price)}</td><td>${money(price*qty)}</td></tr>`}).join("");
   const itemLineSubtotal=items.reduce((sum,it)=>sum+(Number(it.price??it.sellerPrice??it.salePrice??0)||0)*(Number(it.qty??it.quantity??1)||1),0);
   const productSubtotal=Number(o.productSubtotal??o.subtotal??itemLineSubtotal);
-  const savedGrandTotal=Number(o.grandTotal??o.totalAmount??o.total??o.price??(productSubtotal+Number(o.deliveryFee??o.deliveryCharges??o.shippingCharge??0)));
-  const grandTotal=Number.isFinite(savedGrandTotal)?savedGrandTotal:(productSubtotal+Number(o.deliveryFee||0));
-  // If a legacy/missing delivery field disagrees with the canonical paid total, derive it
-  // from the actual total. This keeps each order's own delivery charge (not a fixed amount).
-  const deliveryFee=Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
-  const paymentRaw=String(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||o.paymentName||"").trim();
-  const payment=/(cod|cash on delivery|pay on delivery)/i.test(paymentRaw)?"Cash on Delivery (COD)":/(prepaid|online|upi|razorpay|phonepe|paytm|google pay|gpay|card|net banking)/i.test(paymentRaw)?(paymentRaw.match(/razorpay|phonepe|paytm|google pay|gpay|upi|card|net banking/i)?.[0]||"Prepaid")+" (Prepaid)":paymentRaw||"Not specified";
+  // Prefer the immutable order total saved at checkout; seller's legacy `total` is only its item subtotal.
+  const totalCandidate=o.grandTotal??o.totalAmount??o.orderTotal??o.totalWithDelivery??o.price;
+  const grandTotal=Number.isFinite(Number(totalCandidate))&&totalCandidate!==undefined&&totalCandidate!==null?Number(totalCandidate):productSubtotal+Number(o.deliveryFee??o.deliveryCharges??o.shippingCharge??0);
+  // Use the saved charge for this order; derive it from its saved total only when the charge field is absent.
+  const savedDelivery=o.deliveryFee??o.deliveryCharges??o.shippingCharge;
+  const deliveryFee=savedDelivery!==undefined&&savedDelivery!==null&&savedDelivery!==""?Number(savedDelivery):Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
+  const paymentRaw=String(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||o.paymentName||o.selectedPaymentMethod||"").trim();
+  const payment=/(cod|cash on delivery|pay on delivery)/i.test(paymentRaw)?"Cash on Delivery (COD)":/(prepaid|online|upi|razorpay|phonepe|paytm|google pay|gpay|card|net banking)/i.test(paymentRaw)?(paymentRaw.match(/razorpay|phonepe|paytm|google pay|gpay|upi|card|net banking/i)?.[0]||"Prepaid")+" (Prepaid)":paymentRaw||"Payment method unavailable";
   const qr="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data="+encodeURIComponent(String(id));
   const date=new Date(o.createdAt||Date.now()).toLocaleString("en-IN");
   const sellerName=(sellerProfile&&sellerProfile.shopName)||"ModeLuxe Mart";
