@@ -249,8 +249,8 @@ const firebaseConfig={
  appId:"1:467862693441:web:49998f19ec7bb87ac5c8c0",
  measurementId:"G-HZEKJT5YZX"
 };
-if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-const auth=firebase.auth(),db=firebase.database();
+const panelFirebaseApp=firebase.apps.find(app=>app.name==="modeluxe-seller-panel")||firebase.initializeApp(firebaseConfig,"modeluxe-seller-panel");
+const auth=panelFirebaseApp.auth(),db=panelFirebaseApp.database();
 const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
 async function uploadImageToR2(file){
   if(!currentUser)throw new Error("Pehle seller login karein.");
