@@ -980,9 +980,17 @@ $("orderForm").addEventListener("submit",async e=>{
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
     address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
     pin,payment:$("payment").value,items:cart.map(x=>({...x})),
-    subtotal:getCartSubtotal(),deliveryFee:getDeliveryFee(getCartSubtotal()),total:getCartSubtotal()+getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
+    subtotal:getCartSubtotal(),productSubtotal:getCartSubtotal(),
+    // Freeze the delivery charge at checkout. Later Admin free-delivery/charge changes
+    // must affect only NEW orders, never this already-created order.
+    deliveryFee:getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
     createdAt:new Date().toISOString(),status:"Order Placed",paymentStatus:$("payment").value==="COD"?"Pending":"Payment Pending"
   };
+  order.deliveryCharges=Number(order.deliveryFee||0);
+  order.total= Math.round((Number(order.productSubtotal||0)+Number(order.deliveryFee||0))*100)/100;
+  order.grandTotal=order.total;
+  order.totalAmount=order.total;
+  order.billVersion=2;
   if(order.payment==="RAZORPAY"){await startRazorpayPayment(order);return}
   try{
     await saveOrderToFirebase(order,"Cash on Delivery","Pending");
@@ -1252,6 +1260,9 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
   // so it remains dynamic per order and is never hard-coded.
   const grandTotal=Number(order.total??(productSubtotal+Number(order.deliveryFee||0)));
   const deliveryFee=Math.max(0,Math.round((grandTotal-productSubtotal)*100)/100);
+  if(!Number.isFinite(productSubtotal)||!Number.isFinite(grandTotal)||grandTotal<productSubtotal){
+    throw new Error("Bill calculation invalid: Product Cost aur Grand Total dobara check karein.");
+  }
   const firebaseOrder={
     id:order.id,
     customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
