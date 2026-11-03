@@ -609,7 +609,7 @@ window.mlmVolatileStore = (() => {
 <span id="firebaseConnectionStatus" class="firebase-connection-status">Connecting to store…</span>
 © <span id="year"></span> Vaishu ModeLuxe Mart · Customer Store</footer>
 <div aria-labelledby="orderSuccessTitle" aria-modal="true" class="order-success-overlay hidden" id="orderSuccessOverlay" role="dialog">
-<div class="order-success-card"><div class="order-success-check">✅</div><h2 id="orderSuccessTitle">ऑर्डर प्लेस हो गया!</h2><p>आपका ऑर्डर सफलतापूर्वक दर्ज हो गया है।</p><button onclick="closeOrderSuccess()" type="button">ठीक है</button></div>
+<div class="order-success-card"><div class="order-success-check">✅</div><h2 id="orderSuccessTitle">Order Placed!</h2><p>Your order has been placed successfully.</p><button onclick="closeOrderSuccess()" type="button">Continue</button></div>
 </div>
 <div aria-labelledby="productDetailName" aria-modal="true" class="product-detail-overlay hidden" id="productDetailOverlay" onclick="if(event.target===this)closeProductDetails()" role="dialog">
 <div class="product-detail-card">
@@ -959,12 +959,12 @@ $("orderForm").addEventListener("submit",async e=>{
   if(!activeUserPhone){showToast("Please log in with your mobile number before placing an order.");showSection("account");return;}
   if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
   const pin=$("customerPin").value.trim();
-  if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';return;}
+  if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">Please enter a valid 6-digit PIN Code.</div>';return;}
   const hasLocalDeliveryItems=cart.some(item=>modeluxeIsLocalDeliveryCategory(item.category));
   if(hasLocalDeliveryItems){
     const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
-    if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">आपके Cart में Fast Food, Grocery, Fruits या Vegetables हैं। इनकी delivery के लिए “My Current Location” या “Choose on Map” से location चुनना अनिवार्य है। बाकी categories पर All India delivery है।</div>';return;}
-    if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">आपका address 10 KM local delivery area से बाहर है ('+areaCheck.distanceKm.toFixed(2)+' KM)। Fast Food, Grocery, Fruits और Vegetables का order यहाँ स्वीकार नहीं होगा। बाकी categories पर All India delivery उपलब्ध है।</div>';return;}
+    if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">Please select your delivery location using “My Current Location” or “Choose on Map” for Fast Food, Grocery, Fruits or Vegetables. Other categories support All-India delivery.</div>';return;}
+    if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">Your address is outside the 10 KM local delivery area ('+areaCheck.distanceKm.toFixed(2)+' KM). Fast Food, Grocery, Fruits and Vegetables cannot be delivered here. Other categories support All-India delivery.</div>';return;}
   }
   const order={
     id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
@@ -980,7 +980,7 @@ $("orderForm").addEventListener("submit",async e=>{
     $("orderMsg").innerHTML='';
     e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
   }catch(err){
-    $("orderMsg").innerHTML='<div class="notice error">ऑर्डर पूरा नहीं हो पाया। कृपया दोबारा कोशिश करें। '+esc(err.message||"")+'</div>';
+    $("orderMsg").innerHTML='<div class="notice error">We could not place your order. Please try again. '+esc(err.message||"")+'</div>';
   }
 });
 
@@ -1243,7 +1243,7 @@ const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.worke
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
-  if(!db) throw new Error("Firebase SDK load नहीं हुआ");
+  if(!db) throw new Error("Firebase SDK did not load");
   const firebaseOrder={
     id:order.id,
     customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
@@ -1284,7 +1284,14 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
       paymentMethod:paymentMethod,payment:paymentMethod,paymentStatus:paymentStatus,
       status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()
     };
-  });if(Object.keys(sellerUpdates).length)await db.ref().update(sellerUpdates);
+  });
+  // Customer order creation is successful once /orders/{id} is written.
+  // Seller-private fan-out may be denied by Firebase Rules for customer sessions;
+  // do not report the customer order as failed or suppress its success popup.
+  if(Object.keys(sellerUpdates).length){
+    try{await db.ref().update(sellerUpdates);}
+    catch(sellerSyncError){console.warn("Order saved, but seller order fan-out needs trusted server/Admin sync:",sellerSyncError&&sellerSyncError.message);}
+  }
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
   order.razorpayPaymentId=paymentId;
@@ -1293,21 +1300,21 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
 
 function startRazorpayPayment(order){
   if(!RAZORPAY_KEY_ID||RAZORPAY_KEY_ID.includes("REPLACE_WITH")){
-    $("orderMsg").innerHTML='<div class="notice error">Razorpay Live Key ID सेट नहीं है।</div>';return Promise.resolve();
+    $("orderMsg").innerHTML='<div class="notice error">Razorpay Live Key ID is not configured.</div>';return Promise.resolve();
   }
   if(!RAZORPAY_CREATE_ORDER_URL||!RAZORPAY_VERIFY_PAYMENT_URL){
-    $("orderMsg").innerHTML='<div class="notice error">Secure Razorpay backend endpoints सेट नहीं हैं।</div>';return Promise.resolve();
+    $("orderMsg").innerHTML='<div class="notice error">Secure Razorpay backend endpoints are not configured.</div>';return Promise.resolve();
   }
   if(typeof Razorpay==="undefined"){
-    $("orderMsg").innerHTML='<div class="notice error">Razorpay Checkout लोड नहीं हुआ। इंटरनेट कनेक्शन Check।</div>';return Promise.resolve();
+    $("orderMsg").innerHTML='<div class="notice error">Razorpay Checkout did not load. Please check your internet connection.</div>';return Promise.resolve();
   }
-  $("orderMsg").innerHTML='<div class="notice">Secure payment तैयार किया जा रहा है…</div>';
+  $("orderMsg").innerHTML='<div class="notice">Preparing secure payment…</div>';
   return fetch(RAZORPAY_CREATE_ORDER_URL,{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({amount:Math.round(Number(order.total)*100),currency:"INR",receipt:"mlm_"+order.id})
   }).then(async response=>{
     const serverOrder=await response.json().catch(()=>({}));
-    if(!response.ok||!serverOrder.id)throw new Error(serverOrder.error||"Payment order नहीं बन पाया।");
+    if(!response.ok||!serverOrder.id)throw new Error(serverOrder.error||"Could not create the payment order.");
     return new Promise(resolve=>{
       const options={
         key:RAZORPAY_KEY_ID,
@@ -1355,16 +1362,16 @@ function startRazorpayPayment(order){
           }
           resolve();
         },
-        modal:{ondismiss:function(){ $("orderMsg").innerHTML='<div class="notice">भुगतान विंडो बंद हुई। ऑर्डर अभी confirm नहीं हुआ है।</div>';resolve();}}
+        modal:{ondismiss:function(){ $("orderMsg").innerHTML='<div class="notice">Payment window was closed. The order has not been confirmed.</div>';resolve();}}
       };
       const rzp=new Razorpay(options);
       rzp.on("payment.failed",function(){
-        $("orderMsg").innerHTML='<div class="notice error">भुगतान असफल हुआ। कृपया दोबारा कोशिश करें।</div>';resolve();
+        $("orderMsg").innerHTML='<div class="notice error">Payment failed. Please try again.</div>';resolve();
       });
       rzp.open();
     });
   }).catch(err=>{
-    $("orderMsg").innerHTML='<div class="notice error">ऑनलाइन भुगतान शुरू नहीं हो पाया: '+esc(err.message||"")+'</div>';
+    $("orderMsg").innerHTML='<div class="notice error">Could not start online payment: '+esc(err.message||"")+'</div>';
   });
 }
 
@@ -1373,7 +1380,7 @@ async function retryPendingPaidOrder(){
   let pending;
   try{pending=JSON.parse(mlmVolatileStore.getItem("mlm_pending_paid_order")||"null");}catch(e){pending=null;}
   if(!pending||!pending.order||!pending.response){
-    $("orderMsg").innerHTML='<div class="notice error">कोई pending payment order इस device पर नहीं मिला। Payment ID से सहायता लें; दोबारा भुगतान न करें।</div>';
+    $("orderMsg").innerHTML='<div class="notice error">No pending payment order was found on this device. Contact support with your Payment ID. Do not pay again.</div>';
     return;
   }
   const order=pending.order,response=pending.response;
@@ -1394,7 +1401,7 @@ async function retryPendingPaidOrder(){
     }catch(e){}
     $("orderMsg").innerHTML='<div class="notice success">Order saved and placed. Payment verification is still pending. Do not pay again.</div>';
   }catch(err){
-    $("orderMsg").innerHTML='<div class="notice error">Order अभी save नहीं हो पाया। इंटरनेट/Firebase permission जाँचकर Retry Save Order दबाएँ। Payment ID: '+esc((pending.response&&pending.response.razorpay_payment_id)||"")+'<br><button type="button" onclick="retryPendingPaidOrder()">Retry Save Order</button></div>';
+    $("orderMsg").innerHTML='<div class="notice error">The order could not be saved yet. Check your internet connection and Firebase permissions, then select Retry Save Order. Payment ID: '+esc((pending.response&&pending.response.razorpay_payment_id)||"")+'<br><button type="button" onclick="retryPendingPaidOrder()">Retry Save Order</button></div>';
   }
 }
 
