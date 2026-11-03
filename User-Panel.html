@@ -1024,6 +1024,7 @@ function startUserProductsListener(){
 }
 let pendingOtpRequestId=null, pendingOtpPhone=null;
 let userOrdersListener=null;
+let userOrdersQuery=null;
 let firebaseOrdersForUser=[];
 
 function stopUserOrdersListener(){
@@ -1069,6 +1070,8 @@ function startUserOrdersListener(phone){
   stopUserOrdersListener();
   const digits=String(phone||"").replace(/\D/g,"");
   if(!db || !digits)return;
+  const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : "";
+  if(!orderUid){console.warn("User order listener waiting for Firebase authentication.");return;}
 
   userOrdersListener=snapshot=>{
     const remote=[];
@@ -1107,7 +1110,7 @@ function startUserOrdersListener(phone){
     console.error("User order status live sync failed:",error);
     const list=$("myOrdersList");
     if(list && activeUserPhone===digits){
-      list.insertAdjacentHTML("afterbegin",'<div class="notice error">Order live sync नहीं हो पाया। Firebase Database Rules में इस user को orders पढ़ने की अनुमति जाँचें।</div>');
+      list.insertAdjacentHTML("afterbegin",'<div class="notice error">Order live sync failed. Please check Firebase Database Rules for permission to read this user’s orders.</div>');
     }
   });
 }
@@ -1151,7 +1154,7 @@ function showAuthState(user){
     const phone="+91"+digits;
     switchUserData(digits);
     status.className="notice success";
-    status.textContent=(mlmVolatileStore.getItem("mlm_language")==="en"?"Logged in: ":"लॉगिन है: ")+phone;
+    status.textContent="Logged in: "+phone;
     fields.classList.add("hidden");logout.classList.remove("hidden");
     const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
     p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
@@ -1159,30 +1162,43 @@ function showAuthState(user){
   }else{
     switchUserData("");
     status.className="notice";
-    status.textContent=mlmVolatileStore.getItem("mlm_language")==="en"?"Not logged in. Request an SMS OTP to your mobile.":"लॉगिन नहीं है। अपने मोबाइल पर SMS OTP मँगाएँ।";
+    status.textContent="Not logged in. Request an SMS OTP to your mobile.";
     fields.classList.remove("hidden");logout.classList.add("hidden");
     $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
     renderProfileAvatar({name:"",avatar:""});
     if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';
   }
 }
-if(auth){auth.onAuthStateChanged(user=>{if(user){showAuthState(user);startCartCloudSync(user);}else{stopCartCloudSync();showAuthState(null);}})}
+let authReady=Promise.resolve();
+if(auth && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence){
+  authReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error=>{
+    console.error("Firebase LOCAL persistence could not be enabled:",error);
+    return false;
+  });
+}
+authReady.then(()=>{
+  if(auth)auth.onAuthStateChanged(user=>{
+    if(user){showAuthState(user);startCartCloudSync(user);}
+    else{stopCartCloudSync();showAuthState(null);}
+  });
+});
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
-  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("सही 10 अंकों का भारतीय Mobile number डालें।",true);return}
+  if(!/^[6-9]\d{9}$/.test(phone)){authMessage("Enter a valid 10-digit Indian mobile number.",true);return}
   try{
-    $("sendOtpBtn").disabled=true;authMessage("SMS OTP भेजा जा रहा है…");
+    $("sendOtpBtn").disabled=true;authMessage("Sending SMS OTP…");
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
       method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({action:"send",phoneNumber:"+91"+phone})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||!result.requestId)throw new Error(result.message||"OTP भेजना असफल रहा।");
+    if(!response.ok||result.success!==true||!result.requestId)throw new Error("OTP request was unsuccessful.");
     pendingOtpRequestId=result.requestId;pendingOtpPhone=phone;
     $("otpVerifyArea").classList.remove("hidden");
-    authMessage("OTP SMS से भेज दिया गया है। SMS में आया कोड डालें।");
+    authMessage("OTP sent by SMS. Enter the code you received.");
   }catch(err){
-    authMessage("OTP नहीं भेजा जा सका: "+(err.message||"त्रुटि")+". Worker और StartMessaging सेटिंग Check।",true);
+    console.error("OTP send failed:",err);
+    authMessage("Could not send OTP. Please check the OTP Worker and SMS provider settings.",true);
   }finally{$("sendOtpBtn").disabled=false}
 }
 async function verifyLoginOTP(){
@@ -1197,17 +1213,21 @@ async function verifyLoginOTP(){
       body:JSON.stringify({action:"verify",requestId:pendingOtpRequestId,otpCode:code})
     });
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||result.verified!==true)throw new Error(result.message||"OTP गलत है या समाप्त हो गया है।");
+    if(!response.ok||result.success!==true||result.verified!==true)throw new Error("OTP verification was unsuccessful.");
     const customToken=result.customToken||(result.firebase&&result.firebase.customToken);
-    if(!customToken)throw new Error("OTP Worker ne Firebase customToken nahi diya. Matching OTP Worker deploy hona zaroori hai.");
-    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Auth SDK उपलब्ध नहीं है।");
+    if(!customToken)throw new Error("The OTP Worker did not return a Firebase custom token. Deploy the matching OTP Worker.");
+    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Authentication SDK is unavailable.");
+    await authReady;
     const credential=await auth.signInWithCustomToken(customToken);
-    if(!credential||!credential.user)throw new Error("Firebase login complete nahi hua.");
+    if(!credential||!credential.user)throw new Error("Firebase sign-in could not be completed.");
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
-    authMessage("Mobile OTP verified. Firebase login successful.");
+    authMessage("Mobile OTP verified. You are now signed in.");
     showAuthState(credential.user);startCartCloudSync(credential.user);
-  }catch(err){authMessage("OTP सत्यापित नहीं हुआ: "+(err.message||"त्रुटि"),true)}
+  }catch(err){
+    console.error("OTP verification failed:",err);
+    authMessage("OTP verification failed. Please check the code and try again.",true);
+  }
   finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
