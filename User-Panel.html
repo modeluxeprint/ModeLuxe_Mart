@@ -1035,10 +1035,16 @@ function startUserProductsListener(){
 let pendingOtpRequestId=null, pendingOtpPhone=null;
 let userOrdersListener=null;
 let userOrdersQuery=null;
+let userOrdersQueries=[];
 let firebaseOrdersForUser=[];
 
 function stopUserOrdersListener(){
-  if(userOrdersQuery && userOrdersListener) userOrdersQuery.off("value",userOrdersListener);
+  if(userOrdersQueries.length){
+    userOrdersQueries.forEach(q=>{try{q.off("value");}catch(e){}});
+  }else if(userOrdersQuery && userOrdersListener){
+    userOrdersQuery.off("value",userOrdersListener);
+  }
+  userOrdersQueries=[];
   userOrdersQuery=null;userOrdersListener=null;
   firebaseOrdersForUser=[];
 }
@@ -1080,51 +1086,65 @@ function startUserOrdersListener(phone){
   stopUserOrdersListener();
   const digits=String(phone||"").replace(/\D/g,"");
   if(!db || !digits)return;
-  const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : "";
-  if(!orderUid){console.warn("User order listener waiting for Firebase authentication.");return;}
 
-  userOrdersListener=snapshot=>{
-    const remote=[];
-    const billingRepairs=[];
-    snapshot.forEach(child=>{
-      const raw=child.val()||{};
-      const orderPhone=String(raw.customerPhone||raw.phone||"").replace(/\D/g,"");
-      if(orderPhone!==digits)return;
-      const id=raw.id??child.key;
-      billingRepairs.push(syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message)));
-      remote.push({
-        id,
-        name:raw.customerName||raw.name||"",
-        phone:raw.customerPhone||raw.phone||digits,
-        address:raw.shippingAddress||raw.address||"",
-        pin:raw.pin||raw.shippingPin||"",
-        latitude:raw.lat||raw.latitude||"",
-        longitude:raw.lng||raw.longitude||"",
-        items:Array.isArray(raw.items)?raw.items:[],
-        total:Number(raw.totalAmount??raw.price??raw.total??0),
-        date:raw.dateTime||raw.date||raw.createdAt||"",
-        createdAt:raw.createdAt||"",
-        status:String(raw.status||"Order Placed"),
-        updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
-        payment:raw.paymentMethod||raw.payment||"",
-        paymentStatus:raw.paymentStatus||"Pending",
-        razorpayPaymentId:raw.razorpayPaymentId||""
-      });
-    });
-    firebaseOrdersForUser=remote;
+  // Merge orders by verified mobile number so Browser and Android WebView
+  // show the same history even if their Firebase UID differs.
+  const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : "";
+  const specs=[...new Set([digits,"+91"+digits,"91"+digits])].map(value=>({
+    field:"customerPhone",value
+  }));
+  if(orderUid)specs.push({field:"customerUid",value:orderUid});
+
+  const mergedRemote=new Map();
+  const renderMerged=()=>{
+    firebaseOrdersForUser=Array.from(mergedRemote.values());
     mergeAndRenderUserOrders();
   };
 
-  userOrdersQuery=db.ref("orders").orderByChild("customerUid").equalTo(orderUid);
-  userOrdersQuery.on("value",userOrdersListener,error=>{
-    console.error("User order status live sync failed:",error);
-    const list=$("myOrdersList");
-    if(list && activeUserPhone===digits){
-      list.insertAdjacentHTML("afterbegin",'<div class="notice error">Order live sync failed. Please check Firebase Database Rules for permission to read this user’s orders.</div>');
-    }
+  specs.forEach(spec=>{
+    const query=db.ref("orders").orderByChild(spec.field).equalTo(spec.value);
+    userOrdersQueries.push(query);
+    query.on("value",snapshot=>{
+      snapshot.forEach(child=>{
+        const raw=child.val()||{};
+        const orderPhone=String(raw.customerPhone||raw.phone||"").replace(/\D/g,"");
+        if(orderPhone!==digits)return;
+        const id=raw.id??child.key;
+        const key=String(id);
+        const old=mergedRemote.get(key)||{};
+        mergedRemote.set(key,{
+          ...old,
+          id,
+          name:raw.customerName||raw.name||old.name||"",
+          phone:raw.customerPhone||raw.phone||digits,
+          address:raw.shippingAddress||raw.address||old.address||"",
+          pin:raw.pin||raw.shippingPin||old.pin||"",
+          latitude:raw.lat||raw.latitude||old.latitude||"",
+          longitude:raw.lng||raw.longitude||old.longitude||"",
+          items:Array.isArray(raw.items)?raw.items:(old.items||[]),
+          total:Number(raw.totalAmount??raw.price??raw.total??old.total??0),
+          date:raw.dateTime||raw.date||raw.createdAt||old.date||"",
+          createdAt:raw.createdAt||old.createdAt||"",
+          status:String(raw.status||old.status||"Order Placed"),
+          updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||old.updatedAt||"",
+          payment:raw.paymentMethod||raw.payment||old.payment||"",
+          paymentStatus:raw.paymentStatus||old.paymentStatus||"Pending",
+          razorpayPaymentId:raw.razorpayPaymentId||old.razorpayPaymentId||""
+        });
+        syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message));
+      });
+      renderMerged();
+    },error=>{
+      console.error("User order sync failed for",spec.field,error);
+      const list=$("myOrdersList");
+      if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
+        list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync permission/index issue. Check Firebase Rules for authenticated customer reads and .indexOn for customerPhone/customerUid.</div>');
+      }
+    });
   });
+  userOrdersQuery=userOrdersQueries[0]||null;
+  userOrdersListener=null;
 }
-
 function mergeAndRenderUserOrders(){
   if(!activeUserPhone)return;
   const merged=new Map();
