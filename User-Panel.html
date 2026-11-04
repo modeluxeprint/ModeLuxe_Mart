@@ -1084,16 +1084,20 @@ async function syncSellerBillingSnapshot(raw,orderId){
 
 function startUserOrdersListener(phone){
   stopUserOrdersListener();
-  const digits=String(phone||"").replace(/\D/g,"");
+  const digits=String(phone||"").replace(/\D/g,"").slice(-10);
   if(!db || !digits)return;
 
-  // Merge orders by verified mobile number so Browser and Android WebView
-  // show the same history even if their Firebase UID differs.
   const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : "";
-  const specs=[...new Set([digits,"+91"+digits,"91"+digits])].map(value=>({
-    field:"customerPhone",value
-  }));
-  if(orderUid)specs.push({field:"customerUid",value:orderUid});
+  const specs=[];
+  const addSpec=(field,value)=>{
+    if(value && !specs.some(x=>x.field===field&&x.value===value))specs.push({field,value});
+  };
+
+  // Canonical phone field supports new orders from both Browser and Android WebView.
+  addSpec("customerPhoneDigits",digits);
+  // Legacy phone formats and UID query preserve visibility of older orders.
+  [digits,"+91"+digits,"91"+digits].forEach(v=>addSpec("customerPhone",v));
+  if(orderUid)addSpec("customerUid",orderUid);
 
   const mergedRemote=new Map();
   const renderMerged=()=>{
@@ -1107,11 +1111,12 @@ function startUserOrdersListener(phone){
     query.on("value",snapshot=>{
       snapshot.forEach(child=>{
         const raw=child.val()||{};
-        const orderPhone=String(raw.customerPhone||raw.phone||"").replace(/\D/g,"");
+        const orderPhone=String(raw.customerPhoneDigits||raw.customerPhone||raw.phone||"").replace(/\D/g,"").slice(-10);
         if(orderPhone!==digits)return;
         const id=raw.id??child.key;
         const key=String(id);
         const old=mergedRemote.get(key)||{};
+        const remoteItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
         mergedRemote.set(key,{
           ...old,
           id,
@@ -1121,7 +1126,7 @@ function startUserOrdersListener(phone){
           pin:raw.pin||raw.shippingPin||old.pin||"",
           latitude:raw.lat||raw.latitude||old.latitude||"",
           longitude:raw.lng||raw.longitude||old.longitude||"",
-          items:Array.isArray(raw.items)?raw.items:(old.items||[]),
+          items:remoteItems.length?remoteItems:(old.items||[]),
           total:Number(raw.totalAmount??raw.price??raw.total??old.total??0),
           date:raw.dateTime||raw.date||raw.createdAt||old.date||"",
           createdAt:raw.createdAt||old.createdAt||"",
@@ -1138,7 +1143,7 @@ function startUserOrdersListener(phone){
       console.error("User order sync failed for",spec.field,error);
       const list=$("myOrdersList");
       if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
-        list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync permission/index issue. Check Firebase Rules for authenticated customer reads and .indexOn for customerPhone/customerUid.</div>');
+        list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync permission/index issue. Firebase Rules must allow this customer to read their own orders and index the queried fields.</div>');
       }
     });
   });
@@ -1300,6 +1305,7 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     razorpayPaymentId:paymentId,
     customerName:order.name||"",
     customerPhone:order.phone||"",
+    customerPhoneDigits:String(order.phone||"").replace(/\D/g,"").slice(-10),
     shippingAddress:order.address||"",
     shippingHouseNo:"",
     shippingStreetNo:"",
