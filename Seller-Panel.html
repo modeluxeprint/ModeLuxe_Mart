@@ -722,7 +722,9 @@ function renderSellerOrders(){
   const root=sellerOrderRootRows[id]||{},o={...base,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
   const items=Array.isArray(o.items)?o.items:Object.values(o.items||{});
   const firstItem=items[0]||{};
-  const productImage=firstItem.imageUrl||firstItem.image||firstItem.img||firstItem.photo||firstItem.productImage||"";
+  const firstProductId=String(firstItem.id||firstItem.productId||firstItem.productID||firstItem.sku||"");
+  const matchingSellerProduct=firstProductId?(myProducts[firstProductId]||{}):{};
+  const productImage=firstItem.imageUrl||firstItem.imageURL||firstItem.image||firstItem.img||firstItem.photo||firstItem.productImage||firstItem.photoUrl||firstItem.imageData||matchingSellerProduct.imageUrl||matchingSellerProduct.image||matchingSellerProduct.img||"";
   const status=String(base.status||o.status||"Order Placed");
   const canUpdate=!o.adminStatusLocked&&!['Delivered','Cancelled','Refunded'].includes(String(root.status||status));
   const processingDone=['Processing','Shipped'].includes(status);
