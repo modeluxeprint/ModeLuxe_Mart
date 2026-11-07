@@ -464,6 +464,11 @@ window.mlmVolatileStore = (() => {
 .hero>button{display:inline-block!important;background:#ff9d00!important;color:#fff!important;visibility:visible!important;opacity:1!important;}
 </style>
 
+<style id="modeluxe-added-to-cart-state">
+button.cart-added{background:#0b8a55!important;color:#fff!important;border-color:#087447!important;}
+button.cart-added:disabled{opacity:1!important;}
+</style>
+
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
@@ -519,7 +524,7 @@ window.mlmVolatileStore = (() => {
 <button class="secondary" onclick="newDeliveryAddress()" style="width:auto;padding:8px 12px;font-size:.9rem" type="button">+ Add new address</button>
 </div>
 </div>
-<form class="formgrid" id="orderForm">
+<form class="formgrid" id="orderForm" novalidate>
 <div class="field" id="customerNameField"><label for="customerName">Full name</label><input autocomplete="name" id="customerName" required=""/></div>
 <div class="field" id="customerPhoneField"><label for="customerPhone">Mobile number</label><input id="customerPhone" inputmode="tel" maxlength="10" pattern="[0-9]{10}" placeholder="10 अंकों का नंबर" required=""/></div>
 <div class="field full" id="customerAddressField"><label for="customerAddress">Full delivery address</label><input autocomplete="street-address" id="customerAddress" placeholder="House number, street, locality" required=""/>
@@ -662,7 +667,7 @@ function startCartCloudSync(user){
     if(remote && Array.isArray(remote.items)){
       cart=remote.items.filter(x=>x && x.id!==undefined).map(x=>({
         id:String(x.id),name:String(x.name||""),price:Number(x.price||0),
-        image:String(x.image||""),sellerUid:String(x.sellerUid||""),
+        image:String(x.image||""),category:String(x.category||"Other"),sellerUid:String(x.sellerUid||""),
         seller:String(x.seller||""),qty:Math.max(1,Math.floor(Number(x.qty||1)))
       }));
       mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));
@@ -684,7 +689,7 @@ function writeCartCloudNow(){
   const payload={
     uid:cartCloudUid,items:cart.map(x=>({
       id:String(x.id),name:String(x.name||""),price:Number(x.price||0),
-      image:String(x.image||""),sellerUid:String(x.sellerUid||""),
+      image:String(x.image||""),category:String(x.category||"Other"),sellerUid:String(x.sellerUid||""),
       seller:String(x.seller||""),qty:Math.max(1,Math.floor(Number(x.qty||1)))
     })),
     itemCount:cart.reduce((n,x)=>n+Math.max(0,Number(x.qty||0)),0),
@@ -789,7 +794,7 @@ function showWishlistNotice(){showWishlist()}
 saveWishlist();
 function filterCategoryGroup(group){const choices={fashion:["Men's Wear","Women's Wear","Kids / Baby Wear","Jewellery"],beauty:["Cosmetics"],electronics:["Electronics"],home:["Home & Kitchen","Grocery"]};const found=(choices[group]||[]).find(c=>products.some(p=>String(p.category||"").toLowerCase()===c.toLowerCase()));if(found){setCategory(found);document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}else{activeCategory="All";categories();renderProducts();showToast("इस category में अभी कोई live product उपलब्ध नहीं है।");document.getElementById("products").scrollIntoView({behavior:"smooth",block:"start"});}}
 function handleProductImageError(img){img.onerror=null;img.style.display="none";const fallback=document.createElement("div");fallback.className="image-fallback";fallback.textContent="📦 Photo not available";img.insertAdjacentElement("afterend",fallback)}
-function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>{const unavailable=Number(p.stock||0)<=0||p.sellerPaused===true;const status=p.sellerPaused?"SHOP TEMPORARILY PAUSED":"OUT OF STOCK";return `<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div>${unavailable?`<div class="msg error" style="margin:8px 0;font-weight:800;text-align:center">${status}</div>`:""}<div class="actions"><button data-add-cart="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${mlmVolatileStore.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें"}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${mlmVolatileStore.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`}).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
+function renderProducts(){const q=$("search").value.trim().toLowerCase();const list=products.filter(p=>(!q&&wishlistOnly?wishlistIds.includes(String(p.id)):true)&&(q||activeCategory==="All"||p.category===activeCategory)&&String(p.name||"").toLowerCase().includes(q));$("listingTitle").textContent=q?"Search results for: "+$("search").value.trim():(activeCategory==="All"?"Trending Products":activeCategory);$("products").innerHTML=list.length?list.map(p=>{const unavailable=Number(p.stock||0)<=0||p.sellerPaused===true;const status=p.sellerPaused?"SHOP TEMPORARILY PAUSED":"OUT OF STOCK";return `<article class="product"><div class="product-image-wrap"><img src="${esc(p.image||"")}" alt="${esc(p.name)}" loading="lazy" onclick="openProductDetails('${esc(p.id)}')" onerror="handleProductImageError(this)"><button type="button" class="product-wishlist ${wishlistIds.includes(String(p.id))?"is-saved":""}" aria-label="Add to Wishlist" onclick="event.stopPropagation();toggleWishlist('${esc(p.id)}')">${wishlistIds.includes(String(p.id))?"♥":"♡"}</button></div><div class="pbody"><div class="pname" role="button" tabindex="0" onclick="openProductDetails('${esc(p.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProductDetails('${esc(p.id)}')}">${esc(p.name)}</div><div class="muted">${esc(p.category)}</div><div class="muted">${esc(p.quantity||"1")} ${esc(p.unit||"Piece")} · Stock: ${Number(p.stock||0)} ${esc(p.stockUnit||p.unit||"Piece")}</div><div class="price">₹${Number(p.price).toLocaleString("en-IN")}</div><div class="muted">⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ratings)</div>${unavailable?`<div class="msg error" style="margin:8px 0;font-weight:800;text-align:center">${status}</div>`:""}<div class="actions"><button data-add-cart="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${cart.some(x=>String(x.id)===String(p.id))?(mlmVolatileStore.getItem("mlm_language")==="en"?"✓ Added to Cart":"✓ कार्ट में जुड़ गया"):(mlmVolatileStore.getItem("mlm_language")==="en"?"Add to Cart":"कार्ट में जोड़ें")}</button><button class="secondary" data-buy-now="${esc(p.id)}" type="button" ${unavailable?"disabled":""}>${mlmVolatileStore.getItem("mlm_language")==="en"?"Buy Now":"खरीदें"}</button></div></div></article>`}).join(""):`<div class="empty" style="grid-column:1/-1">कोई प्रोडक्ट नहीं मिला।</div>`}
 function openProductDetails(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
  const en=mlmVolatileStore.getItem("mlm_language")==="en";
@@ -798,7 +803,7 @@ function openProductDetails(id){
  const description=p.description||p.details||p.productDescription||"";
  const seller=p.seller||p.sellerName||"";
  const content=$("productDetailContent");
- content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="muted" id="productDeliveryChargeNotice" style="margin:0 0 8px;color:var(--muted)">${en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${p.sellerPaused?`<div class="msg error">SHOP TEMPORARILY PAUSED</div>`:stock<=0?`<div class="msg error">OUT OF STOCK</div>`:""}${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" data-add-cart="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${en?"Add to Cart":"कार्ट में जोड़ें"}</button><button type="button" class="secondary" data-buy-now="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${en?"Buy Now":"अभी खरीदें"}</button></div>`;
+ content.innerHTML=`${image?`<img class="product-detail-image" src="${esc(image)}" alt="${esc(p.name)}" onerror="this.onerror=null;this.style.display='none'">`:`<div class="image-fallback" style="height:180px">📦 Photo not available</div>`}<div class="product-detail-title" id="productDetailName">${esc(p.name)}</div><div class="muted">${esc(p.category||"Other")}</div><div class="product-detail-price">₹${Number(p.price||0).toLocaleString("en-IN")}</div><div class="muted" id="productDeliveryChargeNotice" style="margin:0 0 8px;color:var(--muted)">${en?`Delivery charges: ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} on purchases below ₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")}.`:`₹${Number(deliverySettings.freeAbove??199).toLocaleString("en-IN")} से कम की खरीदारी पर ₹${Number(deliverySettings.charge??49).toLocaleString("en-IN")} डिलीवरी चार्ज।`}</div><div class="product-detail-info"><strong>${en?"Product quantity / size":"मात्रा / साइज़"}:</strong> ${esc(quantity)} ${esc(unit)}${size?` · ${en?"Size":"साइज़"}: ${esc(Array.isArray(size)?size.join(", "):size)}`:""}</div><div class="product-detail-info"><strong>${en?"Available stock":"उपलब्ध स्टॉक"}:</strong> ${stock} ${esc(stockUnit)}</div>${p.sellerPaused?`<div class="msg error">SHOP TEMPORARILY PAUSED</div>`:stock<=0?`<div class="msg error">OUT OF STOCK</div>`:""}${seller?`<div class="product-detail-info"><strong>${en?"Seller":"विक्रेता"}:</strong> ${esc(seller)}</div>`:""}<div class="product-detail-info"><strong>${en?"Rating":"रेटिंग"}:</strong> ⭐ ${getAverageRating(p.id)} (${getRatingCount(p.id)} ${en?"ratings":"रेटिंग"})</div>${description?`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong><div class="product-detail-description">${esc(description)}</div></div>`:`<div class="product-detail-info"><strong>${en?"Description":"विवरण"}:</strong> ${en?"No description provided.":"विवरण उपलब्ध नहीं है।"}</div>`}<div class="product-detail-actions"><button type="button" data-add-cart="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${cart.some(x=>String(x.id)===String(p.id))?(en?"✓ Added to Cart":"✓ कार्ट में जुड़ गया"):(en?"Add to Cart":"कार्ट में जोड़ें")}</button><button type="button" class="secondary" data-buy-now="${esc(p.id)}" data-close-details="true" ${stock<=0||p.sellerPaused?"disabled":""}>${en?"Buy Now":"अभी खरीदें"}</button></div>`;
  $("productDetailOverlay").classList.remove("hidden");document.body.style.overflow="hidden";
 }
 function closeProductDetails(){$("productDetailOverlay").classList.add("hidden");document.body.style.overflow=""}
@@ -839,8 +844,8 @@ function addCart(id){
   if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return false;}
   if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return false;}
   const item=cart.find(x=>String(x.id)===key);
-  if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";}
-  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
+  if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";item.category=item.category||p.category||"Other";}
+  else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",category:p.category||"Other",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
   save();renderCart();
   showToast("Product added to Cart");
   return true;
@@ -859,7 +864,7 @@ function buyNow(id){
   const previousCart = cart;
 
   cart = [{
-    id: String(p.id), name: p.name, price: Number(p.price || 0), image: p.image || "", sellerUid:p.sellerUid||"", seller:p.seller||"", qty: 1
+    id: String(p.id), name: p.name, price: Number(p.price || 0), image: p.image || "", category:p.category||"Other", sellerUid:p.sellerUid||"", seller:p.seller||"", qty: 1
   }];
 
   save();
@@ -888,11 +893,21 @@ document.addEventListener("click",function(event){
  }
 },true);
 
+function updateAddToCartButtonLabels(){
+  const en=mlmVolatileStore.getItem("mlm_language")==="en";
+  document.querySelectorAll("button[data-add-cart]").forEach(button=>{
+    const id=String(button.getAttribute("data-add-cart")||"");
+    const added=cart.some(item=>String(item.id)===id);
+    button.textContent=added?(en?"✓ Added to Cart":"✓ कार्ट में जुड़ गया"):(en?"Add to Cart":"कार्ट में जोड़ें");
+    button.classList.toggle("cart-added",added);
+    button.setAttribute("aria-label",added?(en?"Added to Cart":"कार्ट में जुड़ गया"):(en?"Add to Cart":"कार्ट में जोड़ें"));
+  });
+}
 function renderCart(){
   const totalCartQty=cart.reduce((n,x)=>n+Number(x.qty||0),0);const cartCountBadge=$("cartCount");if(cartCountBadge)cartCountBadge.textContent=totalCartQty;const topCartBadge=$("cartTopCount");if(topCartBadge)topCartBadge.textContent=totalCartQty;
   cart=cart.map(x=>({...x,image:x.image||(products.find(p=>p.id===x.id)||{}).image||""}));
   $("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cartitem"><img class="cartthumb" src="${esc(x.image||"")}" alt="${esc(x.name)}" onerror="this.style.visibility='hidden'"><div><strong>${esc(x.name)}</strong><div class="muted">₹${Number(x.price).toLocaleString("en-IN")} × ${x.qty}</div><strong style="display:block;margin-top:5px;color:var(--accent)">₹${(x.price*x.qty).toLocaleString("en-IN")}</strong></div><div class="qtybuttons"><button class="secondary" onclick="changeQty('${esc(x.id)}',-1)">−</button> <button class="secondary" onclick="changeQty('${esc(x.id)}',1)">+</button></div></div>`).join(""):`<div class="empty">${mlmVolatileStore.getItem("mlm_language")==="en"?"Your cart is empty.":"आपका कार्ट खाली है।"}</div>`;
-  save();const subtotal=getCartSubtotal(),fee=getDeliveryFee(subtotal),total=subtotal+fee;
+  save();updateAddToCartButtonLabels();const subtotal=getCartSubtotal(),fee=getDeliveryFee(subtotal),total=subtotal+fee;
   if($("cartSubtotal"))$("cartSubtotal").textContent="₹"+subtotal.toLocaleString("en-IN");
   if($("cartDeliveryFee"))$("cartDeliveryFee").textContent="₹"+fee.toLocaleString("en-IN");
   $("cartTotal").textContent="₹"+total.toLocaleString("en-IN");
@@ -1012,31 +1027,76 @@ $("search").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault(
 
 $("orderForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  if(!activeUserPhone){showToast("Please log in with your mobile number before placing an order.");showSection("account");return;}
-  if(!cart.length){$("orderMsg").innerHTML='<div class="notice error">Add a product to your cart first.</div>';return}
-  const pin=$("customerPin").value.trim();
-  if(!/^[0-9]{6}$/.test(pin)){$("orderMsg").innerHTML='<div class="notice error">Please enter a valid 6-digit PIN Code.</div>';return;}
-  const hasLocalDeliveryItems=cart.some(item=>modeluxeIsLocalDeliveryCategory(item.category));
-  if(hasLocalDeliveryItems){
-    const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
-    if(areaCheck.reason==="location_required"){$("orderMsg").innerHTML='<div class="notice error">Please select your delivery location using “My Current Location” or “Choose on Map” for Fast Food, Grocery, Fruits or Vegetables. Other categories support All-India delivery.</div>';return;}
-    if(!areaCheck.allowed){$("orderMsg").innerHTML='<div class="notice error">Your address is outside the 10 KM local delivery area ('+areaCheck.distanceKm.toFixed(2)+' KM). Fast Food, Grocery, Fruits and Vegetables cannot be delivered here. Other categories support All-India delivery.</div>';return;}
-  }
-  const order={
-    id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
-    address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
-    pin,payment:$("payment").value,items:cart.map(x=>({...x})),
-    subtotal:getCartSubtotal(),deliveryFee:getDeliveryFee(getCartSubtotal()),total:getCartSubtotal()+getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
-    createdAt:new Date().toISOString(),status:"Order Placed",paymentStatus:$("payment").value==="COD"?"Pending":"Payment Pending"
-  };
-  if(order.payment==="RAZORPAY"){await startRazorpayPayment(order);return}
+  const form=e.currentTarget;
+  const submitButton=form.querySelector('button[type="submit"]');
+  const originalButtonText=submitButton?submitButton.textContent:"Place Order";
+  const message=$("orderMsg");
+  if(submitButton){submitButton.disabled=true;submitButton.textContent="Please wait…";}
+  if(message)message.innerHTML='<div class="notice">Checking login and order details…</div>';
   try{
+    // Wait until Firebase has restored the browser's saved login session.
+    if(typeof authReady!=="undefined")await authReady;
+    if(typeof authStateReady!=="undefined")await authStateReady;
+    if(auth&&auth.currentUser){
+      const uid=String(auth.currentUser.uid||"");
+      const match=uid.match(/^phone_91([6-9]\d{9})$/);
+      if(match && activeUserPhone!==match[1])showAuthState(auth.currentUser);
+    }
+    if(!activeUserPhone){
+      if(message)message.innerHTML='<div class="notice error">Order करने से पहले Account में अपने मोबाइल नंबर से OTP Login करें।</div>';
+      showSection("account");
+      return;
+    }
+    if(!form.checkValidity()){
+      form.reportValidity();
+      if(message)message.innerHTML='<div class="notice error">कृपया नाम, मोबाइल नंबर, पूरा पता और सही PIN Code भरें।</div>';
+      return;
+    }
+    if(!cart.length){
+      if(message)message.innerHTML='<div class="notice error">पहले कम-से-कम एक प्रोडक्ट Cart में जोड़ें।</div>';
+      showSection("cart");
+      return;
+    }
+    const pin=$("customerPin").value.trim();
+    if(!/^[0-9]{6}$/.test(pin)){
+      if(message)message.innerHTML='<div class="notice error">कृपया सही 6 अंकों का PIN Code डालें।</div>';
+      $("customerPin").focus();return;
+    }
+    const hasLocalDeliveryItems=cart.some(item=>modeluxeIsLocalDeliveryCategory(item.category));
+    if(hasLocalDeliveryItems){
+      const areaCheck=modeluxeCheckDeliveryRadius($("deliveryLat").value,$("deliveryLng").value);
+      if(areaCheck.reason==="location_required"){
+        if(message)message.innerHTML='<div class="notice error">Fast Food, Grocery, Fruits या Vegetables के लिए पहले My Current Location या Choose on Map से लोकेशन चुनें।</div>';
+        return;
+      }
+      if(!areaCheck.allowed){
+        if(message)message.innerHTML='<div class="notice error">यह पता 10 KM local delivery area से बाहर है ('+areaCheck.distanceKm.toFixed(2)+' KM)।</div>';
+        return;
+      }
+    }
+    const order={
+      id:Date.now(),name:$("customerName").value.trim(),phone:$("customerPhone").value.trim(),
+      address:$("customerAddress").value.trim(),latitude:$("deliveryLat").value||"",longitude:$("deliveryLng").value||"",
+      pin,payment:$("payment").value,items:cart.map(x=>({...x})),
+      subtotal:getCartSubtotal(),deliveryFee:getDeliveryFee(getCartSubtotal()),total:getCartSubtotal()+getDeliveryFee(getCartSubtotal()),date:new Date().toLocaleString("hi-IN"),
+      createdAt:new Date().toISOString(),status:"Order Placed",paymentStatus:$("payment").value==="COD"?"Pending":"Payment Pending"
+    };
+    if(order.payment==="RAZORPAY"){
+      if(message)message.innerHTML='<div class="notice">Secure payment window is opening…</div>';
+      await startRazorpayPayment(order);
+      return;
+    }
+    if(message)message.innerHTML='<div class="notice">आपका ऑर्डर सेव हो रहा है…</div>';
     await saveOrderToFirebase(order,"Cash on Delivery","Pending");
     orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
-    $("orderMsg").innerHTML='';
-    e.target.reset();$("payment").value="COD";renderSavedDeliveryAddress();showSection("store");showOrderSuccess();
+    message.innerHTML='<div class="notice success">Order Placed Successfully! आपका ऑर्डर दर्ज हो गया है।</div>';
+    form.reset();$("payment").value="COD";renderSavedDeliveryAddress();
+    showSection("store");showOrderSuccess();
   }catch(err){
-    $("orderMsg").innerHTML='<div class="notice error">We could not place your order. Please try again. '+esc(err.message||"")+'</div>';
+    console.error("ModeLuxe order placement failed:",err);
+    if(message)message.innerHTML='<div class="notice error">ऑर्डर Place नहीं हुआ: '+esc(err&&err.message||"कृपया दोबारा कोशिश करें")+'</div>';
+  }finally{
+    if(submitButton){submitButton.disabled=false;submitButton.textContent=originalButtonText||"Place Order";}
   }
 });
 
@@ -1095,8 +1155,9 @@ function stopUserOrdersListener(){
   firebaseOrdersForUser=[];
 }
 
-// Seller billing snapshot repair is intentionally not run from the customer panel.
-// Customer sessions must not write to seller-private paths; trusted Admin/server sync handles that.
+// Copy the immutable billing snapshot into each seller's private order record.
+// This also repairs older sellerOrders entries when the customer opens My Orders.
+// Only billing/address fields are updated; seller status and courier fields remain untouched.
 async function syncSellerBillingSnapshot(raw,orderId){
   if(!db||!raw||!orderId)return;
   const allItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
@@ -1136,13 +1197,11 @@ function startUserOrdersListener(phone){
   // is constrained to customerUid === auth.uid. Phone-number queries are
   // intentionally not sent: they are rejected by the current secure Rules.
   const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? String(auth.currentUser.uid) : "";
-  const expectedCustomerUid="phone_91"+digits;
-  // Never query orders with an Admin UID or a different customer's UID.
-  if(!orderUid || orderUid!==expectedCustomerUid){
-    console.warn("Order sync blocked: authenticated UID does not match the verified customer phone.", {orderUid, expectedCustomerUid});
+  if(!orderUid){
+    console.warn("Order sync waiting: Firebase authenticated UID is not available.");
     const list=$("myOrdersList");
-    if(list && activeUserPhone===digits){
-      list.innerHTML='<div class="notice error order-sync-warning">Customer OTP session match नहीं हुआ। Logout करके इसी मोबाइल नंबर से OTP Login करें।</div>';
+    if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
+      list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync के लिए Firebase login session उपलब्ध नहीं है। कृपया logout करके OTP से दोबारा login करें।</div>');
     }
     return;
   }
@@ -1184,6 +1243,7 @@ function startUserOrdersListener(phone){
         paymentStatus:raw.paymentStatus||"Pending",
         razorpayPaymentId:raw.razorpayPaymentId||""
       });
+      syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message));
     });
     renderMerged();
   };
@@ -1249,6 +1309,10 @@ function showAuthState(user){
     if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';
   }
 }
+let authStateReadyResolve=null;
+let authStateReadyResolved=false;
+const authStateReady=new Promise(resolve=>{authStateReadyResolve=resolve;});
+function resolveInitialAuthState(user){if(!authStateReadyResolved){authStateReadyResolved=true;authStateReadyResolve(user||null);}}
 let authReady=Promise.resolve();
 if(auth && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence){
   authReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error=>{
@@ -1258,10 +1322,12 @@ if(auth && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence
 }
 authReady.then(()=>{
   if(auth)auth.onAuthStateChanged(user=>{
+    resolveInitialAuthState(user);
     if(user){showAuthState(user);startCartCloudSync(user);startWishlistCloudSync(user);}
     else{stopCartCloudSync();stopWishlistCloudSync();showAuthState(null);}
-  });
-});
+  },error=>{console.error("Firebase auth state error:",error);resolveInitialAuthState(null);});
+  else resolveInitialAuthState(null);
+}).catch(error=>{console.error("Firebase auth initialization failed:",error);resolveInitialAuthState(null);});
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   if(!/^[6-9]\d{9}$/.test(phone)){authMessage("Enter a valid 10-digit Indian mobile number.",true);return}
@@ -2204,8 +2270,6 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
 }
 </style>
 
-</body>
-</html>
 
 <style>
 /* Header search and wishlist overlays: align with controls printed in the banner artwork. */
@@ -2439,3 +2503,5 @@ $("year").textContent=new Date().getFullYear();categories();renderProducts();sta
   .hero>button{margin:0 auto!important;}
 }
 </style>
+</body>
+</html>
