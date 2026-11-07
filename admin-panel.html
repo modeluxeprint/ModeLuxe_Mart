@@ -97,7 +97,7 @@ let adminRestoreStarted=false;
 auth.onAuthStateChanged(async function(user){
   try{
     // Wait until Firebase LOCAL persistence is ready.
-    await adminPersistenceReady;
+    await authPersistenceReady;
 
     showActualAdminUid();
 
