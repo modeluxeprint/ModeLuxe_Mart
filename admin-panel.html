@@ -66,7 +66,8 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const auth=firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
+// Wait for LOCAL persistence before any OTP custom-token sign-in.
+const authPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>{console.error('Auth persistence setup failed:',e);throw e;});
 const ADMIN_PHONE='7818995955';
 const ADMIN_PHONE_ALLOWLIST=[ADMIN_PHONE];
 const ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
@@ -90,12 +91,13 @@ renderNotifications();
 updateUnitChoices();
 setTimeout(processDeliveryQr,800);
 
-// Restore the admin dashboard after refresh instead of showing the login form again.
+// Restore the Firebase admin session after refresh. If the device gate was not completed before refresh, show it again instead of returning to the login form.
 auth.onAuthStateChanged(user=>{
-  if(user && localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
-    signedInPhone=ADMIN_PHONE;
-    $('loginPanel').classList.add('hidden');
-    $('logoutBtn').classList.remove('hidden');
+  if(!user)return;
+  signedInPhone=ADMIN_PHONE;
+  $('loginPanel').classList.add('hidden');
+  $('logoutBtn').classList.remove('hidden');
+  if(localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
     $('adminDeviceLockModal').classList.add('hidden');
     $('adminDeviceLockModal').classList.remove('flex');
     $('dashboard').classList.remove('hidden');
@@ -104,6 +106,8 @@ auth.onAuthStateChanged(user=>{
     startDeliverySettingsAdminListener();
     updateUnitChoices();
     setTimeout(processDeliveryQr,300);
+  }else{
+    showDeviceLockAfterOtp();
   }
 });
 async function sendOTP(){
@@ -154,6 +158,7 @@ async function verifyOTP(){
     setMsg('चरण 2/2: OTP सही है। Firebase login हो रहा है…');
 
     // Also time out Firebase sign-in; the previous timeout covered fetch only.
+    await authPersistenceReady;
     await Promise.race([
       auth.signInWithCustomToken(j.customToken),
       new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase custom-token login ने 20 सेकंड में जवाब नहीं दिया। Firebase Auth configuration/network जाँचें।')),20000))
@@ -184,7 +189,7 @@ function b64url(bytes){let binary='';new Uint8Array(bytes).forEach(b=>binary+=St
 function unb64url(value){const b64=String(value).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64+'='.repeat((4-b64.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
 async function passwordDigest(password,saltB64){const salt=saltB64?unb64url(saltB64):crypto.getRandomValues(new Uint8Array(16));const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},material,256);return {salt:b64url(salt),hash:b64url(bits)};}
 function deviceLockReady(){return !!localStorage.getItem(DEVICE_LOCK_KEY)&&!!localStorage.getItem(DEVICE_CRED_KEY)&&!!window.PublicKeyCredential&&!!navigator.credentials;}
-function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP verify ho gaya, lekin is browser/URL par Passkey supported nahi. HTTPS par supported browser se kholein.');$('loginPanel').classList.remove('hidden');$('logoutBtn').classList.add('hidden');auth.signOut().catch(()=>{});return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
+function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP और Admin Password सत्यापित हो गए। इस ब्राउज़र में Passkey उपलब्ध नहीं है, इसलिए सुरक्षित Firebase OTP session से Dashboard खोला जा रहा है।');localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('dashboard').classList.remove('hidden');startOrders();startProducts();startDeliverySettingsAdminListener();updateUnitChoices();setTimeout(processDeliveryQr,300);return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
 async function registerDevicePasskey(){const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'ModeLuxe Mart Admin',id:location.hostname},user:{id:userId,name:'modeluxe-admin-device',displayName:'ModeLuxe Mart Admin'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000,attestation:'none'}});if(!credential)throw Error('Passkey registration cancel ho gaya.');localStorage.setItem(DEVICE_CRED_KEY,b64url(credential.rawId));}
 async function verifyDevicePasskey(){const id=localStorage.getItem(DEVICE_CRED_KEY);if(!id)throw Error('Is phone ka passkey registered nahi hai.');const challenge=crypto.getRandomValues(new Uint8Array(32));const assertion=await navigator.credentials.get({publicKey:{challenge,rpId:location.hostname,allowCredentials:[{type:'public-key',id:unb64url(id)}],userVerification:'required',timeout:60000}});if(!assertion)throw Error('Passkey verification cancel ho gaya.');}
 async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startProducts();startDeliverySettingsAdminListener();updateUnitChoices();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
