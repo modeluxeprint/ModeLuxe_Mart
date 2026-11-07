@@ -130,6 +130,9 @@ window.mlmVolatileStore = (() => {
 .invoice-action-row{display:flex;justify-content:flex-end;margin-top:10px}.invoice-action-row button{min-width:132px}.order-card{grid-template-columns:58px minmax(0,1fr);gap:9px;padding:9px;margin:8px 0}
 .order-card .order-thumb{width:58px;height:58px;object-fit:cover;border-radius:8px;background:#eff6ff;align-self:start}
 .order-card .meta{line-height:1.35;margin:2px 0}
+.order-card.is-new-order{background:#eaf4ff;border:2px solid #79b8f4;box-shadow:0 2px 10px rgba(7,95,196,.10)}
+.order-card .new-order-label{display:inline-block;margin:0 0 5px;padding:3px 8px;border-radius:999px;background:#075fc4;color:#fff;font-size:11px;font-weight:800;letter-spacing:.02em}
+.order-card .item-price{color:#075fc4;font-weight:800}
 .order-card .actions{gap:6px;margin-top:6px}
 .order-card .actions button{padding:7px 9px;font-size:12px}
 .seller-order-total{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;margin-left:5px;border-radius:999px;background:#d5e9ff;color:#164e84;font-size:12px;font-weight:850;line-height:1;vertical-align:middle}
@@ -703,7 +706,8 @@ function sellerOrderCategory(status){
 document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(btn=>btn.addEventListener("click",()=>{
  const isSame=activeSellerOrderFilter===btn.dataset.orderFilter;
  activeSellerOrderFilter=isSame?"":btn.dataset.orderFilter;
- if(!isSame)sellerMarkCategorySeen(btn.dataset.orderFilter);
+ // Keep newly received order highlights visible until the seller starts processing them.
+ if(!isSame && btn.dataset.orderFilter !== "received") sellerMarkCategorySeen(btn.dataset.orderFilter);
  document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(b=>{const selected=!isSame&&b===btn;b.classList.toggle("active",selected);b.classList.toggle("primary",selected);b.classList.toggle("secondary",!selected);});
  if(isSame){$("sellerOrdersList").textContent="Order category select karein.";}else{renderSellerOrders();}
 }));
@@ -718,10 +722,14 @@ function renderSellerOrders(){
  const rows=Object.entries(sellerOrderRows||{});
  if(!activeSellerOrderFilter){$("sellerOrdersList").textContent="Upar se Received, RTO, Delivered ya Return Order select karein.";return;}
  const filteredRows=rows.filter(([id,base])=>{const root=sellerOrderRootRows[id]||{};return sellerOrderCategory(root.status||base.status)===activeSellerOrderFilter;});
+ const orderTime=([id,base])=>{const root=sellerOrderRootRows[id]||{};const raw=root.createdAt||base.createdAt||root.timestamp||base.timestamp||root.dateTime||base.dateTime;const parsed=raw?Date.parse(raw):NaN;if(Number.isFinite(parsed))return parsed;const numeric=Number(id);return Number.isFinite(numeric)?numeric:0;};
+ filteredRows.sort((a,b)=>orderTime(b)-orderTime(a));
+ const notifiedReceivedOrderIds=new Set((sellerNotifications||[]).filter(n=>n&&n.category==='received').map(n=>String(n.orderId||n.id||'')));
  $("sellerOrdersList").innerHTML=filteredRows.map(([id,base])=>{
-  const root=sellerOrderRootRows[id]||{},o={...base,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
+  const root=sellerOrderRootRows[id]||{},o={...base,...root,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
   const items=Array.isArray(o.items)?o.items:Object.values(o.items||{});
   const firstItem=items[0]||{};
+  const isNewOrder=activeSellerOrderFilter==='received'&&notifiedReceivedOrderIds.has(String(id))&&String(root.status||base.status||'Order Placed')==='Order Placed';
   const firstProductId=String(firstItem.id||firstItem.productId||firstItem.productID||firstItem.sku||"");
   const matchingSellerProduct=firstProductId?(myProducts[firstProductId]||{}):{};
   const productImage=firstItem.imageUrl||firstItem.imageURL||firstItem.image||firstItem.img||firstItem.photo||firstItem.productImage||firstItem.photoUrl||firstItem.imageData||matchingSellerProduct.imageUrl||matchingSellerProduct.image||matchingSellerProduct.img||"";
@@ -729,7 +737,16 @@ function renderSellerOrders(){
   const canUpdate=!o.adminStatusLocked&&!['Delivered','Cancelled','Refunded'].includes(String(root.status||status));
   const processingDone=['Processing','Shipped'].includes(status);
   const isProcessing=status==='Processing',isShipped=status==='Shipped';
-  return `<article class="product order-card">${productImage?`<img class="order-thumb" src="${esc(productImage)}" alt="Product">`:`<div class="order-thumb" style="display:grid;place-items:center">📦</div>`}<div><b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(status)}</div><div class="meta">${esc(items.map(i=>(i.name||i.productName||"Item")+' × '+(i.qty||i.quantity||1)).join(", "))}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:""}${canUpdate?`<div class="actions order-status-actions"><button class="${isProcessing?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Processing')" ${processingDone?'disabled':''}>${isProcessing?'✓ Seller Processing':'Mark Seller Processing'}</button><button class="${isShipped?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')" ${!processingDone||isShipped?'disabled':''}>${isShipped?'✓ Shipped':'Mark Shipped'}</button><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div>`:`<div class="actions order-status-actions"><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div><div class="hint">Order status locked / completed.</div>`}</div></article>`;
+  const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+  const itemSummary=items.map(i=>{
+   const itemId=String(i.id||i.productId||i.productID||i.sku||'');
+   const product=myProducts[itemId]||{};
+   let unitPrice=i.price??i.unitPrice??i.sellingPrice??i.productPrice??i.sellerPrice??i.salePrice??product.price;
+   if((unitPrice===undefined||unitPrice===null||unitPrice==='')&&items.length===1)unitPrice=o.productSubtotal??o.subtotal??o.price;
+   const priceText=unitPrice!==undefined&&unitPrice!==null&&unitPrice!==''&&Number.isFinite(Number(unitPrice))?`<span class="item-price">${money(unitPrice)}</span>`:'<span class="hint">Price unavailable</span>';
+   return `${esc(i.name||i.productName||i.title||'Item')} × ${esc(i.qty||i.quantity||1)} · ${priceText}`;
+  }).join('<br>');
+  return `<article class="product order-card${isNewOrder?' is-new-order':''}">${productImage?`<img class="order-thumb" src="${esc(productImage)}" alt="Product">`:`<div class="order-thumb" style="display:grid;place-items:center">📦</div>`}<div>${isNewOrder?'<span class="new-order-label">NEW ORDER</span><br>':''}<b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(status)}</div><div class="meta">${itemSummary||'Item details unavailable'}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:""}${canUpdate?`<div class="actions order-status-actions"><button class="${isProcessing?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Processing')" ${processingDone?'disabled':''}>${isProcessing?'✓ Seller Processing':'Mark Seller Processing'}</button><button class="${isShipped?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')" ${!processingDone||isShipped?'disabled':''}>${isShipped?'✓ Shipped':'Mark Shipped'}</button><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div>`:`<div class="actions order-status-actions"><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div><div class="hint">Order status locked / completed.</div>`}</div></article>`;
  }).join("")||"Is category mein abhi koi order nahi hai.";
 }
 function startSellerOrders(){
