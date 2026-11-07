@@ -701,6 +701,44 @@ function scheduleCartCloudSync(){
   cartCloudWriteTimer=setTimeout(()=>{cartCloudWriteTimer=null;writeCartCloudNow();},350);
 }
 
+// Wishlist is also shared through the authenticated account UID (same verified
+// phone OTP identity in Chrome and Android WebView), never through device storage alone.
+let wishlistCloudRef=null,wishlistCloudListener=null,wishlistCloudUid="",wishlistCloudApplying=false;
+function stopWishlistCloudSync(){
+  if(wishlistCloudRef&&wishlistCloudListener)wishlistCloudRef.off("value",wishlistCloudListener);
+  wishlistCloudRef=null;wishlistCloudListener=null;wishlistCloudUid="";
+}
+function startWishlistCloudSync(user){
+  stopWishlistCloudSync();
+  if(!user||!user.uid||!window.MLM_CART_DB)return;
+  const uid=String(user.uid);
+  wishlistCloudUid=uid;
+  wishlistCloudRef=window.MLM_CART_DB.ref("customerWishlists/"+uid);
+  wishlistCloudListener=snap=>{
+    const remote=snap.val();
+    wishlistCloudApplying=true;
+    if(remote&&Array.isArray(remote.productIds)){
+      wishlistIds=remote.productIds.map(String);
+      mlmVolatileStore.setItem(userKey("mlm_wishlist"),JSON.stringify(wishlistIds));
+      mlmVolatileStore.setItem("mlm_wishlist",JSON.stringify(wishlistIds));
+      renderProducts();saveWishlistBadge();
+    }else if(!snap.exists()){
+      writeWishlistCloudNow();
+    }
+    wishlistCloudApplying=false;
+  };
+  wishlistCloudRef.on("value",wishlistCloudListener,error=>{
+    console.error("Wishlist cloud sync read failed:",error);
+    showToast("Wishlist sync नहीं हुआ। Firebase Rules जाँचें।");
+  });
+}
+function writeWishlistCloudNow(){
+  if(wishlistCloudApplying||!wishlistCloudRef||!wishlistCloudUid)return;
+  wishlistCloudRef.set({uid:wishlistCloudUid,phoneDigits:activeUserPhone,productIds:wishlistIds.map(String),updatedAt:Date.now(),schemaVersion:1})
+    .catch(error=>{console.error("Wishlist cloud sync write failed:",error);showToast("Wishlist cloud पर सेव नहीं हुई। Firebase Rules जाँचें।");});
+}
+function saveWishlistBadge(){const badge=$("bottomWishlistCount");if(badge)badge.textContent=String(wishlistIds.length);}
+
 function load(key,fallback){try{const v=mlmVolatileStore.getItem(key);return v?JSON.parse(v):JSON.parse(JSON.stringify(fallback))}catch(e){return JSON.parse(JSON.stringify(fallback))}}
 function userKey(base,phone=activeUserPhone){return phone?base+"_user_"+String(phone).replace(/\D/g,""):base+"_logged_out"}
 function save(){mlmVolatileStore.setItem("mlm_products",JSON.stringify(products));mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));if(activeUserPhone)mlmVolatileStore.setItem(userKey("mlm_orders"),JSON.stringify(orders));scheduleCartCloudSync();}
@@ -710,6 +748,7 @@ function switchUserData(phone){
     startUserOrdersListener(activeUserPhone);
     startSharedProfileListener(activeUserPhone);
     cart=load(userKey("mlm_cart"),[]);orders=load(userKey("mlm_orders"),[]);
+    wishlistIds=load(userKey("mlm_wishlist"),load("mlm_wishlist",[])).map(String);
     const pk=userKey("mlm_profile");
     if(!mlmVolatileStore.getItem(pk)){
       const old=load("mlm_profile",{name:"",phone:"",address:"",pin:"",avatar:""});
@@ -720,14 +759,21 @@ function switchUserData(phone){
       const legacy=load("mlm_orders",[]).filter(o=>String(o.phone||"").replace(/\D/g,"")===activeUserPhone);
       orders=legacy;mlmVolatileStore.setItem(ok,JSON.stringify(orders));
     }
-  }else{stopUserOrdersListener();cart=[];orders=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
+  }else{stopUserOrdersListener();cart=[];orders=[];wishlistIds=[];if($("customerName"))$("customerName").value="";if($("customerPhone"))$("customerPhone").value="";if($("customerAddress"))$("customerAddress").value="";if($("customerPin"))$("customerPin").value="";}
   renderCart();renderMyOrders();renderProfileAvatar(activeUserPhone?load(userKey("mlm_profile"),{name:"",avatar:""}):{name:"",avatar:""});
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function categories(){const cats=["All",...new Set(products.map(p=>p.category))];$("categories").innerHTML=cats.map(c=>`<button class="${activeCategory===c?"active":"secondary"}" onclick="setCategory('${esc(c)}')">${c==="All"?(mlmVolatileStore.getItem("mlm_language")==="en"?"All":"सभी"):esc(c)}</button>`).join("")}
 function setCategory(c){activeCategory=c;categories();renderProducts()}
-let wishlistIds=load("mlm_wishlist",[]).map(String), wishlistOnly=false;
-function saveWishlist(){try{mlmVolatileStore.setItem("mlm_wishlist",JSON.stringify(wishlistIds));}catch(e){} const badge=$("bottomWishlistCount");if(badge)badge.textContent=String(wishlistIds.length);}
+let wishlistIds=load(userKey("mlm_wishlist"),load("mlm_wishlist",[])).map(String), wishlistOnly=false;
+function saveWishlist(){
+  try{
+    mlmVolatileStore.setItem("mlm_wishlist",JSON.stringify(wishlistIds));
+    if(activeUserPhone)mlmVolatileStore.setItem(userKey("mlm_wishlist"),JSON.stringify(wishlistIds));
+  }catch(e){}
+  saveWishlistBadge();
+  if(!wishlistCloudApplying)writeWishlistCloudNow();
+}
 function toggleWishlist(id){id=String(id);if(wishlistIds.includes(id)){wishlistIds=wishlistIds.filter(x=>x!==id);showToast("Removed from Wishlist");}else{wishlistIds.push(id);showToast("Added to Wishlist");}saveWishlist();renderProducts();}
 function showWishlist(){wishlistOnly=true;activeCategory="All";categories();showSection("store");renderProducts();$("listingTitle").textContent="Wishlist";$("products").scrollIntoView({behavior:"smooth",block:"start"});if(!wishlistIds.length)showToast("Your Wishlist is empty.");}
 
@@ -1230,8 +1276,8 @@ if(auth && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence
 }
 authReady.then(()=>{
   if(auth)auth.onAuthStateChanged(user=>{
-    if(user){showAuthState(user);startCartCloudSync(user);}
-    else{stopCartCloudSync();showAuthState(null);}
+    if(user){showAuthState(user);startCartCloudSync(user);startWishlistCloudSync(user);}
+    else{stopCartCloudSync();stopWishlistCloudSync();showAuthState(null);}
   });
 });
 async function sendLoginOTP(){
@@ -1276,7 +1322,7 @@ async function verifyLoginOTP(){
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
     authMessage("Mobile OTP verified. You are now signed in.");
-    showAuthState(credential.user);startCartCloudSync(credential.user);
+    showAuthState(credential.user);startCartCloudSync(credential.user);startWishlistCloudSync(credential.user);
   }catch(err){
     console.error("OTP verification failed:",err);
     authMessage("OTP verification failed. Please check the code and try again.",true);
