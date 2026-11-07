@@ -469,6 +469,12 @@ button.cart-added{background:#0b8a55!important;color:#fff!important;border-color
 button.cart-added:disabled{opacity:1!important;}
 </style>
 
+<style id="saved-address-checkout-cleanup">
+#checkoutSection.has-saved-address #customerAddressField .location-tools,
+#checkoutSection.has-saved-address #customerAddressField #locationStatus,
+#checkoutSection.has-saved-address #customerAddressField #locationPreview{display:none!important}
+#accountSection #authStatus.hidden,#accountSection #authMsg.hidden{display:none!important}
+</style>
 </head>
 <body>
 <header class="top header-banner"><div class="topinner banner-inner">
@@ -815,21 +821,25 @@ function renderSavedDeliveryAddress(){
   if(!card)return;
   const fields=["customerNameField","customerPhoneField","customerAddressField","customerPinField"];
   if(saved){
-    $("savedAddressText").textContent=[saved.name,saved.phone,saved.address,"PIN Code: "+saved.pin].filter(Boolean).join("\\n");
+    $("savedAddressText").textContent=[saved.name,saved.phone,saved.address,"PIN Code: "+saved.pin].filter(Boolean).join("\n");
     card.classList.remove("hidden");
+    $("checkoutSection")?.classList.add("has-saved-address");
     fields.forEach(id=>$(id)?.classList.add("hidden"));
     $("customerName").value=saved.name||"";$("customerPhone").value=saved.phone||"";
     $("customerAddress").value=saved.address||"";$("customerPin").value=saved.pin||"";
     if(saved.latitude)$("deliveryLat").value=saved.latitude;
     if(saved.longitude)$("deliveryLng").value=saved.longitude;
   }else{
-    card.classList.add("hidden");fields.forEach(id=>$(id)?.classList.remove("hidden"));
+    card.classList.add("hidden");
+    $("checkoutSection")?.classList.remove("has-saved-address");
+    fields.forEach(id=>$(id)?.classList.remove("hidden"));
   }
 }
-function editSavedAddress(){["customerNameField","customerPhoneField","customerAddressField","customerPinField"].forEach(id=>$(id)?.classList.remove("hidden"));$("savedAddressCard").classList.add("hidden");$("customerAddress").focus()}
+function editSavedAddress(){$("checkoutSection")?.classList.remove("has-saved-address");["customerNameField","customerPhoneField","customerAddressField","customerPinField"].forEach(id=>$(id)?.classList.remove("hidden"));$("savedAddressCard").classList.add("hidden");$("customerAddress").focus()}
 function newDeliveryAddress(){
   ["customerNameField","customerPhoneField","customerAddressField","customerPinField"].forEach(id=>$(id)?.classList.remove("hidden"));
   $("savedAddressCard").classList.add("hidden");
+  $("checkoutSection")?.classList.remove("has-saved-address");
   ["customerName","customerPhone","customerAddress","customerPin","deliveryLat","deliveryLng"].forEach(id=>$(id).value="");
   $("locationStatus").textContent="नए पते के लिए लोकेशन चुनें।";
   $("customerAddress").focus();
@@ -847,8 +857,6 @@ function addCart(id){
   else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",category:p.category||"Other",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
   save();renderCart();
   updateAddToCartButtonLabels();
-  const en=mlmVolatileStore.getItem("mlm_language")==="en";
-  showToast(en ? "Product added to cart successfully." : "प्रोडक्ट Cart में जुड़ गया।");
   return true;
 }
 function buyNow(id){
@@ -978,7 +986,7 @@ function showSection(s){
   $("areaMsg").classList.toggle("hidden",!onStore);
   $("storeFooter").classList.toggle("hidden",!onStore);
   if(s==="cart")renderCart();
-  if(s==="checkout"){renderSavedDeliveryAddress();const p=activeUserPhone?load(userKey("mlm_profile"),{}):{};if(p.name&&!$("customerName").value)$("customerName").value=p.name;if(activeUserPhone&&p.phone&&!$("customerPhone").value)$("customerPhone").value=p.phone;if(p.address&&!$("customerAddress").value)$("customerAddress").value=p.address;if(p.pin&&!$("customerPin").value)$("customerPin").value=p.pin;restoreDeliveryLocation();}
+  if(s==="checkout"){$("orderMsg").innerHTML="";closeOrderSuccess();renderSavedDeliveryAddress();const p=activeUserPhone?load(userKey("mlm_profile"),{}):{};if(p.name&&!$("customerName").value)$("customerName").value=p.name;if(activeUserPhone&&p.phone&&!$("customerPhone").value)$("customerPhone").value=p.phone;if(p.address&&!$("customerAddress").value)$("customerAddress").value=p.address;if(p.pin&&!$("customerPin").value)$("customerPin").value=p.pin;restoreDeliveryLocation();}
   if(s==="account"||s==="profile")loadProfile();
   if(s==="myorders"){renderMyOrders();if(activeUserPhone)startUserOrdersListener(activeUserPhone);}
   window.scrollTo({top:0,behavior:"smooth"});
@@ -1032,6 +1040,8 @@ $("orderForm").addEventListener("submit",async e=>{
   const submitButton=form.querySelector('button[type="submit"]');
   const originalButtonText=submitButton?submitButton.textContent:"Place Order";
   const message=$("orderMsg");
+  if(message)message.innerHTML="";
+  closeOrderSuccess();
   if(submitButton){submitButton.disabled=true;submitButton.textContent="Please wait…";}
   if(message)message.innerHTML='<div class="notice">Checking login and order details…</div>';
   try{
@@ -1091,10 +1101,11 @@ $("orderForm").addEventListener("submit",async e=>{
     const saveResult = await saveOrderToFirebase(order,"Cash on Delivery","Pending");
     orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
     message.innerHTML = saveResult && saveResult.sellerSyncOk
-      ? '<div class="notice success">Order Placed Successfully! आपका ऑर्डर दर्ज हो गया है और Seller Panel पर भेज दिया गया है।</div>'
+      ? ''
       : '<div class="notice error">आपका ऑर्डर दर्ज हो गया है, लेकिन Seller Panel Sync अभी Pending है। कारण: '+esc(saveResult && saveResult.sellerSyncError || "Unknown sync error")+'</div>';
     form.reset();$("payment").value="COD";renderSavedDeliveryAddress();
-    showSection("store");showOrderSuccess();
+    showSection("store");
+    if(saveResult && saveResult.sellerSyncOk)showOrderSuccess();
   }catch(err){
     console.error("ModeLuxe order placement failed:",err);
     if(message)message.innerHTML='<div class="notice error">ऑर्डर Place नहीं हुआ: '+esc(err&&err.message||"कृपया दोबारा कोशिश करें")+'</div>';
@@ -1272,41 +1283,31 @@ function mergeAndRenderUserOrders(){
   renderMyOrders();
 }
 function authMessage(message,isError=false){
-  const el=$("authMsg");
-  if(el)el.innerHTML='<div class="notice '+(isError?'error':'success')+'">'+esc(message)+'</div>';
+  const el=$("authMsg");if(!el)return;
+  if(!message){el.innerHTML="";el.classList.add("hidden");return;}
+  el.classList.remove("hidden");
+  el.innerHTML='<div class="notice '+(isError?'error':'success')+'">'+esc(message)+'</div>';
 }
 function showAuthState(user){
   const status=$("authStatus"),fields=$("otpLoginFields"),logout=$("logoutBtn");
-  // Customer identity must come from Firebase UID issued by the verified-phone OTP Worker.
-  // Never use a stale localStorage phone number to disguise an Admin/other Firebase session.
   const uid=String(user&&user.uid||"");
   const match=uid.match(/^phone_91([6-9]\d{9})$/);
   const digits=match?match[1]:"";
-
   if(user && !digits){
-    switchUserData("");
-    status.className="notice error";
-    status.textContent="यह Firebase session ग्राहक के मोबाइल OTP अकाउंट से मेल नहीं खाता। कृपया Logout करके अपने मोबाइल नंबर से OTP Login करें।";
-    fields.classList.remove("hidden");
-    logout.classList.remove("hidden");
-    if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Customer mobile OTP login required to view orders.</div>';
+    switchUserData("");status.className="notice hidden";status.textContent="";
+    fields.classList.remove("hidden");logout.classList.add("hidden");authMessage("");
+    if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in with your mobile OTP to view your orders.</div>';
     return;
   }
-
   if(digits){
-    const phone="+91"+digits;
-    switchUserData(digits);
-    status.className="notice success";
-    status.textContent="Logged in: "+phone;
-    fields.classList.add("hidden");logout.classList.remove("hidden");
+    switchUserData(digits);status.className="notice hidden";status.textContent="";
+    fields.classList.add("hidden");logout.classList.remove("hidden");authMessage("");
     const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
     p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
     if($("profilePhone"))$("profilePhone").value=digits;
   }else{
-    switchUserData("");
-    status.className="notice";
-    status.textContent="Not logged in. Request an SMS OTP to your mobile.";
-    fields.classList.remove("hidden");logout.classList.add("hidden");
+    switchUserData("");status.className="notice hidden";status.textContent="";
+    fields.classList.remove("hidden");logout.classList.add("hidden");authMessage("");
     $("profileName").value="";$("profilePhone").value="";$("profileAddress").value="";$("profilePin").value="";$("profileDisplayName").textContent="Your Profile";$("profilePhoto").value="";pendingProfileAvatar="";
     renderProfileAvatar({name:"",avatar:""});
     if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Please log in to view your orders and tracking.</div>';
@@ -1367,6 +1368,7 @@ async function verifyLoginOTP(){
     if(!customToken)throw new Error("The OTP Worker did not return a Firebase custom token. Deploy the matching OTP Worker.");
     if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Authentication SDK is unavailable.");
     await authReady;
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     const credential=await auth.signInWithCustomToken(customToken);
     if(!credential||!credential.user)throw new Error("Firebase sign-in could not be completed.");
     const expectedUid="phone_91"+phone;
