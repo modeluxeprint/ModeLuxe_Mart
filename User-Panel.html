@@ -1133,19 +1133,18 @@ function startUserOrdersListener(phone){
   const digits=String(phone||"").replace(/\D/g,"").slice(-10);
   if(!db || !digits)return;
 
-  const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : "";
-  const specs=[];
-  const addSpec=(field,value)=>{
-    if(value && !specs.some(x=>x.field===field&&x.value===value))specs.push({field,value});
-  };
-
-  // Search by the verified login number, independently of the delivery-contact
-  // number entered at checkout. This keeps Android WebView and Chrome in sync.
-  addSpec("customerPhoneDigits",digits);
-  addSpec("customerLoginPhoneDigits",digits);
-  // Legacy phone formats and Firebase UID preserve visibility of older orders.
-  [digits,"+91"+digits,"91"+digits].forEach(v=>addSpec("customerPhone",v));
-  if(orderUid)addSpec("customerUid",orderUid);
+  // Realtime Database Rules permit customer order reads ONLY when the query
+  // is constrained to customerUid === auth.uid. Phone-number queries are
+  // intentionally not sent: they are rejected by the current secure Rules.
+  const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? String(auth.currentUser.uid) : "";
+  if(!orderUid){
+    console.warn("Order sync waiting: Firebase authenticated UID is not available.");
+    const list=$("myOrdersList");
+    if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
+      list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync के लिए Firebase login session उपलब्ध नहीं है। कृपया logout करके OTP से दोबारा login करें।</div>');
+    }
+    return;
+  }
 
   const mergedRemote=new Map();
   const renderMerged=()=>{
@@ -1153,54 +1152,48 @@ function startUserOrdersListener(phone){
     mergeAndRenderUserOrders();
   };
 
-  specs.forEach(spec=>{
-    const query=db.ref("orders").orderByChild(spec.field).equalTo(spec.value);
-    userOrdersQueries.push(query);
-    query.on("value",snapshot=>{
-      snapshot.forEach(child=>{
-        const raw=child.val()||{};
-        const orderPhone=String(raw.customerPhoneDigits||raw.customerPhone||raw.phone||"").replace(/\D/g,"").slice(-10);
-        const orderLoginPhone=String(raw.customerLoginPhoneDigits||"").replace(/\D/g,"").slice(-10);
-        const belongsToUid=!!(orderUid && String(raw.customerUid||"")===orderUid);
-        // UID match must not be discarded just because checkout contact differs
-        // from the verified login number. Phone fields remain fallback for legacy orders.
-        if(orderPhone!==digits && orderLoginPhone!==digits && !belongsToUid)return;
-        const id=raw.id??child.key;
-        const key=String(id);
-        const old=mergedRemote.get(key)||{};
-        const remoteItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
-        mergedRemote.set(key,{
-          ...old,
-          id,
-          name:raw.customerName||raw.name||old.name||"",
-          phone:raw.customerPhone||raw.phone||digits,
-          address:raw.shippingAddress||raw.address||old.address||"",
-          pin:raw.pin||raw.shippingPin||old.pin||"",
-          latitude:raw.lat||raw.latitude||old.latitude||"",
-          longitude:raw.lng||raw.longitude||old.longitude||"",
-          items:remoteItems.length?remoteItems:(old.items||[]),
-          total:Number(raw.totalAmount??raw.price??raw.total??old.total??0),
-          date:raw.dateTime||raw.date||raw.createdAt||old.date||"",
-          createdAt:raw.createdAt||old.createdAt||"",
-          status:String(raw.status||old.status||"Order Placed"),
-          updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||old.updatedAt||"",
-          payment:raw.paymentMethod||raw.payment||old.payment||"",
-          paymentStatus:raw.paymentStatus||old.paymentStatus||"Pending",
-          razorpayPaymentId:raw.razorpayPaymentId||old.razorpayPaymentId||""
-        });
-        syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message));
+  const query=db.ref("orders").orderByChild("customerUid").equalTo(orderUid);
+  userOrdersQueries.push(query);
+  userOrdersQuery=query;
+  userOrdersListener=snapshot=>{
+    mergedRemote.clear();
+    snapshot.forEach(child=>{
+      const raw=child.val()||{};
+      // Enforce ownership again in the client; the database query is already
+      // UID-scoped by Rules. Do not use checkout/contact phone as account ID.
+      if(String(raw.customerUid||"")!==orderUid)return;
+      const id=raw.id??child.key;
+      const key=String(id);
+      const remoteItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
+      mergedRemote.set(key,{
+        id,
+        name:raw.customerName||raw.name||"",
+        phone:raw.customerPhone||raw.phone||digits,
+        address:raw.shippingAddress||raw.address||"",
+        pin:raw.pin||raw.shippingPin||"",
+        latitude:raw.lat||raw.latitude||"",
+        longitude:raw.lng||raw.longitude||"",
+        items:remoteItems,
+        total:Number(raw.totalAmount??raw.price??raw.total??0),
+        date:raw.dateTime||raw.date||raw.createdAt||"",
+        createdAt:raw.createdAt||"",
+        status:String(raw.status||"Order Placed"),
+        updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
+        payment:raw.paymentMethod||raw.payment||"",
+        paymentStatus:raw.paymentStatus||"Pending",
+        razorpayPaymentId:raw.razorpayPaymentId||""
       });
-      renderMerged();
-    },error=>{
-      console.error("User order sync failed for",spec.field,error);
-      const list=$("myOrdersList");
-      if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
-        list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync permission/index issue. Firebase Rules must allow this customer to read their own orders and index the queried fields.</div>');
-      }
+      syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message));
     });
+    renderMerged();
+  };
+  query.on("value",userOrdersListener,error=>{
+    console.error("User order sync failed for customerUid",error);
+    const list=$("myOrdersList");
+    if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
+      list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">My Orders Firebase sync failed. Firebase Rules में orders की customerUid Query अनुमति और customerUid index जाँचें।</div>');
+    }
   });
-  userOrdersQuery=userOrdersQueries[0]||null;
-  userOrdersListener=null;
 }
 function mergeAndRenderUserOrders(){
   if(!activeUserPhone)return;
