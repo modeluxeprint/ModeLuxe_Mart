@@ -2085,9 +2085,6 @@ function downloadUserInvoice(orderId){
     const phone=o.customerPhone||o.phone||"";
     const pin=o.pin||o.pincode||o.postalCode||"";
 
-    const qr="https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data="+
-      encodeURIComponent(String(orderId));
-
     const html=`<!doctype html>
 <html>
 <head>
@@ -2186,15 +2183,6 @@ ${phone?"Mobile: "+eh(phone):""}
 <tr><th>Grand Total</th><th style="text-align:right">${money(total)}</th></tr>
 </tbody>
 </table>
-
-<div class="qrwrap">
-<img src="${qr}" alt="Delivery confirmation QR">
-<div class="qrtext">
-<b>SCAN TO CONFIRM DELIVERY</b><br>
-Delivery Boy: customer ko parcel hand over karne ke baad Delivery Panel mein QR scan karein.
-<br><small>Order ID: ${eh(orderId)}</small>
-</div>
-</div>
 
 <div class="footer">
 Thank you for shopping with ModeLuxe Mart · This invoice is also a packing slip.
