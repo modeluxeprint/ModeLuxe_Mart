@@ -847,6 +847,8 @@ function addCart(id){
   else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",category:p.category||"Other",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
   save();renderCart();
   updateAddToCartButtonLabels();
+  const en=mlmVolatileStore.getItem("mlm_language")==="en";
+  showToast(en ? "Product added to cart successfully." : "प्रोडक्ट Cart में जुड़ गया।");
   return true;
 }
 function buyNow(id){
