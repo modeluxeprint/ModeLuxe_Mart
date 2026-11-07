@@ -1214,29 +1214,23 @@ function authMessage(message,isError=false){
 }
 function showAuthState(user){
   const status=$("authStatus"),fields=$("otpLoginFields"),logout=$("logoutBtn");
-  // Prefer Firebase phoneNumber only when it contains a complete 10-digit Indian number.
-  let digits="";
-  const authPhone=String((user&&user.phoneNumber)||"").replace(/\D/g,"");
-  if(authPhone.length===10) digits=authPhone;
-  else if(authPhone.length===12 && authPhone.startsWith("91")) digits=authPhone.slice(2);
+  // Customer identity must come from Firebase UID issued by the verified-phone OTP Worker.
+  // Never use a stale localStorage phone number to disguise an Admin/other Firebase session.
+  const uid=String(user&&user.uid||"");
+  const match=uid.match(/^phone_91([6-9]\d{9})$/);
+  const digits=match?match[1]:"";
 
-  // Support the OTP Worker's phone UID, saved verified number, and restored input.
-  if(!digits && user && user.uid){
-    const match=String(user.uid).match(/^phone_\+?(\d{10,13})$/);
-    if(match){
-      let raw=match[1];
-      if(raw.length===12 && raw.startsWith("91")) raw=raw.slice(2);
-      if(raw.length===10) digits=raw;
-    }
-  }
-  if(!digits && user){
-    const savedPhone=String(mlmVolatileStore.getItem("mlm_sms_verified_phone")||"").replace(/\D/g,"");
-    const inputPhone=String(($("loginPhone")&&$("loginPhone").value)||"").replace(/\D/g,"");
-    const candidate=savedPhone.length===10?savedPhone:inputPhone;
-    if(candidate.length===10) digits=candidate;
+  if(user && !digits){
+    switchUserData("");
+    status.className="notice error";
+    status.textContent="यह Firebase session ग्राहक के मोबाइल OTP अकाउंट से मेल नहीं खाता। कृपया Logout करके अपने मोबाइल नंबर से OTP Login करें।";
+    fields.classList.remove("hidden");
+    logout.classList.remove("hidden");
+    if($("myOrdersList"))$("myOrdersList").innerHTML='<div class="empty">Customer mobile OTP login required to view orders.</div>';
+    return;
   }
 
-  if(digits.length===10){
+  if(digits){
     const phone="+91"+digits;
     switchUserData(digits);
     status.className="notice success";
@@ -1245,11 +1239,6 @@ function showAuthState(user){
     const p=load(userKey("mlm_profile"),{name:"",phone:"",address:"",pin:"",avatar:""});
     p.phone=digits;mlmVolatileStore.setItem(userKey("mlm_profile"),JSON.stringify(p));
     if($("profilePhone"))$("profilePhone").value=digits;
-  }else if(user){
-    // A valid Firebase session must never show the Send OTP controls again.
-    status.className="notice success";
-    status.textContent="You are signed in. Your account session is active.";
-    fields.classList.add("hidden");logout.classList.remove("hidden");
   }else{
     switchUserData("");
     status.className="notice";
@@ -1311,6 +1300,11 @@ async function verifyLoginOTP(){
     await authReady;
     const credential=await auth.signInWithCustomToken(customToken);
     if(!credential||!credential.user)throw new Error("Firebase sign-in could not be completed.");
+    const expectedUid="phone_91"+phone;
+    if(String(credential.user.uid||"")!==expectedUid || (result.uid && String(result.uid)!==expectedUid)){
+      await auth.signOut();
+      throw new Error("Firebase UID does not match the verified mobile number. Please check the OTP Worker.");
+    }
     mlmVolatileStore.setItem("mlm_sms_verified_phone",phone);
     pendingOtpRequestId=null;pendingOtpPhone=null;
     $("otpVerifyArea").classList.add("hidden");
@@ -1336,9 +1330,15 @@ const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.wor
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
   if(!db) throw new Error("Firebase SDK did not load");
+  const loginDigits=String(activeUserPhone||"").replace(/\D/g,"").slice(-10);
+  const currentUid=String(auth&&auth.currentUser&&auth.currentUser.uid||"");
+  const expectedUid=loginDigits ? "phone_91"+loginDigits : "";
+  if(!loginDigits || currentUid!==expectedUid){
+    throw new Error("Customer mobile OTP session is not valid. Please logout and login again with your mobile OTP before placing an order.");
+  }
   const firebaseOrder={
     id:order.id,
-    customerUid:(auth&&auth.currentUser&&auth.currentUser.uid)||"",
+    customerUid:currentUid,
     product:(order.items||[]).map(i=>i.name).join(", "),
     items:order.items||[],
     price:Number(order.total||0),
@@ -1352,7 +1352,7 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     customerPhone:order.phone||"",
     customerPhoneDigits:String(order.phone||"").replace(/\D/g,"").slice(-10),
     // Verified account number is stored separately from the delivery contact number.
-    customerLoginPhoneDigits:String(activeUserPhone||"").replace(/\D/g,"").slice(-10),
+    customerLoginPhoneDigits:loginDigits,
     shippingAddress:order.address||"",
     shippingHouseNo:"",
     shippingStreetNo:"",
