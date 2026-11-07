@@ -1097,7 +1097,6 @@ $("orderForm").addEventListener("submit",async e=>{
       await startRazorpayPayment(order);
       return;
     }
-    if(message)message.innerHTML='<div class="notice">आपका ऑर्डर सेव हो रहा है…</div>';
     const saveResult = await saveOrderToFirebase(order,"Cash on Delivery","Pending");
     orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
     message.innerHTML = saveResult && saveResult.sellerSyncOk
