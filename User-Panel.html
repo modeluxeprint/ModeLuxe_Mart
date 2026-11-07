@@ -1095,9 +1095,8 @@ function stopUserOrdersListener(){
   firebaseOrdersForUser=[];
 }
 
-// Copy the immutable billing snapshot into each seller's private order record.
-// This also repairs older sellerOrders entries when the customer opens My Orders.
-// Only billing/address fields are updated; seller status and courier fields remain untouched.
+// Seller billing snapshot repair is intentionally not run from the customer panel.
+// Customer sessions must not write to seller-private paths; trusted Admin/server sync handles that.
 async function syncSellerBillingSnapshot(raw,orderId){
   if(!db||!raw||!orderId)return;
   const allItems=Array.isArray(raw.items)?raw.items:Object.values(raw.items||{});
@@ -1137,11 +1136,13 @@ function startUserOrdersListener(phone){
   // is constrained to customerUid === auth.uid. Phone-number queries are
   // intentionally not sent: they are rejected by the current secure Rules.
   const orderUid=(auth && auth.currentUser && auth.currentUser.uid) ? String(auth.currentUser.uid) : "";
-  if(!orderUid){
-    console.warn("Order sync waiting: Firebase authenticated UID is not available.");
+  const expectedCustomerUid="phone_91"+digits;
+  // Never query orders with an Admin UID or a different customer's UID.
+  if(!orderUid || orderUid!==expectedCustomerUid){
+    console.warn("Order sync blocked: authenticated UID does not match the verified customer phone.", {orderUid, expectedCustomerUid});
     const list=$("myOrdersList");
-    if(list && activeUserPhone===digits && !list.querySelector(".order-sync-warning")){
-      list.insertAdjacentHTML("afterbegin",'<div class="notice error order-sync-warning">Order sync के लिए Firebase login session उपलब्ध नहीं है। कृपया logout करके OTP से दोबारा login करें।</div>');
+    if(list && activeUserPhone===digits){
+      list.innerHTML='<div class="notice error order-sync-warning">Customer OTP session match नहीं हुआ। Logout करके इसी मोबाइल नंबर से OTP Login करें।</div>';
     }
     return;
   }
@@ -1183,7 +1184,6 @@ function startUserOrdersListener(phone){
         paymentStatus:raw.paymentStatus||"Pending",
         razorpayPaymentId:raw.razorpayPaymentId||""
       });
-      syncSellerBillingSnapshot(raw,id).catch(err=>console.warn("Seller billing snapshot sync failed",id,err&&err.message));
     });
     renderMerged();
   };
