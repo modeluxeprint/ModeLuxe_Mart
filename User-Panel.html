@@ -1353,38 +1353,94 @@ async function sendLoginOTP(){
 async function verifyLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   const code=$("loginOtp").value.trim();
-  if(!pendingOtpRequestId||pendingOtpPhone!==phone){authMessage("Request an OTP for this mobile number first.",true);return}
-  if(!/^\d{4,6}$/.test(code)){authMessage("Enter the 4–6 digit OTP received by SMS.",true);return}
+
+  if(!pendingOtpRequestId||pendingOtpPhone!==phone){
+    authMessage("Request an OTP for this mobile number first.",true);
+    return;
+  }
+
+  if(!/^\d{6}$/.test(code)){
+    authMessage("Enter the 6-digit OTP received by SMS.",true);
+    return;
+  }
+
   try{
-    $("verifyOtpBtn")&&($("verifyOtpBtn").disabled=true);
+    if($("verifyOtpBtn")) $("verifyOtpBtn").disabled=true;
+    authMessage("Verifying OTP...");
+
     const response=await fetch("https://modeluxe-otp.vaishumodeluxe.workers.dev/",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"verify",requestId:pendingOtpRequestId,otpCode:code})
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        action:"verify",
+        requestId:pendingOtpRequestId,
+        otpCode:code
+      })
     });
+
     const result=await response.json().catch(()=>({}));
-    if(!response.ok||result.success!==true||result.verified!==true)throw new Error("OTP verification was unsuccessful.");
-    const customToken=result.customToken||(result.firebase&&result.firebase.customToken);
-    if(!customToken)throw new Error("The OTP Worker did not return a Firebase custom token. Deploy the matching OTP Worker.");
-    if(!auth||typeof auth.signInWithCustomToken!=="function")throw new Error("Firebase Authentication SDK is unavailable.");
+
+    if(!response.ok||result.success!==true||result.verified!==true){
+      throw new Error(
+        result.message||
+        result.error?.message||
+        ("OTP verification failed (HTTP "+response.status+")")
+      );
+    }
+
+    const customToken=result.customToken||
+      (result.firebase&&result.firebase.customToken);
+
+    if(!customToken){
+      throw new Error("Firebase custom token missing from OTP Worker response.");
+    }
+
+    if(!auth||typeof auth.signInWithCustomToken!=="function"){
+      throw new Error("Firebase Authentication SDK is unavailable.");
+    }
+
     await authReady;
+
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
     const credential=await auth.signInWithCustomToken(customToken);
-    if(!credential||!credential.user)throw new Error("Firebase sign-in could not be completed.");
+
+    if(!credential||!credential.user){
+      throw new Error("Firebase sign-in could not be completed.");
+    }
+
     const expectedUid="phone_91"+phone;
-    if(String(credential.user.uid||"")!==expectedUid || (result.uid && String(result.uid)!==expectedUid)){
+
+    if(
+      String(credential.user.uid||"")!==expectedUid||
+      (result.uid&&String(result.uid)!==expectedUid)
+    ){
       await auth.signOut();
       throw new Error("Firebase UID does not match the verified mobile number. Please check the OTP Worker.");
     }
+
     mlmVolatileStore.setItem("mlm_sms_verified_phone",phone);
-    pendingOtpRequestId=null;pendingOtpPhone=null;
+
+    pendingOtpRequestId=null;
+    pendingOtpPhone=null;
+
     $("otpVerifyArea").classList.add("hidden");
+
     authMessage("Mobile OTP verified. You are now signed in.");
-    showAuthState(credential.user);startCartCloudSync(credential.user);startWishlistCloudSync(credential.user);
+
+    showAuthState(credential.user);
+    startCartCloudSync(credential.user);
+    startWishlistCloudSync(credential.user);
+
   }catch(err){
     console.error("OTP verification failed:",err);
-    authMessage("OTP verification failed. Please check the code and try again.",true);
+    authMessage(
+      err.message||"OTP verification failed. Please try again.",
+      true
+    );
+  }finally{
+    if($("verifyOtpBtn")) $("verifyOtpBtn").disabled=false;
   }
-  finally{if($("verifyOtpBtn"))$("verifyOtpBtn").disabled=false}
 }
 async function logoutPhoneUser(){
   try{if(auth&&auth.currentUser)await auth.signOut()}catch(err){}
