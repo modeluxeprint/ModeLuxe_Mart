@@ -1318,9 +1318,9 @@ const authStateReady=new Promise(resolve=>{authStateReadyResolve=resolve;});
 function resolveInitialAuthState(user){if(!authStateReadyResolved){authStateReadyResolved=true;authStateReadyResolve(user||null);}}
 let authReady=Promise.resolve();
 if(auth && firebase.auth && firebase.auth.Auth && firebase.auth.Auth.Persistence){
-  authReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error=>{
+  authReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(error=>{
     console.error("Firebase LOCAL persistence could not be enabled:",error);
-    return false;
+    throw error;
   });
 }
 authReady.then(()=>{
@@ -1330,7 +1330,7 @@ authReady.then(()=>{
     else{stopCartCloudSync();stopWishlistCloudSync();showAuthState(null);}
   },error=>{console.error("Firebase auth state error:",error);resolveInitialAuthState(null);});
   else resolveInitialAuthState(null);
-}).catch(error=>{console.error("Firebase auth initialization failed:",error);resolveInitialAuthState(null);});
+}).catch(error=>{console.error("Firebase auth initialization failed:",error);resolveInitialAuthState(auth&&auth.currentUser?auth.currentUser:null);});
 async function sendLoginOTP(){
   const phone=$("loginPhone").value.trim().replace(/\D/g,"");
   if(!/^[6-9]\d{9}$/.test(phone)){authMessage("Enter a valid 10-digit Indian mobile number.",true);return}
