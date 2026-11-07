@@ -91,23 +91,86 @@ renderNotifications();
 updateUnitChoices();
 setTimeout(processDeliveryQr,800);
 
-// Restore the Firebase admin session after refresh. If the device gate was not completed before refresh, show it again instead of returning to the login form.
-auth.onAuthStateChanged(user=>{
-  if(!user)return;
-  signedInPhone=ADMIN_PHONE;
-  $('loginPanel').classList.add('hidden');
-  $('logoutBtn').classList.remove('hidden');
-  if(localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
-    $('adminDeviceLockModal').classList.add('hidden');
-    $('adminDeviceLockModal').classList.remove('flex');
-    $('dashboard').classList.remove('hidden');
-    startOrders();
-    startProducts();
-    startDeliverySettingsAdminListener();
-    updateUnitChoices();
-    setTimeout(processDeliveryQr,300);
-  }else{
-    showDeviceLockAfterOtp();
+// Restore Admin session safely after refresh or browser restart.
+let adminRestoreStarted=false;
+
+auth.onAuthStateChanged(async function(user){
+  try{
+    // Wait until Firebase LOCAL persistence is ready.
+    await adminPersistenceReady;
+
+    showActualAdminUid();
+
+    // Reject any non-admin Firebase account.
+    if(user && user.uid !== 'admin_7818995955'){
+      signedInPhone='';
+      localStorage.removeItem('modeluxeAdminDeviceUnlocked');
+
+      if(orderListener) db.ref('orders').off('value',orderListener);
+      if(productListener) db.ref('sellerProducts').off('value',productListener);
+
+      orderListener=null;
+      productListener=null;
+
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('loginPanel').classList.remove('hidden');
+
+      await auth.signOut();
+      setMsg('यह Admin Firebase account नहीं है।');
+      return;
+    }
+
+    // Firebase session is not available.
+    if(!user){
+      signedInPhone='';
+
+      if(orderListener) db.ref('orders').off('value',orderListener);
+      if(productListener) db.ref('sellerProducts').off('value',productListener);
+
+      orderListener=null;
+      productListener=null;
+
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('loginPanel').classList.remove('hidden');
+      return;
+    }
+
+    // Admin is already authenticated and this device was verified.
+    if(localStorage.getItem('modeluxeAdminDeviceUnlocked') === 'yes'){
+      signedInPhone=ADMIN_PHONE;
+
+      $('loginPanel').classList.add('hidden');
+      $('logoutBtn').classList.remove('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('dashboard').classList.remove('hidden');
+
+      if(!adminRestoreStarted){
+        adminRestoreStarted=true;
+        startOrders();
+        startProducts();
+        startDeliverySettingsAdminListener();
+        startOwnerManagement();
+        updateUnitChoices();
+        setTimeout(processDeliveryQr,300);
+      }
+    }else{
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('loginPanel').classList.remove('hidden');
+    }
+
+  }catch(error){
+    console.error('Admin session restore error:',error);
+    $('dashboard').classList.add('hidden');
+    $('loginPanel').classList.remove('hidden');
+    setMsg('Admin session restore error: '+error.message);
   }
 });
 async function sendOTP(){
