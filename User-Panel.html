@@ -672,7 +672,6 @@ function startCartCloudSync(user){
       }));
       mlmVolatileStore.setItem(userKey("mlm_cart"),JSON.stringify(cart));
       renderCart();
-      showToast("Cart cloud se sync ho gaya");
     }else if(!snap.exists()){
       // First login on a new device: seed the cloud cart from this session's current cart.
       writeCartCloudNow();
@@ -844,10 +843,10 @@ function addCart(id){
   if(!p){showToast("यह प्रोडक्ट अभी उपलब्ध नहीं है।");return false;}
   if(Number(p.stock||0)<=0||p.sellerPaused){showToast(p.sellerPaused?"Seller ने shop temporarily pause की है।":"यह प्रोडक्ट Out of Stock है।");return false;}
   const item=cart.find(x=>String(x.id)===key);
-  if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";item.category=item.category||p.category||"Other";}
+  if(item){item.qty=Number(item.qty||0)+1;item.image=item.image||p.image||"";item.category=item.category||p.category||"Other";item.sellerUid=item.sellerUid||p.sellerUid||"";item.seller=item.seller||p.seller||"";}
   else cart.push({id:String(p.id),name:p.name,price:Number(p.price||0),image:p.image||"",category:p.category||"Other",sellerUid:p.sellerUid||"",seller:p.seller||"",qty:1});
   save();renderCart();
-  showToast("Product added to Cart");
+  updateAddToCartButtonLabels();
   return true;
 }
 function buyNow(id){
@@ -1087,9 +1086,11 @@ $("orderForm").addEventListener("submit",async e=>{
       return;
     }
     if(message)message.innerHTML='<div class="notice">आपका ऑर्डर सेव हो रहा है…</div>';
-    await saveOrderToFirebase(order,"Cash on Delivery","Pending");
+    const saveResult = await saveOrderToFirebase(order,"Cash on Delivery","Pending");
     orders.unshift(order);save();rememberDeliveryAddress(order);cart=[];save();renderCart();renderMyOrders();
-    message.innerHTML='<div class="notice success">Order Placed Successfully! आपका ऑर्डर दर्ज हो गया है।</div>';
+    message.innerHTML = saveResult && saveResult.sellerSyncOk
+      ? '<div class="notice success">Order Placed Successfully! आपका ऑर्डर दर्ज हो गया है और Seller Panel पर भेज दिया गया है।</div>'
+      : '<div class="notice error">आपका ऑर्डर दर्ज हो गया है, लेकिन Seller Panel Sync अभी Pending है। कारण: '+esc(saveResult && saveResult.sellerSyncError || "Unknown sync error")+'</div>';
     form.reset();$("payment").value="COD";renderSavedDeliveryAddress();
     showSection("store");showOrderSuccess();
   }catch(err){
@@ -1393,6 +1394,7 @@ async function logoutPhoneUser(){
 const RAZORPAY_KEY_ID = "rzp_live_TiLvRgu9GruQuj";
 const RAZORPAY_CREATE_ORDER_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/create-order";
 const RAZORPAY_VERIFY_PAYMENT_URL = "https://modeluxe-payment.vaishumodeluxe.workers.dev/verify-payment";
+const SELLER_ORDER_SYNC_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
 
 async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId=""){
   if(!db) throw new Error("Firebase SDK did not load");
@@ -1431,32 +1433,69 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     createdAt:order.createdAt||new Date().toISOString(),
     dateTime:order.date||new Date().toLocaleString()
   };
+  // Save the canonical customer order first.
   await db.ref("orders/"+order.id).set(firebaseOrder);
-  const groups={};(order.items||[]).forEach(item=>{const sid=String(item.sellerUid||"");if(sid){(groups[sid]||(groups[sid]=[])).push(item);}});
-  const sellerUpdates={};Object.entries(groups).forEach(([sid,items])=>{
-    const sellerSubtotal=items.reduce((n,i)=>n+(Number(i.price??i.sellerPrice??i.salePrice??0)||0)*(Number(i.qty??i.quantity??1)||1),0);
-    sellerUpdates["sellerOrders/"+sid+"/"+order.id]={
-      orderId:order.id,sellerUid:sid,items,
-      customerName:order.name,customerPhone:order.phone,shippingAddress:order.address,pin:order.pin,
-      latitude:order.latitude||"",longitude:order.longitude||"",
-      total:sellerSubtotal,productSubtotal:sellerSubtotal,subtotal:sellerSubtotal,
-      deliveryFee:Number(order.deliveryFee||0),deliveryCharges:Number(order.deliveryFee||0),
-      grandTotal:Number(order.total||0),totalAmount:Number(order.total||0),
-      paymentMethod:paymentMethod,payment:paymentMethod,paymentStatus:paymentStatus,
-      status:"Order Placed",createdAt:order.createdAt||new Date().toISOString()
-    };
-  });
-  // Customer order creation is successful once /orders/{id} is written.
-  // Seller-private fan-out may be denied by Firebase Rules for customer sessions;
-  // do not report the customer order as failed or suppress its success popup.
-  if(Object.keys(sellerUpdates).length){
-    try{await db.ref().update(sellerUpdates);}
-    catch(sellerSyncError){console.warn("Order saved, but seller order fan-out needs trusted server/Admin sync:",sellerSyncError&&sellerSyncError.message);}
+
+  // Fan out the order to each seller through the trusted Worker.
+  // The Worker validates the customer's Firebase ID token and reads the saved order.
+  let sellerSyncOk = false;
+  let sellerSyncError = "";
+  let sellerCount = 0;
+  try{
+    const currentUser = auth && auth.currentUser;
+    if(!currentUser) throw new Error("Customer Firebase login session missing.");
+    if(!SELLER_ORDER_SYNC_URL) throw new Error("Seller Order Sync Worker URL is not configured.");
+
+    const idToken = await currentUser.getIdToken(true);
+    const syncResponse = await fetch(SELLER_ORDER_SYNC_URL, {
+      method: "POST",
+      mode: "cors",
+      cache: "no-store",
+      credentials: "omit",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + idToken
+      },
+      body: JSON.stringify({
+        action: "syncOrder",
+        orderId: String(order.id)
+      })
+    });
+
+    const syncResult = await syncResponse.json().catch(() => ({}));
+    if(!syncResponse.ok || syncResult.ok !== true){
+      throw new Error(syncResult.error || syncResult.message || ("Seller sync failed (HTTP " + syncResponse.status + ")."));
+    }
+
+    sellerCount = Number(syncResult.sellerCount || 0);
+    if(sellerCount < 1){
+      throw new Error(syncResult.message || "Product listing mein sellerUid nahi mila. Seller UID ke bina order Seller Panel tak route nahi ho sakta.");
+    }
+    sellerSyncOk = true;
+  }catch(syncError){
+    sellerSyncError = String(syncError && syncError.message || syncError || "Unknown seller sync error");
+    console.error("Customer order saved, but Seller Panel sync failed:", sellerSyncError);
   }
+
+  order.sellerSyncPending = !sellerSyncOk;
+  order.sellerSyncError = sellerSyncOk ? "" : sellerSyncError;
+
+  // Keep a diagnostic marker on the canonical order without changing its payment or billing values.
+  try{
+    await db.ref("orders/"+order.id).update({
+      sellerSyncPending: !sellerSyncOk,
+      sellerSyncError: sellerSyncOk ? null : sellerSyncError,
+      sellerSyncUpdatedAt: new Date().toISOString()
+    });
+  }catch(markerError){
+    console.warn("Could not update seller sync diagnostic marker:", markerError && markerError.message);
+  }
+
   order.payment=paymentMethod;
   order.paymentStatus=paymentStatus;
   order.razorpayPaymentId=paymentId;
   order.status="Order Placed";
+  return { sellerSyncOk, sellerSyncError, sellerCount };
 }
 
 function startRazorpayPayment(order){
