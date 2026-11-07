@@ -1093,9 +1093,11 @@ function startUserOrdersListener(phone){
     if(value && !specs.some(x=>x.field===field&&x.value===value))specs.push({field,value});
   };
 
-  // Canonical phone field supports new orders from both Browser and Android WebView.
+  // Search by the verified login number, independently of the delivery-contact
+  // number entered at checkout. This keeps Android WebView and Chrome in sync.
   addSpec("customerPhoneDigits",digits);
-  // Legacy phone formats and UID query preserve visibility of older orders.
+  addSpec("customerLoginPhoneDigits",digits);
+  // Legacy phone formats and Firebase UID preserve visibility of older orders.
   [digits,"+91"+digits,"91"+digits].forEach(v=>addSpec("customerPhone",v));
   if(orderUid)addSpec("customerUid",orderUid);
 
@@ -1112,7 +1114,11 @@ function startUserOrdersListener(phone){
       snapshot.forEach(child=>{
         const raw=child.val()||{};
         const orderPhone=String(raw.customerPhoneDigits||raw.customerPhone||raw.phone||"").replace(/\D/g,"").slice(-10);
-        if(orderPhone!==digits)return;
+        const orderLoginPhone=String(raw.customerLoginPhoneDigits||"").replace(/\D/g,"").slice(-10);
+        const belongsToUid=!!(orderUid && String(raw.customerUid||"")===orderUid);
+        // UID match must not be discarded just because checkout contact differs
+        // from the verified login number. Phone fields remain fallback for legacy orders.
+        if(orderPhone!==digits && orderLoginPhone!==digits && !belongsToUid)return;
         const id=raw.id??child.key;
         const key=String(id);
         const old=mergedRemote.get(key)||{};
@@ -1306,6 +1312,8 @@ async function saveOrderToFirebase(order,paymentMethod,paymentStatus,paymentId="
     customerName:order.name||"",
     customerPhone:order.phone||"",
     customerPhoneDigits:String(order.phone||"").replace(/\D/g,"").slice(-10),
+    // Verified account number is stored separately from the delivery contact number.
+    customerLoginPhoneDigits:String(activeUserPhone||"").replace(/\D/g,"").slice(-10),
     shippingAddress:order.address||"",
     shippingHouseNo:"",
     shippingStreetNo:"",
