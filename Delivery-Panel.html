@@ -42,10 +42,100 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn(
 function setDeliveryAuthMode(mode){authMode=mode;const reg=mode==='register';$('deliveryAuthForm').classList.remove('hidden');$('registerFields').classList.toggle('hidden',!reg);$('deliveryName').required=reg;$('deliveryPhone').required=reg;$('authSubmit').textContent=reg?'Create Delivery Account':'Login';$('password').autocomplete=reg?'new-password':'current-password';$('loginMsg').textContent='';}
 function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingApplication').classList.add('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden'); }
 $('choiceApplyBtn').onclick=()=>setDeliveryAuthMode('register');$('choiceLoginBtn').onclick=()=>setDeliveryAuthMode('login');
-$('authSubmit').onclick=async()=>{const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;try{if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');if(authMode==='register'){const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString(),uid=cred.user.uid;const profile={uid,email,name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};try{const updates={};updates['deliveryProfiles/'+uid]=profile;updates['deliveryApplications/'+uid]=profile;await db.ref().update(updates);const [profileCheck,applicationCheck]=await Promise.all([db.ref('deliveryProfiles/'+uid).once('value'),db.ref('deliveryApplications/'+uid).once('value')]);if(!profileCheck.exists()||!applicationCheck.exists())throw Error('Firebase save verification failed: deliveryProfiles ya deliveryApplications record missing hai.');$('loginMsg').textContent='Application Firebase mein successfully submit aur verify ho gayi. Admin approval ka wait karein.';}catch(writeErr){throw Error('Account ban gaya, lekin application Firebase mein save nahi hui: '+(writeErr.message||writeErr)+'. Firebase Rules mein deliveryProfiles/'+uid+' aur deliveryApplications/'+uid+' par is UID ki write permission check karein.');}}else{await auth.signInWithEmailAndPassword(email,password);}}catch(e){const c=e.code||'';$('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':e.message||'Login nahi ho paya.';}finally{btn.disabled=false;}};
-$('pendingRefresh').onclick=()=>currentDeliveryUser&&currentDeliveryUser.reload().then(()=>location.reload());$('pendingLogout').onclick=()=>auth.signOut();
-async function syncOwnDeliveryApplication(){const user=auth.currentUser;if(!user)throw Error('Pehle Delivery account se login karein.');const profileSnap=await db.ref('deliveryProfiles/'+user.uid).once('value');let profile=profileSnap.val()||{};if(!profileSnap.exists())throw Error('Delivery profile Firebase mein nahi mila. Registration form se naya application submit karein.');const appRef=db.ref('deliveryApplications/'+user.uid);const appSnap=await appRef.once('value');if(!appSnap.exists()){const now=new Date().toISOString();const record={...profile,uid:user.uid,accountType:'delivery',applicationStatus:profile.applicationStatus||'pending',status:profile.status||profile.applicationStatus||'pending',submittedAt:profile.submittedAt||now,updatedAt:now};await appRef.set(record);}const verify=await appRef.once('value');if(!verify.exists())throw Error('deliveryApplications record verify nahi hua.');$('applicationSyncMsg').textContent='Application Firebase mein sync ho gayi. Ab Admin Panel refresh karein.';} $('syncDeliveryApplication').onclick=async()=>{const m=$('applicationSyncMsg');m.textContent='Application sync ho rahi hai…';try{await syncOwnDeliveryApplication();}catch(e){m.textContent='Sync error: '+(e.message||e);}};
-auth.onAuthStateChanged(async user=>{currentDeliveryUser=user;$('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('logout').classList.add('hidden');if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}$('login').classList.add('hidden');try{const snap=await db.ref('deliveryProfiles/'+user.uid).once('value');deliveryProfile=snap.val()||{};if(snap.exists()){const ownApplication=await db.ref('deliveryApplications/'+user.uid).once('value');if(!ownApplication.exists()){const now=new Date().toISOString();await db.ref('deliveryApplications/'+user.uid).set({...deliveryProfile,uid:user.uid,accountType:'delivery',applicationStatus:deliveryProfile.applicationStatus||'pending',status:deliveryProfile.status||deliveryProfile.applicationStatus||'pending',submittedAt:deliveryProfile.submittedAt||now,updatedAt:now});}}if(!snap.exists()){ $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Delivery profile nahi mila. Admin se sampark karein.';return;}if(deliveryProfile.status==='suspended'||deliveryProfile.applicationStatus==='suspended'||deliveryProfile.applicationStatus!=='approved'){ $('pendingApplication').classList.remove('hidden');$('applicationStatus').textContent=deliveryProfile.applicationStatus==='rejected'?'Application reject ho gayi. Admin se sampark karein.':deliveryProfile.applicationStatus==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega.';return;}signedInPhone=user.uid;$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders();startDeliveryWithdrawals();}catch(e){$('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Profile load error: '+e.message;}});
+let registrationInProgress=false;
+function deliveryStatusOf(record){
+ const raw=String(record?.applicationStatus||record?.status||'pending').toLowerCase();
+ if(['approved','active','accepted'].includes(raw))return 'approved';
+ if(['cancelled','canceled','rejected','declined'].includes(raw))return 'cancelled';
+ if(['suspended','blocked'].includes(raw))return 'suspended';
+ return 'pending';
+}
+function showDeliveryApplicationStatus(record){
+ const status=deliveryStatusOf(record);
+ $('pendingApplication').classList.remove('hidden');
+ $('logout').classList.remove('hidden');
+ $('applicationStatus').textContent=status==='approved'?'Application approved hai. Dashboard khol rahe hain…':status==='cancelled'?'Application cancel/reject kar di gayi hai. Admin se sampark karein.':status==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega.';
+ return status;
+}
+async function loadDeliveryAccount(user){
+ currentDeliveryUser=user;
+ $('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('logout').classList.add('hidden');
+ if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}
+ $('login').classList.add('hidden');
+ try{
+   const [appSnap,profileSnap]=await Promise.all([
+     db.ref('deliveryApplications/'+user.uid).once('value'),
+     db.ref('deliveryProfiles/'+user.uid).once('value')
+   ]);
+   let app=appSnap.val()||null, profile=profileSnap.val()||null;
+   if(!app&&!profile){
+     $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');
+     $('loginMsg').textContent='Is Login UID par Delivery Application/Profile nahi mili. Agar pehle application submit ki thi, Firebase Rules aur sahi account UID verify karein.';
+     return;
+   }
+   const base={...(profile||{}),...(app||{}),uid:user.uid,email:(app&&app.email)||(profile&&profile.email)||user.email,accountType:'delivery'};
+   deliveryProfile=base;
+   // Keep both records aligned. If one path is missing, restore it from the existing record.
+   const updates={};
+   if(!app){updates['deliveryApplications/'+user.uid]={...base,applicationStatus:base.applicationStatus||base.status||'pending',status:base.status||base.applicationStatus||'pending',submittedAt:base.submittedAt||base.createdAt||new Date().toISOString()};}
+   if(!profile){updates['deliveryProfiles/'+user.uid]={...base,applicationStatus:base.applicationStatus||base.status||'pending',status:base.status||base.applicationStatus||'pending'};}
+   if(Object.keys(updates).length){
+     try{await db.ref().update(updates);}
+     catch(syncErr){console.warn('Delivery record auto-sync:',syncErr);}
+   }
+   const status=deliveryStatusOf(base);
+   if(status==='cancelled'||status==='suspended'||status!=='approved'){
+     showDeliveryApplicationStatus(base);return;
+   }
+   signedInPhone=user.uid;
+   $('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');
+   startOrders();startDeliveryWithdrawals();
+ }catch(e){
+   $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');
+   $('loginMsg').textContent='Firebase read error: '+(e.message||e)+' — deliveryApplications aur deliveryProfiles ke apne UID read permissions check karein.';
+ }
+}
+$('authSubmit').onclick=async()=>{
+ const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;
+ try{
+   if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');
+   if(authMode==='register'){
+     const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();
+     if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
+     registrationInProgress=true;
+     const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString(),uid=cred.user.uid;
+     const record={uid,email,name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};
+     const updates={};updates['deliveryProfiles/'+uid]=record;updates['deliveryApplications/'+uid]=record;
+     await db.ref().update(updates);
+     const [pCheck,aCheck]=await Promise.all([db.ref('deliveryProfiles/'+uid).once('value'),db.ref('deliveryApplications/'+uid).once('value')]);
+     if(!pCheck.exists()||!aCheck.exists())throw Error('Firebase save verification failed. Dono records verify nahi hue.');
+     $('loginMsg').textContent='Application Firebase mein successfully submit aur verify ho gayi. Admin approval ka wait karein.';
+     await loadDeliveryAccount(cred.user);
+   }else{
+     const cred=await auth.signInWithEmailAndPassword(email,password);
+     await loadDeliveryAccount(cred.user);
+   }
+ }catch(e){
+   const c=e.code||'';
+   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':(e.message||'Login nahi ho paya.');
+ }finally{registrationInProgress=false;btn.disabled=false;}
+};
+$('pendingRefresh').onclick=async()=>{const user=auth.currentUser;if(user){$('applicationStatus').textContent='Status refresh ho raha hai…';await loadDeliveryAccount(user);}};
+$('pendingLogout').onclick=()=>auth.signOut();
+async function syncOwnDeliveryApplication(){
+ const user=auth.currentUser;if(!user)throw Error('Pehle Delivery account se login karein.');
+ const [pSnap,aSnap]=await Promise.all([db.ref('deliveryProfiles/'+user.uid).once('value'),db.ref('deliveryApplications/'+user.uid).once('value')]);
+ const existing={...(pSnap.val()||{}),...(aSnap.val()||{})};
+ if(!pSnap.exists()&&!aSnap.exists())throw Error('Is UID par profile ya application ka record nahi mila. Purani application Firebase mein save nahi hui thi.');
+ const now=new Date().toISOString(),record={...existing,uid:user.uid,email:existing.email||user.email,accountType:'delivery',applicationStatus:existing.applicationStatus||existing.status||'pending',status:existing.status||existing.applicationStatus||'pending',submittedAt:existing.submittedAt||existing.createdAt||now,updatedAt:now};
+ const updates={};if(!pSnap.exists())updates['deliveryProfiles/'+user.uid]=record;if(!aSnap.exists())updates['deliveryApplications/'+user.uid]=record;
+ if(Object.keys(updates).length)await db.ref().update(updates);
+ const [pv,av]=await Promise.all([db.ref('deliveryProfiles/'+user.uid).once('value'),db.ref('deliveryApplications/'+user.uid).once('value')]);
+ if(!pv.exists()||!av.exists())throw Error('Sync verify nahi hua. Firebase Rules mein own UID read/write permission check karein.');
+ deliveryProfile={...record};$('applicationSyncMsg').textContent='Application aur Profile dono Firebase mein verify ho gaye. Admin Panel refresh karein.';
+}
+$('syncDeliveryApplication').onclick=async()=>{const m=$('applicationSyncMsg');m.textContent='Application sync ho rahi hai…';try{await syncOwnDeliveryApplication();}catch(e){m.textContent='Sync error: '+(e.message||e);}};
+auth.onAuthStateChanged(async user=>{if(registrationInProgress)return;await loadDeliveryAccount(user);});
 $('activeBox').onclick=()=>showBucket('active');$('deliveredBox').onclick=()=>showBucket('delivered');$('backHome').onclick=()=>setView('home');$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
 let deliveryWithdrawalListener=null;
 function startDeliveryWithdrawals(){
