@@ -17,9 +17,9 @@
 <button id="myAccountBtn" class="btn muted" type="button" style="width:100%">👤 My Account</button>
 <div id="myAccountPanel" class="hidden" style="margin-top:12px;padding:14px;background:#f8fafc;border:1px solid #dbe5f1;border-radius:12px">
 <h3 style="margin:0 0 12px;color:#075fc4">My Account Details</h3>
-<div class="small">Login mobile number</div><b id="accountPhone">—</b>
-<div class="small" style="margin-top:9px">Login email</div><b id="accountEmail">—</b>
-<div class="small" style="margin-top:9px">Firebase UID</div><div id="accountUid" style="font-size:12px;word-break:break-all">—</div>
+<div class="small">Login method</div><b id="accountLoginMethod">—</b><div class="small" style="margin-top:9px">Login mobile number</div><b id="accountPhone">—</b>
+<div class="small" style="margin-top:9px">Login Gmail / Email</div><b id="accountEmail">—</b>
+
 </div>
 <button id="orderGraphBtn" class="btn primary" type="button" style="width:100%;margin-top:12px">📊 Order Graph</button>
 <div id="orderGraphPanel" class="hidden" style="margin-top:14px;border:1px solid #dbe5f1;border-radius:14px;padding:14px;background:#fff">
@@ -27,7 +27,7 @@
 <div id="dailyOrderChart" style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;min-height:230px;border-bottom:1px solid #dbe5f1;padding:12px 4px 0"></div>
 <div id="dailyOrderTotal" style="font-size:16px;color:#64748b;margin-top:14px">Total: 0 orders</div>
 </div></div>
-<div class="panel" style="margin-top:12px"><input id="search" placeholder="Order ID, customer, phone search karein"><button id="scanBtn" class="btn primary" style="width:100%;margin-top:10px">📷 Scan Invoice Delivery QR</button><p id="sync" class="small" style="margin-bottom:0">Firebase se connect ho raha hai…</p></div>
+<div class="panel" style="margin-top:12px"><input id="search" placeholder="Order ID, customer, phone search karein"><button id="scanBtn" class="btn primary" style="width:100%;margin-top:10px">📷 Scan Invoice Delivery QR</button><p id="sync" class="small" style="margin-bottom:0">Connecting…</p></div>
 <section id="listView" class="hidden"><div class="topline" style="align-items:center;margin-top:16px"><button id="backHome" class="btn muted">← Dashboard</button><h2 id="listTitle" class="blue" style="margin:0">Active deliveries</h2></div><div id="orders"></div></section>
 <section id="detailView" class="hidden"><button id="backList" class="btn muted back-btn">← Orders list</button><div id="orderDetail" class="panel"></div></section>
 </section></main></main>
@@ -74,7 +74,7 @@ $('verify').onclick=async()=>{const otp=$('otp').value.trim();if($('phone').valu
 function startOrders(){
  if(listener)db.ref('orders').off('value',listener);
  listener=s=>{const next=s.val()||{};for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New order received','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();renderShipPopups();if($('orderGraphPanel')&&!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};
- db.ref('orders').on('value',listener,e=>$('sync').textContent='Firebase error: '+e.message);
+ db.ref('orders').on('value',listener,e=>$('sync').textContent='Connection error: '+e.message);
  if(assignmentListener)db.ref('deliveryAssignments').off('value',assignmentListener);
  assignmentListener=s=>{assignmentData=s.val()||{};renderOrders();renderShipPopups()};
  db.ref('deliveryAssignments').on('value',assignmentListener,e=>$('sync').textContent='Assignment sync error: '+e.message);
@@ -91,11 +91,18 @@ function addNotice(title,detail){const a=getNotifications();a.unshift({title,det
 function renderNotifications(){const a=getNotifications();$('bellBadge').textContent=a.filter(n=>!n.read).length;$('notificationList').innerHTML=a.length?a.map((n,i)=>`<div class="notification-item"><b>${esc(n.title)}</b><div>${esc(n.detail||'')}</div><div class="small">${esc(n.time||'')}</div></div>`).join(''):'<p class="small">अभी कोई notification नहीं है।</p>'}
 function renderMyAccount(){
  const u=auth.currentUser||{};
- const phone=u.phoneNumber||signedInPhone||ADMIN_PHONE;
- const email=u.email||'Not linked to this login';
- $('accountPhone').textContent=phone||'Not available';
+ const providers=Array.isArray(u.providerData)?u.providerData:[];
+ const providerPhone=providers.find(p=>p&&p.phoneNumber)?.phoneNumber;
+ const providerEmail=providers.find(p=>p&&p.email)?.email;
+ const phone=u.phoneNumber||providerPhone||signedInPhone||'Not available';
+ const email=u.email||providerEmail||'Not available';
+ $('accountPhone').textContent=phone;
  $('accountEmail').textContent=email;
- $('accountUid').textContent=u.uid||'Not available';
+
+ const method=providers.map(p=>p&&p.providerId).filter(Boolean);
+ const methodText=method.length?method.join(', '):(signedInPhone?'Admin OTP (SMS)':'Custom login');
+ const methodEl=$('accountLoginMethod');
+ if(methodEl)methodEl.textContent=methodText;
 }
 function renderDailyOrderGraph(){
  const now=new Date(),days=[];
@@ -122,7 +129,7 @@ window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selected
 window.markOutForDelivery=async function(id){const o=ordersData[id];if(!o||!assignedToThisDevice(id))return alert('Ye order is Delivery Panel ko assign nahi hai.');if(String(o.status||'').toLowerCase()!=='picked by delivery partner')return alert('Order abhi Picked by Delivery Partner status mein nahi hai.');try{const now=new Date().toISOString();await db.ref('orders/'+id).update({status:'Out for Delivery',deliveryStatus:'Out for Delivery',outForDeliveryAt:now,outForDeliveryBy:deliveryDeviceId});addNotice('Out for Delivery','Order #'+id+' Out for Delivery mark ho gaya.');renderOrders();}catch(e){alert('Status update nahi hua: '+e.message)}};
 window.saveStatus=async id=>{if(!signedInPhone||signedInPhone!==ADMIN_PHONE)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
 async function openScanner(){if(!signedInPhone)return alert('पहले login करें');if(typeof Html5Qrcode==='undefined')return alert('QR library load नहीं हुई; internet check करें।');$('scanner').classList.remove('hidden');$('scanMsg').textContent='Camera permission का इंतजार है…';scanBusy=false;try{scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async value=>{if(scanBusy)return;scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';try{await scanner.stop()}catch{}await confirmQr(value)},()=>{});$('scanMsg').textContent='QR को frame के अंदर रखें।'}catch(e){$('scanMsg').textContent='Camera start नहीं हुआ: '+(e.message||e);scanBusy=false}}
-async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(st==='delivered'){alert('यह order पहले ही Delivered है।');closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});alert('Delivery confirmed! Order #'+id+' Delivered है।');closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
+async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order नहीं मिला');const st=String(o.status||'').toLowerCase();if(st==='delivered'){alert('यह order पहले ही Delivered है।');closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});alert('Delivery confirmed! Order #'+id+' Delivered है।');closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
 $('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(listener)db.ref('orders').off('value',listener);listener=null;if(assignmentListener)db.ref('deliveryAssignments').off('value',assignmentListener);assignmentListener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script></body></html>
