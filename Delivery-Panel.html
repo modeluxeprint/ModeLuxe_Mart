@@ -18,9 +18,17 @@
 <button id="myAccountBtn" class="btn muted" type="button" style="width:100%">👤 My Account</button>
 <div id="myAccountPanel" class="hidden" style="margin-top:12px;padding:14px;background:#f8fafc;border:1px solid #dbe5f1;border-radius:12px">
 <h3 style="margin:0 0 12px;color:#075fc4">My Account Details</h3>
-<div class="small">Login method</div><b id="accountLoginMethod">—</b><div class="small" style="margin-top:9px">Login mobile number</div><b id="accountPhone">—</b>
-<div class="small" style="margin-top:9px">Login Gmail / Email</div><b id="accountEmail">—</b>
-
+<div class="small">Login ID (Gmail / Email)</div><b id="accountEmail">—</b>
+<div class="small" style="margin-top:9px">Mobile number</div><b id="accountPhone">Not added</b>
+<div class="small" style="margin-top:9px">Login method</div><b id="accountLoginMethod">Email & Password</b>
+<button id="editAccountBtn" class="btn muted" type="button" style="width:100%;margin-top:14px">✏️ Update Mobile / Gmail</button>
+<div id="editAccountForm" class="hidden" style="margin-top:12px;padding:12px;border:1px solid #dbe5f1;border-radius:12px;background:#fff">
+<label class="small">New Gmail / Email (Login ID)</label><input id="editAccountEmail" type="email" autocomplete="email" placeholder="name@gmail.com">
+<label class="small" style="display:block;margin-top:10px">Mobile number</label><input id="editAccountPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
+<label class="small" style="display:block;margin-top:10px">Current password (only if changing Gmail)</label><input id="editAccountPassword" type="password" autocomplete="current-password" placeholder="Current password">
+<button id="saveAccountBtn" class="btn primary" type="button" style="width:100%;margin-top:12px">Save Changes</button>
+<div id="accountUpdateMsg" class="small" style="margin-top:8px"></div>
+</div>
 </div>
 <button id="orderGraphBtn" class="btn primary" type="button" style="width:100%;margin-top:12px">📊 Order Graph</button>
 <div id="orderGraphPanel" class="hidden" style="margin-top:14px;border:1px solid #dbe5f1;border-radius:14px;padding:14px;background:#fff">
@@ -60,7 +68,18 @@ function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingAp
 $('choiceApplyBtn').onclick=()=>setDeliveryAuthMode('register');$('choiceLoginBtn').onclick=()=>setDeliveryAuthMode('login');
 $('authSubmit').onclick=async()=>{const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;try{if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');if(authMode==='register'){const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString();const profile={uid:cred.user.uid,email,name,phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,updatedAt:now};try{await db.ref('deliveryProfiles/'+cred.user.uid).set(profile);await db.ref('deliveryApplications/'+cred.user.uid).set({...profile,submittedAt:now});$('loginMsg').textContent='Application submit ho gayi. Admin approval ka wait karein.';}catch(writeErr){throw Error('Account ban gaya, lekin application save nahi hui: '+writeErr.message+'. Firebase Rules mein deliveryProfiles aur deliveryApplications par apne UID ki write permission chahiye.');}}else{await auth.signInWithEmailAndPassword(email,password);}}catch(e){const c=e.code||'';$('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':e.message||'Login nahi ho paya.';}finally{btn.disabled=false;}};
 $('pendingRefresh').onclick=()=>currentDeliveryUser&&currentDeliveryUser.reload().then(()=>location.reload());$('pendingLogout').onclick=()=>auth.signOut();
-auth.onAuthStateChanged(async user=>{currentDeliveryUser=user;$('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('logout').classList.add('hidden');if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}$('login').classList.add('hidden');try{const snap=await db.ref('deliveryProfiles/'+user.uid).once('value');deliveryProfile=snap.val()||{};if(!snap.exists()){ $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Delivery profile nahi mila. Admin se sampark karein.';return;}if(deliveryProfile.status==='suspended'||deliveryProfile.applicationStatus==='suspended'||deliveryProfile.applicationStatus!=='approved'){ $('pendingApplication').classList.remove('hidden');$('applicationStatus').textContent=deliveryProfile.applicationStatus==='rejected'?'Application reject ho gayi. Admin se sampark karein.':deliveryProfile.applicationStatus==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega.';return;}signedInPhone=user.uid;$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders();startDeliveryWithdrawals();}catch(e){$('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Profile load error: '+e.message;}});
+auth.onAuthStateChanged(async user=>{currentDeliveryUser=user;$('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('logout').classList.add('hidden');if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}$('login').classList.add('hidden');try{const snap=await db.ref('deliveryProfiles/'+user.uid).once('value');deliveryProfile=snap.val()||{};if(!snap.exists()){ $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Delivery profile nahi mila. Admin se sampark karein.';return;}if(deliveryProfile.status==='suspended'||deliveryProfile.applicationStatus==='suspended'||deliveryProfile.applicationStatus!=='approved'){ $('pendingApplication').classList.remove('hidden');$('applicationStatus').textContent=deliveryProfile.applicationStatus==='rejected'?'Application reject ho gayi. Admin se sampark karein.':deliveryProfile.applicationStatus==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega.';return;}signedInPhone=user.uid;$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders();startDeliveryWithdrawals();}catch(e){$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Profile load error: '+e.message;}});
+let deliveryWithdrawalListener=null;
+function startDeliveryWithdrawals(){
+ const ref=db.ref('withdrawalRequests/delivery/'+signedInPhone);
+ if(deliveryWithdrawalListener)ref.off('value',deliveryWithdrawalListener);
+ deliveryWithdrawalListener=snap=>{
+  const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));
+  const target=$('deliveryWithdrawHistory');
+  if(target)target.innerHTML=rows.length?rows.map(([id,r])=>'<div style="padding:8px 0;border-top:1px solid #e2e8f0">₹'+Number(r.amount||0).toLocaleString('en-IN')+' · '+esc(r.status||'pending')+' · '+esc(r.createdAt||'')+'</div>').join(''):'No withdrawal requests yet.';
+ };
+ ref.on('value',deliveryWithdrawalListener,e=>{const target=$('deliveryWithdrawHistory');if(target)target.textContent='History load error: '+e.message;});
+}
 $('activeBox').onclick=()=>showBucket('active');$('deliveredBox').onclick=()=>showBucket('delivered');$('myAccountBtn').onclick=()=>{const p=$('myAccountPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))renderMyAccount()};$('orderGraphBtn').onclick=()=>{$('orderGraphPanel').classList.toggle('hidden');if(!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph()};$('backHome').onclick=()=>setView('home');$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
 $('send').onclick=async()=>{const phone=$('phone').value.trim(),password=$('password').value;if(phone!==ADMIN_PHONE){$('loginMsg').textContent='यह मोबाइल नंबर अधिकृत नहीं है।';return}if(password.length<12){$('loginMsg').textContent='Admin password कम-से-कम 12 अक्षरों का होना चाहिए।';return}try{$('send').disabled=true;$('loginMsg').textContent='Password जाँचा जा रहा है और OTP भेजा जा रहा है…';const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password})});const j=await r.json();if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||'OTP request fail हुई');pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');$('loginMsg').textContent='OTP भेज दिया गया है।'}catch(e){$('loginMsg').textContent='Login error: '+(e.message||'Unknown error')}finally{$('send').disabled=false}};
 $('verify').onclick=async()=>{const otp=$('otp').value.trim();if($('phone').value.trim()!==pendingPhone||!requestId){$('loginMsg').textContent='पहले नया OTP भेजें।';return}if(!/^\d{6}$/.test(otp)){$('loginMsg').textContent='6 अंकों का OTP डालें।';return}try{$('verify').disabled=true;$('loginMsg').textContent='OTP verify हो रहा है…';const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp})});const j=await r.json();if(!r.ok||j.success!==true||j.verified!==true||!j.customToken)throw Error(j.message||'OTP verify नहीं हुआ');await auth.signInWithCustomToken(j.customToken);signedInPhone=pendingPhone;$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders()}catch(e){$('loginMsg').textContent='Login error: '+(e.message||'Unknown error')}finally{$('verify').disabled=false}};
@@ -84,19 +103,44 @@ function addNotice(title,detail){const a=getNotifications();a.unshift({title,det
 function renderNotifications(){const a=getNotifications();$('bellBadge').textContent=a.filter(n=>!n.read).length;$('notificationList').innerHTML=a.length?a.map((n,i)=>`<div class="notification-item"><b>${esc(n.title)}</b><div>${esc(n.detail||'')}</div><div class="small">${esc(n.time||'')}</div></div>`).join(''):'<p class="small">अभी कोई notification नहीं है।</p>'}
 function renderMyAccount(){
  const u=auth.currentUser||{};
- const providers=Array.isArray(u.providerData)?u.providerData:[];
- const providerPhone=providers.find(p=>p&&p.phoneNumber)?.phoneNumber;
- const providerEmail=providers.find(p=>p&&p.email)?.email;
- const phone=u.phoneNumber||providerPhone||signedInPhone||'Not available';
- const email=u.email||providerEmail||'Not available';
- $('accountPhone').textContent=phone;
+ const email=u.email||deliveryProfile.email||'Not available';
+ const phone=deliveryProfile.phone||'Not added';
  $('accountEmail').textContent=email;
-
- const method=providers.map(p=>p&&p.providerId).filter(Boolean);
- const methodText=method.length?method.join(', '):(signedInPhone?'Admin OTP (SMS)':'Custom login');
- const methodEl=$('accountLoginMethod');
- if(methodEl)methodEl.textContent=methodText;
+ $('accountPhone').textContent=phone;
+ $('accountLoginMethod').textContent='Gmail / Email & Password';
+ $('editAccountEmail').value=u.email||deliveryProfile.email||'';
+ $('editAccountPhone').value=deliveryProfile.phone||'';
+ $('editAccountPassword').value='';
+ $('accountUpdateMsg').textContent='';
 }
+$('editAccountBtn').onclick=()=>{$('editAccountForm').classList.toggle('hidden');if(!$('editAccountForm').classList.contains('hidden'))renderMyAccount()};
+$('saveAccountBtn').onclick=async()=>{
+ const u=auth.currentUser;
+ if(!u)return;
+ const newEmail=$('editAccountEmail').value.trim().toLowerCase();
+ const newPhone=$('editAccountPhone').value.trim();
+ const currentPassword=$('editAccountPassword').value;
+ const msg=$('accountUpdateMsg'),btn=$('saveAccountBtn');
+ if(newPhone&&!/^\\d{10}$/.test(newPhone)){msg.textContent='Mobile number 10 digits ka hona chahiye.';return;}
+ if(!newEmail||!/^\\S+@\\S+\\.\\S+$/.test(newEmail)){msg.textContent='Valid Gmail / Email enter karein.';return;}
+ btn.disabled=true;msg.textContent='Updating…';
+ try{
+   if(newEmail!==String(u.email||'').toLowerCase()){
+     if(!currentPassword)throw Error('Gmail change karne ke liye current password enter karein.');
+     const credential=firebase.auth.EmailAuthProvider.credential(u.email,currentPassword);
+     await u.reauthenticateWithCredential(credential);
+     await u.updateEmail(newEmail);
+     await u.sendEmailVerification();
+   }
+   const updated={...deliveryProfile,email:newEmail,phone:newPhone,updatedAt:new Date().toISOString()};
+   await db.ref('deliveryProfiles/'+u.uid).update({email:newEmail,phone:newPhone,updatedAt:updated.updatedAt});
+   await db.ref('deliveryApplications/'+u.uid).update({email:newEmail,phone:newPhone,updatedAt:updated.updatedAt}).catch(()=>{});
+   deliveryProfile=updated;
+   renderMyAccount();
+   msg.textContent=newEmail!==String(u.email||'').toLowerCase()?'Details updated. New email verify karein; next login se naya Gmail/Login ID use hoga.':'Mobile number updated successfully.';
+ }catch(e){msg.textContent=e.code==='auth/requires-recent-login'?'Gmail change ke liye logout karke dobara login karein.':e.code==='auth/email-already-in-use'?'Ye Gmail kisi doosre account par already use ho rahi hai.':(e.message||'Update nahi ho paya.');}
+ finally{btn.disabled=false;}
+};
 function renderDailyOrderGraph(){
  const now=new Date(),days=[];
  for(let n=6;n>=0;n--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-n);days.push({date:d,key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),count:0});}
