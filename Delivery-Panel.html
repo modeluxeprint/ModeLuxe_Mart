@@ -101,7 +101,7 @@ function startOrders(){
  if(listener)db.ref('orders').off('value',listener);
  $('sync').textContent='Firebase se connect ho raha hai…';
  listener=s=>{const next=s.val()||{};for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New delivery order','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();renderShipPopups();refreshDeliveryAssignments();if($('orderGraphPanel')&&!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};
- db.ref('orders').on('value',listener,e=>{$('sync').textContent='Orders permission/connection error: '+(e&&e.message||'unknown error')+' · Firebase Rules mein approved Delivery UID check karein.';});
+ db.ref('orders').on('value',listener,e=>{$('sync').textContent='Firebase /orders read failed: '+(e&&e.message||'unknown error')+' · UID: '+(auth.currentUser&&auth.currentUser.uid||'not signed in')+' · Approved delivery profile aur /orders .read rule check karein.';});
  refreshDeliveryAssignments();
  db.ref('deliverySettings').on('value',snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');},e=>{console.warn('Delivery settings read:',e.message)});
  // This panel's existing rules do not expose deliveryWallets; don't let an unrelated
@@ -221,36 +221,29 @@ async function stopNativeScanner(){
 }
 async function openScanner(){
  if(!auth.currentUser)return alert('पहले Delivery Panel में login करें।');
- $('scanner').classList.remove('hidden');$('scanMsg').textContent='Camera permission माँगी जा रही है…';$('reader').innerHTML='';scanBusy=false;
- if(!window.isSecureContext){$('scanMsg').textContent='Camera चलाने के लिए HTTPS वेबसाइट खोलें।';return;}
+ if(!window.isSecureContext){$('sync').textContent='Camera के लिए HTTPS जरूरी है।';return alert('Camera चलाने के लिए HTTPS वेबसाइट खोलें।');}
+ $('scanner').classList.remove('hidden');$('scanMsg').textContent='QR Scanner library load हो रही है…';$('reader').innerHTML='';scanBusy=false;
  try{
-  // Prefer the browser's native QR detector on Android Chrome; this avoids a CDN dependency.
-  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&('BarcodeDetector' in window)){
-   const supported=await BarcodeDetector.getSupportedFormats();
-   if(supported.includes('qr_code')){
-    nativeBarcodeDetector=new BarcodeDetector({formats:['qr_code']});
-    nativeCameraStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
-    nativeVideo=document.createElement('video');nativeVideo.setAttribute('playsinline','');nativeVideo.setAttribute('autoplay','');nativeVideo.muted=true;
-    nativeVideo.style.cssText='width:100%;max-height:360px;object-fit:cover;border-radius:12px;background:#000';
-    $('reader').appendChild(nativeVideo);nativeVideo.srcObject=nativeCameraStream;await nativeVideo.play();
-    $('scanMsg').textContent='QR को camera frame में रखें।';
-    const scan=async()=>{if(!nativeVideo||scanBusy)return;try{if(nativeVideo.readyState>=2){const codes=await nativeBarcodeDetector.detect(nativeVideo);if(codes&&codes.length){scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';await stopNativeScanner();await confirmQr(codes[0].rawValue);return;}}}catch(e){console.warn('Native QR scan:',e);}nativeScanFrame=requestAnimationFrame(scan);};
-    nativeScanFrame=requestAnimationFrame(scan);return;
-   }
+  // Use the exact Html5Qrcode camera flow used by the working Admin Panel.
+  if(typeof Html5Qrcode==='undefined'){
+   const loaded=await (window.__loadModeLuxeQrLibrary?window.__loadModeLuxeQrLibrary():Promise.resolve(false));
+   if(!loaded||typeof Html5Qrcode==='undefined')throw Error('QR Scanner library load नहीं हुई। Internet/CDN connection check करें।');
   }
-  // Same Html5Qrcode loader/fallback used by the working Admin Panel.
-  if(typeof Html5Qrcode==='undefined'){const loaded=await (window.__loadModeLuxeQrLibrary?window.__loadModeLuxeQrLibrary():Promise.resolve(false));if(!loaded||typeof Html5Qrcode==='undefined')throw Error('QR Scanner library load नहीं हुई। Internet connection check करें।');}
-  // Use Html5Qrcode fallback when native BarcodeDetector is unavailable.
-  scanner=new Html5Qrcode('reader',{verbose:false});
-  const config={fps:10,qrbox:(vw,vh)=>{const side=Math.max(160,Math.min(260,vw-24,vh-24));return {width:side,height:side};},aspectRatio:1.0,disableFlip:false};
-  const onScan=async value=>{if(scanBusy)return;scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';try{if(scanner&&scanner.isScanning)await scanner.stop()}catch{}await confirmQr(value)};
-  try{await scanner.start({facingMode:'environment'},config,onScan,()=>{});}
-  catch(firstError){const cameras=await Html5Qrcode.getCameras();if(!cameras||!cameras.length)throw firstError;const preferred=cameras.find(c=>/back|rear|environment|world/i.test(c.label))||cameras[cameras.length-1];await scanner.start(preferred.id,config,onScan,()=>{});}
-  $('scanMsg').textContent='QR को frame के अंदर रखें। Camera permission पूछे तो Allow दबाएँ।';
+  scanner=new Html5Qrcode('reader');
+  $('scanMsg').textContent='Camera permission का इंतजार है…';
+  await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async decodedText=>{
+   if(scanBusy)return;
+   scanBusy=true;$('scanMsg').textContent='QR scan हो गया। Order verify हो रहा है…';
+   try{if(scanner&&scanner.isScanning)await scanner.stop();}catch(e){}
+   await confirmQr(decodedText);
+  },()=>{});
+  $('scanMsg').textContent='QR code को camera frame के अंदर रखें।';
  }catch(e){
   const msg=String(e&&e.message||e||'Unknown error');
-  $('scanMsg').textContent=/permission|notallowed|denied/i.test(msg)?'Camera permission बंद है। Chrome Site settings → Camera → Allow करें।':/notfound|no camera|device/i.test(msg)?'इस device में camera नहीं मिला या किसी दूसरी app में busy है। Camera app बंद करें।':'Camera start नहीं हुआ: '+msg;
-  scanBusy=false;await stopNativeScanner();try{if(scanner){await scanner.clear()}}catch{}scanner=null;
+  $('scanMsg').textContent=/permission|notallowed|denied/i.test(msg)?'Camera permission बंद है। Chrome Site settings → Camera → Allow करें।':/notfound|no camera|device/i.test(msg)?'Camera नहीं मिला या दूसरी app में busy है।':'Camera start नहीं हुआ: '+msg;
+  scanBusy=false;
+  try{if(scanner){if(scanner.isScanning)await scanner.stop();await scanner.clear();}}catch(e){}
+  scanner=null;
  }
 }
 async function closeScanner(){await stopNativeScanner();if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null;}$('scanner').classList.add('hidden');scanBusy=false}
