@@ -3,7 +3,44 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script><style>body{background:#061711;color:#f5f5f4;font-family:system-ui,sans-serif}input,select,textarea{color:#fff;background:#0b2920;border:1px solid #285747;border-radius:10px;padding:10px;width:100%;outline:none}button{transition:.15s}button:disabled{opacity:.5;cursor:not-allowed}.gold{color:#fbbf24}.panel{background:#0b2119;border:1px solid #214b3b;border-radius:16px}.btn{border-radius:10px;padding:10px 13px;font-weight:700}.primary{background:#fbbf24;color:#08150f}.muted{background:#17392c}.danger{background:#7f1d1d}.success{background:#166534}.small{font-size:12px}.order-card{background:#102b20;border:1px solid #27533f;border-radius:14px;padding:14px}#notificationDropdown{position:fixed!important;left:auto!important;right:12px!important;width:min(380px,calc(100vw - 24px))!important;max-width:calc(100vw - 24px)!important;max-height:70vh;overflow-y:auto;box-sizing:border-box;z-index:9999!important;margin-top:8px!important;transform:none!important}
 @media(max-width:480px){#notificationDropdown{right:12px!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;padding:12px!important}}
-</style></head>
+</style>
+
+<style id="modeluxe-admin-blue-theme">
+:root{--admin-bg:#f4f7fb;--admin-navy:#062b78;--admin-blue:#075fbd;--admin-panel:#fff;--admin-soft:#eaf3ff;--admin-line:#dbe7f5;--admin-text:#111827;--admin-muted:#687386;--admin-gold:#ffbd2e}
+html,body{background:var(--admin-bg)!important;color:var(--admin-text)!important;font-family:Arial,Helvetica,sans-serif!important}
+body{min-height:100vh}
+main{color:var(--admin-text)!important}
+header{background:var(--admin-navy)!important;color:#fff!important;border-radius:0 0 16px 16px;padding:18px!important;margin:0 -16px 22px!important;width:calc(100% + 32px)}
+header h1{color:#fff!important;font-size:clamp(25px,5vw,38px)!important}
+header p{color:#dbeafe!important}
+.gold,.text-amber-200,.text-amber-300{color:#075fbd!important}
+.panel,.order-card,#loginPanel,#adminDeviceLockModal .panel,#deliveryScannerModal .panel,#editModal .panel{background:#fff!important;color:var(--admin-text)!important;border:1px solid var(--admin-line)!important;border-radius:18px!important;box-shadow:0 4px 18px rgba(8,55,130,.07)!important}
+#loginPanel{padding:24px!important;max-width:520px!important;margin:32px auto!important}
+#loginPanel h2,.panel h2{color:var(--admin-blue)!important}
+#loginPanel p,#loginPanel label,.panel label{color:#526174!important}
+input,select,textarea{background:#f8fbff!important;color:#111827!important;border:1px solid #cbd9e9!important;border-radius:12px!important;padding:12px!important}
+input::placeholder,textarea::placeholder{color:#8794a5!important}
+button.btn{border-radius:12px!important;font-weight:700!important;box-shadow:none!important;transition:filter .15s!important}
+button.primary{background:#075fbd!important;color:#fff!important;border:1px solid #075fbd!important}
+button.muted,button.secondary{background:#e7f2ff!important;color:#07529e!important;border:1px solid #c8ddf7!important}
+button.danger{background:#b42318!important;color:#fff!important}
+button.success{background:#087443!important;color:#fff!important}
+#sendBtn,#verifyBtn,#devicePrimaryBtn{background:#075fbd!important;color:#fff!important;border:0!important;min-height:52px!important;font-size:16px!important}
+#bellBtn{background:#e7f2ff!important;color:#07529e!important;border:1px solid #c8ddf7!important}
+#notificationDropdown{background:#fff!important;color:#111827!important;border:1px solid #dbe7f5!important;box-shadow:0 12px 35px #102b4930!important}
+#notificationDropdown b,#notificationDropdown p,#notificationDropdown span{color:#34445a!important}
+.order-card{background:#f8fbff!important;border-color:#dbe7f5!important}
+.text-stone-300,.text-stone-400,.text-stone-500{color:#687386!important}
+.bg-emerald-950\/50{background:#eaf3ff!important}
+.border-emerald-900{border-color:#dbe7f5!important}
+#syncMsg,#productsSyncMsg{color:#526174!important}
+#adminDeviceLockModal,#deliveryScannerModal,#editModal{background:rgba(10,35,75,.58)!important}
+#adminDeviceLockTitle,#deliveryScannerTitle{color:#075fbd!important}
+footer{color:#687386!important;line-height:1.6}
+#productPreview,#deliverySettingsPreview{background:#eaf3ff!important;color:#174a86!important;border-color:#c8ddf7!important}
+@media(max-width:600px){header{padding:16px!important;margin:0 -16px 18px!important}#loginPanel{margin:20px auto!important;padding:20px!important}}
+</style>
+</head>
 <body><main class="max-w-6xl mx-auto p-4 md:p-6">
 <header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p></div><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div></header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" value="7818995955" autocomplete="tel"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
@@ -97,9 +134,7 @@ let adminRestoreStarted=false;
 auth.onAuthStateChanged(async function(user){
   try{
     // Wait until Firebase LOCAL persistence is ready.
-    await adminPersistenceReady;
-
-    showActualAdminUid();
+    await authPersistenceReady;
 
     // Reject any non-admin Firebase account.
     if(user && user.uid !== 'admin_7818995955'){
@@ -156,7 +191,6 @@ auth.onAuthStateChanged(async function(user){
         startOrders();
         startProducts();
         startDeliverySettingsAdminListener();
-        startOwnerManagement();
         updateUnitChoices();
         setTimeout(processDeliveryQr,300);
       }
@@ -371,6 +405,42 @@ th{background:#eff6ff;color:#164e84}
  .delivery-qr img{width:120px;height:120px}
 }
 </style>
+
+<style id="modeluxe-admin-blue-theme">
+:root{--admin-bg:#f4f7fb;--admin-navy:#062b78;--admin-blue:#075fbd;--admin-panel:#fff;--admin-soft:#eaf3ff;--admin-line:#dbe7f5;--admin-text:#111827;--admin-muted:#687386;--admin-gold:#ffbd2e}
+html,body{background:var(--admin-bg)!important;color:var(--admin-text)!important;font-family:Arial,Helvetica,sans-serif!important}
+body{min-height:100vh}
+main{color:var(--admin-text)!important}
+header{background:var(--admin-navy)!important;color:#fff!important;border-radius:0 0 16px 16px;padding:18px!important;margin:0 -16px 22px!important;width:calc(100% + 32px)}
+header h1{color:#fff!important;font-size:clamp(25px,5vw,38px)!important}
+header p{color:#dbeafe!important}
+.gold,.text-amber-200,.text-amber-300{color:#075fbd!important}
+.panel,.order-card,#loginPanel,#adminDeviceLockModal .panel,#deliveryScannerModal .panel,#editModal .panel{background:#fff!important;color:var(--admin-text)!important;border:1px solid var(--admin-line)!important;border-radius:18px!important;box-shadow:0 4px 18px rgba(8,55,130,.07)!important}
+#loginPanel{padding:24px!important;max-width:520px!important;margin:32px auto!important}
+#loginPanel h2,.panel h2{color:var(--admin-blue)!important}
+#loginPanel p,#loginPanel label,.panel label{color:#526174!important}
+input,select,textarea{background:#f8fbff!important;color:#111827!important;border:1px solid #cbd9e9!important;border-radius:12px!important;padding:12px!important}
+input::placeholder,textarea::placeholder{color:#8794a5!important}
+button.btn{border-radius:12px!important;font-weight:700!important;box-shadow:none!important;transition:filter .15s!important}
+button.primary{background:#075fbd!important;color:#fff!important;border:1px solid #075fbd!important}
+button.muted,button.secondary{background:#e7f2ff!important;color:#07529e!important;border:1px solid #c8ddf7!important}
+button.danger{background:#b42318!important;color:#fff!important}
+button.success{background:#087443!important;color:#fff!important}
+#sendBtn,#verifyBtn,#devicePrimaryBtn{background:#075fbd!important;color:#fff!important;border:0!important;min-height:52px!important;font-size:16px!important}
+#bellBtn{background:#e7f2ff!important;color:#07529e!important;border:1px solid #c8ddf7!important}
+#notificationDropdown{background:#fff!important;color:#111827!important;border:1px solid #dbe7f5!important;box-shadow:0 12px 35px #102b4930!important}
+#notificationDropdown b,#notificationDropdown p,#notificationDropdown span{color:#34445a!important}
+.order-card{background:#f8fbff!important;border-color:#dbe7f5!important}
+.text-stone-300,.text-stone-400,.text-stone-500{color:#687386!important}
+.bg-emerald-950\/50{background:#eaf3ff!important}
+.border-emerald-900{border-color:#dbe7f5!important}
+#syncMsg,#productsSyncMsg{color:#526174!important}
+#adminDeviceLockModal,#deliveryScannerModal,#editModal{background:rgba(10,35,75,.58)!important}
+#adminDeviceLockTitle,#deliveryScannerTitle{color:#075fbd!important}
+footer{color:#687386!important;line-height:1.6}
+#productPreview,#deliverySettingsPreview{background:#eaf3ff!important;color:#174a86!important;border-color:#c8ddf7!important}
+@media(max-width:600px){header{padding:16px!important;margin:0 -16px 18px!important}#loginPanel{margin:20px auto!important;padding:20px!important}}
+</style>
 </head>
 <body>
 <main class="invoice">
@@ -454,7 +524,7 @@ function downloadInvoice(id){
   const w=window.open('','_blank');
   if(!w){alert('PDF download ke liye pop-up allow karein, phir dobara try karein.');return;}
   const pdfScript=`<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script><script>(function(){function makePdf(){if(typeof html2pdf==='undefined'){document.getElementById('pdfStatus').textContent='PDF library load nahi hui. Internet check karke Print / Save as PDF button use karein.';return;}var target=document.querySelector('.sheet');var options={margin:8,filename:'ModeLuxe-Invoice-${String(id).replace(/[^a-zA-Z0-9_-]/g,'')}.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,scrollY:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy']}};html2pdf().set(options).from(target).save().then(function(){var s=document.getElementById('pdfStatus');if(s)s.textContent='PDF download ho gaya.';}).catch(function(){var s=document.getElementById('pdfStatus');if(s)s.textContent='PDF nahi bana. Print / Save as PDF button use karein.';});}window.addEventListener('load',function(){setTimeout(makePdf,400);});})();<\/script>`;
-  const readyHtml=html.replace('</head>','<style>#pdfStatus{max-width:850px;margin:0 auto 10px;color:#174b39;font:14px Arial,sans-serif}</style></head>').replace('<body>','<body><div id="pdfStatus">Invoice PDF ban raha hai…</div>'+pdfScript);
+  const readyHtml=html.replace('</head>','<style>#pdfStatus{max-width:850px;margin:0 auto 10px;color:#174b86;font:14px Arial,sans-serif}</style></head>').replace('<body>','<body><div id="pdfStatus">Invoice PDF ban raha hai…</div>'+pdfScript);
   w.document.open();w.document.write(readyHtml);w.document.close();w.focus();
   addNotification('Invoice PDF started','Order #'+id+' का invoice PDF download शुरू किया गया।','success');
 }
