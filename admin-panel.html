@@ -94,7 +94,7 @@ footer{color:#687386!important;line-height:1.6}
     <button class="btn muted" type="button" onclick="setApplicationFilter('delivery','cancelled')">Cancel Application</button>
     <button class="btn muted" type="button" onclick="setApplicationFilter('delivery','suspended')">Suspend Application</button>
   </div>
-  <input id="deliveryAppsSearch" placeholder="Name / mobile search karein" oninput="renderApplications('delivery')" class="mb-3">
+  <div class="flex gap-2 mb-3"><input id="deliveryAppsSearch" placeholder="Name / mobile search karein" oninput="renderApplications('delivery')" class="mb-0"><button class="btn muted shrink-0" type="button" onclick="refreshDeliveryApplications()">↻ Refresh</button></div>
   <p id="deliveryAppsSync" class="small text-stone-400 mb-3">Delivery applications load ho rahi hain…</p><div id="deliveryAppsList" class="space-y-3"></div>
 </div>
 <div id="paymentRequestsTab" class="hidden panel p-5 mb-4">
@@ -897,30 +897,60 @@ function renderApplications(type){
     $('deliveryAppsSync').textContent='Firebase live sync · '+Object.keys(data||{}).length+' delivery applications · deliveryApplications + deliveryProfiles';
   }
 }
+let applicationListenerRefs={};
+function stopApplicationListeners(){
+  Object.entries(applicationListenerRefs).forEach(([path,callback])=>{
+    if(callback)db.ref(path).off('value',callback);
+  });
+  applicationListenerRefs={};
+  applicationListenersStarted=false;
+}
 function startApplicationListeners(){
-  if(applicationListenersStarted)return;applicationListenersStarted=true;
-  db.ref('sellerApplications').on('value',snap=>{
+  if(applicationListenersStarted)return;
+  applicationListenersStarted=true;
+  const bind=(path,callback,errorCallback)=>{
+    applicationListenerRefs[path]=callback;
+    db.ref(path).on('value',callback,errorCallback);
+  };
+  bind('sellerApplications',snap=>{
     sellerApplicationsData=snap.val()||{};
     sellerApplicationsData=mergeApplicationRecords(sellerApplicationsData,sellerProfilesData);
     renderApplications('seller');
   },err=>{$('sellerAppsSync').textContent='Seller application read error: '+err.message;});
-  db.ref('sellerProfiles').on('value',snap=>{
+  bind('sellerProfiles',snap=>{
     sellerProfilesData=snap.val()||{};
     sellerApplicationsData=mergeApplicationRecords(sellerApplicationsData,sellerProfilesData);
     renderApplications('seller');
   },err=>{$('sellerAppsSync').textContent='Seller profile read error: '+err.message;});
-  db.ref('deliveryApplications').on('value',snap=>{
+  bind('deliveryApplications',snap=>{
     deliveryApplicationsData=snap.val()||{};
     deliveryApplicationsData=mergeApplicationRecords(deliveryApplicationsData,deliveryProfilesData);
     renderApplications('delivery');
   },err=>{$('deliveryAppsSync').textContent='Delivery application read error: '+err.message;});
-  // The delivery registration flow writes to BOTH nodes. Read deliveryProfiles as a fallback
-  // so older/partially-written applications are still visible in the correct status tab.
-  db.ref('deliveryProfiles').on('value',snap=>{
+  bind('deliveryProfiles',snap=>{
     deliveryProfilesData=snap.val()||{};
     deliveryApplicationsData=mergeApplicationRecords(deliveryApplicationsData,deliveryProfilesData);
     renderApplications('delivery');
   },err=>{$('deliveryAppsSync').textContent='Delivery profile read error: '+err.message;});
+}
+async function refreshDeliveryApplications(){
+  const msg=$('deliveryAppsSync');
+  msg.textContent='Firebase se deliveryApplications aur deliveryProfiles dobara read ho rahe hain…';
+  try{
+    const [appsSnap,profilesSnap]=await Promise.all([
+      db.ref('deliveryApplications').once('value'),
+      db.ref('deliveryProfiles').once('value')
+    ]);
+    deliveryApplicationsData=appsSnap.val()||{};
+    deliveryProfilesData=profilesSnap.val()||{};
+    deliveryApplicationsData=mergeApplicationRecords(deliveryApplicationsData,deliveryProfilesData);
+    renderApplications('delivery');
+    const total=Object.keys(deliveryApplicationsData).length;
+    const pending=Object.values(deliveryApplicationsData).filter(a=>normalizeApplicationStatus(a)==='pending').length;
+    msg.textContent=`Manual Firebase refresh successful · ${total} total delivery applications · ${pending} pending · deliveryApplications + deliveryProfiles`;
+  }catch(e){
+    msg.textContent='Firebase refresh/read error: '+(e.message||e)+' — Firebase Rules mein admin read permission check karein.';
+  }
 }
 async function decideApplication(type,id,decision){
   id=decodeURIComponent(id);
