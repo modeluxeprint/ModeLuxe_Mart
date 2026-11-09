@@ -52,36 +52,11 @@ footer{color:#687386!important;line-height:1.6}
 <button id="storesTabBtn" class="btn muted" type="button" onclick="showAdminTab('stores')">Stores List</button>
 <button id="sellerAppsTabBtn" class="btn muted" type="button" onclick="showAdminTab('sellerApps')">Seller Application</button>
 <button id="deliveryAppsTabBtn" class="btn muted" type="button" onclick="showAdminTab('deliveryApps')">Delivery Application</button>
-<button id="productsTabBtn" class="btn muted" type="button" onclick="showAdminTab('products')">Products</button>
 </div>
 <div id="ordersTab">
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
 <div class="panel p-4 mb-4"><div class="grid md:grid-cols-[1fr_190px_auto] gap-3"><input id="search" placeholder="Order ID, customer name, phone search karein" oninput="renderOrders()"><select id="statusFilter" onchange="window.__ordersSummaryMode=this.value==='all'?'all':this.value;renderOrders()"><option value="all">All statuses</option><option>Order Placed</option><option>Processing</option><option>Packed</option><option>Picked Up by Delivery Partner</option><option>Shipped</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Return Approved</option><option>Refund Pending</option><option>Refunded</option></select><button class="btn muted" onclick="exportCSV()">Export CSV</button><button class="btn primary" type="button" onclick="openDeliveryScanner()">📷 Scan Delivery QR</button></div><p id="syncMsg" class="small text-stone-400 mt-3">Firebase se connect ho raha hai…</p></div>
 <div id="ordersList" class="space-y-3"></div>
-</div>
-<div id="productsTab" class="hidden">
-  <div class="panel p-4 mb-4">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3"><div><h2 class="text-xl font-bold gold">Product Listing</h2><p class="small text-stone-400">Admin/Seller product catalogue · existing orders are not changed</p></div><span id="productCount" class="text-sm gold font-bold">0 products</span></div>
-    <form id="productForm" class="grid md:grid-cols-2 gap-3" onsubmit="saveProduct(event)">
-      <input id="productEditId" type="hidden">
-      <div><label class="small block mb-1" for="productSeller">Seller / Shop Name</label><input id="productSeller" placeholder="Seller ya shop ka naam" required></div>
-      <div><label class="small block mb-1" for="productCategory">Category</label><select id="productCategory" required onchange="updateUnitChoices()"><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div>
-      <div><label class="small block mb-1" for="productName">Product Name</label><input id="productName" placeholder="Product ka naam" required></div>
-      <div><label class="small block mb-1" for="productImageFile">Product Photo Upload (optional)</label><input id="productImageFile" type="file" accept="image/*" onchange="previewProductImage(event)"><img id="productImagePreview" class="hidden mt-2 w-24 h-24 object-cover rounded-lg border border-emerald-900" alt="Product photo preview"><p class="small text-stone-400 mt-1">Mobile se photo select karein; URL bharne ki zaroorat nahi.</p></div>
-      <div><label class="small block mb-1" for="productQty">Quantity / Size (left box)</label><input id="productQty" type="text" placeholder="1, 2, 250, S, XL, 6" value="1" required></div>
-      <div><label class="small block mb-1" for="productUnit">Unit (right box)</label><select id="productUnit" required></select></div>
-      <div><label class="small block mb-1" for="productPrice">Price (₹)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="Selling price" required></div>
-      <div><label class="small block mb-1" for="productStock">Stock quantity (number)</label><input id="productStock" type="number" min="0" step="0.01" value="0" required></div>
-      <div><label class="small block mb-1" for="productStockUnit">Stock unit</label><select id="productStockUnit" required><option value="kg">Kilogram (kg)</option><option value="Gram">Gram</option><option value="Quintal">Quintal</option><option value="Ton">Ton</option><option value="Piece">Piece</option><option value="Dozen">Dozen</option><option value="Pack">Pack</option><option value="Box">Box</option><option value="Plate">Plate</option><option value="Bottle">Bottle</option><option value="Litre">Litre</option><option value="ml">ml</option><option value="Set">Set</option><option value="Pair">Pair</option></select><p class="small text-stone-400 mt-1">उदाहरण: 600 + kg, 2 + Quintal या 1 + Ton.</p></div>
-      <div class="md:col-span-2"><label class="small block mb-1" for="productDescription">Description (optional)</label><textarea id="productDescription" rows="2" placeholder="Product details"></textarea></div>
-      <div class="md:col-span-2 rounded-xl border border-emerald-900 p-3"><p class="small text-stone-400">Preview</p><p id="productPreview" class="font-bold gold">1 kg</p><p class="small text-stone-300">Left box में मात्रा या size खुद भरें; right box से unit चुनें. उदाहरण: 2 kg, 250 Gram, 1 Half Plate, 6 Month, 90 cm, XL.</p></div>
-      <div class="md:col-span-2 flex flex-wrap gap-2"><button id="saveProductBtn" class="btn primary" type="submit">Save Product</button><button class="btn muted" type="button" onclick="resetProductForm()">Clear Form</button></div>
-      <p id="productMsg" class="small md:col-span-2" aria-live="polite"></p>
-    </form>
-  </div>
-  <div class="panel p-4 mb-4"><p class="small text-stone-300 mb-2">Category select karein — us category ke products neeche Edit/Delete ke saath dikhenge.</p><div class="grid md:grid-cols-2 gap-3"><input id="productSearch" placeholder="Product ya seller search karein" oninput="renderProducts()"><select id="productFilterCategory" onchange="renderProducts()"><option value="all">All categories</option><option>Grocery</option><option>Fruits</option><option>Vegetables</option><option>Fast Food</option><option>Drinks</option><option>Men's Wear</option><option>Women's Wear</option><option>Kids / Baby Wear</option><option>Jewellery</option><option>Cosmetics</option><option>Home & Kitchen</option><option>Other</option></select></div></div>
-  <div id="productsSyncMsg" class="small text-stone-400 mb-3">Products Firebase se load ho rahe hain…</div>
-  <div id="productsList" class="space-y-3"></div>
 </div>
 <div id="chargesTab" class="hidden panel p-5 mb-4 max-w-2xl">
   <h2 class="text-xl font-bold gold mb-2">Delivery & Commission Charges</h2>
@@ -225,7 +200,6 @@ auth.onAuthStateChanged(async function(user){
       if(!adminRestoreStarted){
         adminRestoreStarted=true;
         startOrders();
-        startProducts();
         startDeliverySettingsAdminListener();
         startApplicationListeners();
         updateUnitChoices();
@@ -323,10 +297,10 @@ function b64url(bytes){let binary='';new Uint8Array(bytes).forEach(b=>binary+=St
 function unb64url(value){const b64=String(value).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(b64+'='.repeat((4-b64.length%4)%4));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
 async function passwordDigest(password,saltB64){const salt=saltB64?unb64url(saltB64):crypto.getRandomValues(new Uint8Array(16));const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:310000,hash:'SHA-256'},material,256);return {salt:b64url(salt),hash:b64url(bits)};}
 function deviceLockReady(){return !!localStorage.getItem(DEVICE_LOCK_KEY)&&!!localStorage.getItem(DEVICE_CRED_KEY)&&!!window.PublicKeyCredential&&!!navigator.credentials;}
-function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP और Admin Password सत्यापित हो गए। इस ब्राउज़र में Passkey उपलब्ध नहीं है, इसलिए सुरक्षित Firebase OTP session से Dashboard खोला जा रहा है।');localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('dashboard').classList.remove('hidden');startOrders();startProducts();startDeliverySettingsAdminListener();startApplicationListeners();updateUnitChoices();setTimeout(processDeliveryQr,300);return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
+function showDeviceLockAfterOtp(){if(!window.isSecureContext||!window.PublicKeyCredential||!navigator.credentials){setMsg('OTP और Admin Password सत्यापित हो गए। इस ब्राउज़र में Passkey उपलब्ध नहीं है, इसलिए सुरक्षित Firebase OTP session से Dashboard खोला जा रहा है।');localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('dashboard').classList.remove('hidden');startOrders();startDeliverySettingsAdminListener();startApplicationListeners();updateUnitChoices();setTimeout(processDeliveryQr,300);return;}deviceLockAction=deviceLockReady()?'unlock':'setup';$('adminDeviceLockIntro').textContent=deviceLockAction==='setup'?'Pehli baar is phone par strong password set karein aur Android passkey register karein.':'Admin password enter karein aur is phone ka passkey/biometric confirm karein.';$('deviceConfirmLabel').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePasswordConfirm').classList.toggle('hidden',deviceLockAction!=='setup');$('devicePrimaryBtn').textContent=deviceLockAction==='setup'?'Set Password & Register Passkey':'Verify Password & Passkey';$('deviceLockMsg').textContent='OTP verify ho gaya. Admin Dashboard kholne ke liye final device check karein.';$('adminDeviceLockModal').classList.remove('hidden');$('adminDeviceLockModal').classList.add('flex');}
 async function registerDevicePasskey(){const challenge=crypto.getRandomValues(new Uint8Array(32));const userId=crypto.getRandomValues(new Uint8Array(16));const credential=await navigator.credentials.create({publicKey:{challenge,rp:{name:'ModeLuxe Mart Admin',id:location.hostname},user:{id:userId,name:'modeluxe-admin-device',displayName:'ModeLuxe Mart Admin'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'preferred',userVerification:'required'},timeout:60000,attestation:'none'}});if(!credential)throw Error('Passkey registration cancel ho gaya.');localStorage.setItem(DEVICE_CRED_KEY,b64url(credential.rawId));}
 async function verifyDevicePasskey(){const id=localStorage.getItem(DEVICE_CRED_KEY);if(!id)throw Error('Is phone ka passkey registered nahi hai.');const challenge=crypto.getRandomValues(new Uint8Array(32));const assertion=await navigator.credentials.get({publicKey:{challenge,rpId:location.hostname,allowCredentials:[{type:'public-key',id:unb64url(id)}],userVerification:'required',timeout:60000}});if(!assertion)throw Error('Passkey verification cancel ho gaya.');}
-async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startProducts();startDeliverySettingsAdminListener();startApplicationListeners();updateUnitChoices();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
+async function submitDeviceLock(){const msg=$('deviceLockMsg'),password=$('devicePassword').value,confirmPassword=$('devicePasswordConfirm').value;try{if(password.length<10)throw Error('Device password kam se kam 10 characters ka rakhein.');if(deviceLockAction==='setup'){if(password!==confirmPassword)throw Error('Dono password match nahi karte.');msg.textContent='Phone ka screen lock/biometric confirm karein…';const digest=await passwordDigest(password);await registerDevicePasskey();localStorage.setItem(DEVICE_LOCK_KEY,JSON.stringify(digest));}else{const stored=JSON.parse(localStorage.getItem(DEVICE_LOCK_KEY)||'null');if(!stored)throw Error('Device lock set nahi hai.');const entered=await passwordDigest(password,stored.salt);if(entered.hash!==stored.hash)throw Error('Device password galat hai.');msg.textContent='Password sahi hai. Ab biometric/passkey confirm karein…';await verifyDevicePasskey();}localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('devicePassword').value='';$('devicePasswordConfirm').value='';$('dashboard').classList.remove('hidden');addNotification('Admin login successful','Device password/passkey check पूरा हुआ।','success');startOrders();startDeliverySettingsAdminListener();startApplicationListeners();updateUnitChoices();setTimeout(processDeliveryQr,300);}catch(e){msg.textContent=e?.message||'Device verification fail ho gayi.';}}
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
 $('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
@@ -657,14 +631,13 @@ const PRODUCT_UNITS = [
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
 let currentDeliverySettings={freeAbove:199,charge:49},deliverySettingsAdminListener=null,commissionSettingsListener=null;
-let sellerApplicationsData={},deliveryApplicationsData={};
+let sellerApplicationsData={},deliveryApplicationsData={},sellerProfilesData={},deliveryProfilesData={};
 let applicationListenersStarted=false;
 let applicationFilters={seller:'approved',delivery:'approved'};
 function showAdminTab(tab){
-  ['orders','products','charges','stores','sellerApps','deliveryApps'].forEach(name=>{const el=$(name==='charges'?'chargesTab':name+'Tab');if(el)el.classList.toggle('hidden',name!==tab);});
-  const buttons={orders:'ordersTabBtn',products:'productsTabBtn',charges:'chargesTabBtn',stores:'storesTabBtn',sellerApps:'sellerAppsTabBtn',deliveryApps:'deliveryAppsTabBtn'};
+  ['orders','charges','stores','sellerApps','deliveryApps'].forEach(name=>{const el=$(name==='charges'?'chargesTab':name+'Tab');if(el)el.classList.toggle('hidden',name!==tab);});
+  const buttons={orders:'ordersTabBtn',charges:'chargesTabBtn',stores:'storesTabBtn',sellerApps:'sellerAppsTabBtn',deliveryApps:'deliveryAppsTabBtn'};
   Object.entries(buttons).forEach(([name,id])=>{const b=$(id);if(b)b.className='btn '+(name===tab?'primary':'muted');});
-  if(tab==='products') updateUnitChoices();
   if(tab==='charges') loadDeliverySettingsForm();
   if(tab==='stores') renderApplications('seller');
   if(tab==='sellerApps') renderApplications('seller');
@@ -694,24 +667,155 @@ $('deliverySettingsForm').addEventListener('submit',async e=>{
   }catch(err){$('deliverySettingsMsg').textContent='Save failed: '+err.message;}finally{btn.disabled=false;}
 });
 
-function normalizeApplicationStatus(app){const raw=String(app.status||app.applicationStatus||app.approvalStatus||'pending').toLowerCase().replace(/[ _-]+/g,'');if(['approved','approve','active','accepted'].includes(raw))return 'approved';if(['cancelled','canceled','rejected','declined'].includes(raw))return 'cancelled';if(['suspended','suspend','blocked','inactive'].includes(raw))return 'suspended';return 'pending';}
+function normalizeApplicationStatus(app){
+  app=app||{};
+  const raw=String(app.applicationStatus||app.status||app.approvalStatus||'pending').toLowerCase().replace(/[ _-]+/g,'');
+  if(['approved','approve','active','accepted'].includes(raw))return 'approved';
+  if(['cancelled','canceled','rejected','declined'].includes(raw))return 'cancelled';
+  if(['suspended','suspend','blocked','inactive'].includes(raw))return 'suspended';
+  return 'pending';
+}
 function appValue(app,keys,fallback=''){for(const k of keys){if(app[k]!==undefined&&app[k]!==null&&String(app[k]).trim()!=='')return app[k];}return fallback;}
-function appCard(type,id,app){const status=normalizeApplicationStatus(app),shop=appValue(app,['shopName','storeName','businessName','shop_name','store_name'],type==='seller'?'Seller Shop':'Delivery Partner'),name=appValue(app,['ownerName','sellerName','deliveryName','fullName','name','applicantName'],'—'),phone=appValue(app,['mobile','phone','phoneNumber','mobileNumber','contactNumber'],'—'),address=appValue(app,['address','shopAddress','businessAddress','fullAddress'],'—'),created=appValue(app,['createdAt','submittedAt','date','applicationDate'],'');const label={approved:'Approved',pending:'Pending',cancelled:'Cancelled',suspended:'Suspended'}[status];
-const actionButtons=type==='seller'?`<button class="btn success" type="button" onclick="updateApplicationStatus('seller','${encodeURIComponent(id)}','approved')">Approve</button><button class="btn muted" type="button" onclick="updateApplicationStatus('seller','${encodeURIComponent(id)}','pending')">Pending</button><button class="btn danger" type="button" onclick="updateApplicationStatus('seller','${encodeURIComponent(id)}','cancelled')">Cancel</button><button class="btn muted" type="button" onclick="updateApplicationStatus('seller','${encodeURIComponent(id)}','suspended')">Suspend</button>`:`<button class="btn success" type="button" onclick="updateApplicationStatus('delivery','${encodeURIComponent(id)}','approved')">Approve</button><button class="btn muted" type="button" onclick="updateApplicationStatus('delivery','${encodeURIComponent(id)}','pending')">Pending</button><button class="btn danger" type="button" onclick="updateApplicationStatus('delivery','${encodeURIComponent(id)}','cancelled')">Cancel</button><button class="btn muted" type="button" onclick="updateApplicationStatus('delivery','${encodeURIComponent(id)}','suspended')">Suspend</button>`;
-return `<article class="order-card p-4"><div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="font-bold text-lg">${esc(shop)}</h3><p class="text-sm">${esc(name)}</p></div><span class="rounded-full px-3 py-1 text-xs font-bold ${status==='approved'?'bg-green-100 text-green-800':status==='cancelled'?'bg-red-100 text-red-800':status==='suspended'?'bg-slate-200 text-slate-700':'bg-amber-100 text-amber-800'}">${label}</span></div><div class="grid sm:grid-cols-2 gap-2 text-sm mt-3"><p><b>Mobile:</b> ${esc(phone)}</p><p><b>Address:</b> ${esc(address)}</p>${created?`<p><b>Applied:</b> ${esc(created)}</p>`:''}<p><b>Application ID:</b> ${esc(id)}</p></div><div class="flex flex-wrap gap-2 mt-4">${actionButtons}</div></article>`;}
-function setApplicationFilter(type,status){applicationFilters[type]=status;const id=type==='seller'?'sellerAppFilters':'deliveryAppFilters';$(id).querySelectorAll('button').forEach((b,i)=>{b.className='btn '+(['approved','pending','cancelled','suspended'][i]===status?'primary':'muted');});renderApplications(type);}
-function renderApplications(type){const data=type==='seller'?sellerApplicationsData:deliveryApplicationsData,filter=applicationFilters[type],search=$(type==='seller'?( $('storesTab')&&!$('storesTab').classList.contains('hidden')?'storesSearch':'sellerAppsSearch'):'deliveryAppsSearch')?.value?.toLowerCase().trim()||'';const entries=Object.entries(data||{}).filter(([id,a])=>{a=a||{};const status=normalizeApplicationStatus(a);const hay=[id,a.shopName,a.storeName,a.businessName,a.ownerName,a.sellerName,a.name,a.mobile,a.phone].join(' ').toLowerCase();return status===filter&&hay.includes(search);});
-if(type==='seller'){
- const approved=Object.entries(data||{}).filter(([,a])=>normalizeApplicationStatus(a||{})==='approved');$('approvedStoresCount').textContent=approved.length+' Stores';$('storesList').innerHTML=approved.filter(([id,a])=>[id,a.shopName,a.storeName,a.businessName,a.ownerName,a.sellerName,a.name].join(' ').toLowerCase().includes(($('storesSearch')?.value||'').toLowerCase())).map(([id,a])=>appCard('seller',id,a||{})).join('')||'<p class="small text-stone-400">अभी कोई approved store नहीं मिला।</p>';
- $('sellerAppsList').innerHTML=entries.map(([id,a])=>appCard('seller',id,a||{})).join('')||`<p class="small text-stone-400">${filter} application अभी नहीं मिली।</p>`;
- $('sellerAppsSync').textContent='Firebase live sync · '+Object.keys(data||{}).length+' seller applications';
-}else{$('deliveryAppsList').innerHTML=entries.map(([id,a])=>appCard('delivery',id,a||{})).join('')||`<p class="small text-stone-400">${filter} application अभी नहीं मिली।</p>`;$('deliveryAppsSync').textContent='Firebase live sync · '+Object.keys(data||{}).length+' delivery applications';}
+function mergeApplicationRecords(primary,profiles){
+  const merged={};
+  const add=(source,prefer)=>Object.entries(source||{}).forEach(([id,value])=>{
+    if(!value||typeof value!=='object')return;
+    const old=merged[id]||{};
+    const oldTime=Date.parse(old.updatedAt||old.reviewedAt||old.submittedAt||old.createdAt||0)||0;
+    const newTime=Date.parse(value.updatedAt||value.reviewedAt||value.submittedAt||value.createdAt||0)||0;
+    const newer=newTime>=oldTime;
+    const combined={...old,...value};
+    // Keep status from the record with the latest update; if dates are absent prefer primary applications node.
+    if(!newer && (old.applicationStatus||old.status)){
+      combined.applicationStatus=old.applicationStatus||old.status;
+      combined.status=old.status||old.applicationStatus;
+    }else if(value.applicationStatus||value.status){
+      combined.applicationStatus=value.applicationStatus||value.status;
+      combined.status=value.status||value.applicationStatus;
+    }
+    merged[id]=combined;
+  });
+  add(profiles,false);add(primary,true);
+  return merged;
 }
-function startApplicationListeners(){if(applicationListenersStarted)return;applicationListenersStarted=true;
- db.ref('sellerApplications').on('value',snap=>{sellerApplicationsData=snap.val()||{};renderApplications('seller');},err=>{$('sellerAppsSync').textContent='Seller application read error: '+err.message;});
- db.ref('deliveryApplications').on('value',snap=>{deliveryApplicationsData=snap.val()||{};renderApplications('delivery');},err=>{$('deliveryAppsSync').textContent='Delivery application read error: '+err.message;});
+function appCard(type,id,app){
+  app=app||{};
+  const status=normalizeApplicationStatus(app);
+  const shop=appValue(app,['shopName','storeName','businessName','shop_name','store_name'],type==='seller'?'Seller Shop':'Delivery Partner');
+  const name=appValue(app,['ownerName','sellerName','deliveryName','fullName','name','applicantName'],'—');
+  const phone=appValue(app,['mobile','phone','phoneNumber','mobileNumber','contactNumber'],'—');
+  const address=appValue(app,['address','shopAddress','businessAddress','fullAddress'],'—');
+  const created=appValue(app,['submittedAt','createdAt','date','applicationDate'],'');
+  const label={approved:'Approved',pending:'Pending',cancelled:'Cancelled',suspended:'Suspended'}[status];
+  // Pending applications can receive one final decision: Approve, Cancel, or Suspend.
+  // Once approved, only Suspend remains available. Cancelled/Suspended are terminal states.
+  const actionButtons=status==='pending'
+    ? `<button class="btn success" type="button" onclick="decideApplication('${type}','${encodeURIComponent(id)}','approved')">Approve</button><button class="btn danger" type="button" onclick="decideApplication('${type}','${encodeURIComponent(id)}','cancelled')">Cancel</button><button class="btn muted" type="button" onclick="decideApplication('${type}','${encodeURIComponent(id)}','suspended')">Suspend</button>`
+    : status==='approved'
+      ? `<button class="btn muted" type="button" onclick="decideApplication('${type}','${encodeURIComponent(id)}','suspended')">Suspend</button>`
+      : '';
+  return `<article class="order-card p-4"><div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="font-bold text-lg">${esc(shop)}</h3><p class="text-sm">${esc(name)}</p></div><span class="rounded-full px-3 py-1 text-xs font-bold ${status==='approved'?'bg-green-100 text-green-800':status==='cancelled'?'bg-red-100 text-red-800':status==='suspended'?'bg-slate-200 text-slate-700':'bg-amber-100 text-amber-800'}">${label}</span></div><div class="grid sm:grid-cols-2 gap-2 text-sm mt-3"><p><b>Mobile:</b> ${esc(phone)}</p><p><b>Address:</b> ${esc(address)}</p>${created?`<p><b>Applied:</b> ${esc(created)}</p>`:''}<p><b>Application ID:</b> ${esc(id)}</p></div>${actionButtons?`<div class="flex flex-wrap gap-2 mt-4">${actionButtons}</div>`:''}</article>`;
 }
-async function updateApplicationStatus(type,id,status){id=decodeURIComponent(id);if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const path=(type==='seller'?'sellerApplications/':'deliveryApplications/')+id;const data=type==='seller'?sellerApplicationsData:deliveryApplicationsData;if(!data[id])return alert('Application nahi mili.');const label={approved:'Approve',pending:'Pending',cancelled:'Cancel',suspended:'Suspend'}[status];if(!confirm(`Is application ko ${label} karna hai?`))return;try{const now=new Date().toISOString();await db.ref(path).update({status,applicationStatus:status,updatedAt:now,adminUpdatedBy:signedInPhone});addNotification((type==='seller'?'Seller':'Delivery')+' application '+label,`Application ${id} ko ${label} kiya gaya.`,'success');}catch(e){alert('Status update nahi hua: '+e.message);}}
+function setApplicationFilter(type,status){
+  applicationFilters[type]=status;
+  const id=type==='seller'?'sellerAppFilters':'deliveryAppFilters';
+  $(id).querySelectorAll('button').forEach((b,i)=>{b.className='btn '+(['approved','pending','cancelled','suspended'][i]===status?'primary':'muted');});
+  renderApplications(type);
+}
+function renderApplications(type){
+  const data=type==='seller'?sellerApplicationsData:deliveryApplicationsData;
+  const filter=applicationFilters[type];
+  const search=$(type==='seller'?( $('storesTab')&&!$('storesTab').classList.contains('hidden')?'storesSearch':'sellerAppsSearch'):'deliveryAppsSearch')?.value?.toLowerCase().trim()||'';
+  const entries=Object.entries(data||{}).filter(([id,a])=>{
+    a=a||{};const status=normalizeApplicationStatus(a);
+    const hay=[id,a.shopName,a.storeName,a.businessName,a.ownerName,a.sellerName,a.deliveryName,a.name,a.email,a.mobile,a.phone].join(' ').toLowerCase();
+    return status===filter&&hay.includes(search);
+  });
+  if(type==='seller'){
+    const approved=Object.entries(data||{}).filter(([,a])=>normalizeApplicationStatus(a||{})==='approved');
+    $('approvedStoresCount').textContent=approved.length+' Stores';
+    $('storesList').innerHTML=approved.filter(([id,a])=>[id,a.shopName,a.storeName,a.businessName,a.ownerName,a.sellerName,a.name].join(' ').toLowerCase().includes(($('storesSearch')?.value||'').toLowerCase())).map(([id,a])=>appCard('seller',id,a||{})).join('')||'<p class="small text-stone-400">अभी कोई approved store नहीं मिला।</p>';
+    $('sellerAppsList').innerHTML=entries.map(([id,a])=>appCard('seller',id,a||{})).join('')||`<p class="small text-stone-400">${filter} application अभी नहीं मिली।</p>`;
+    $('sellerAppsSync').textContent='Firebase live sync · '+Object.keys(data||{}).length+' seller applications';
+  }else{
+    $('deliveryAppsList').innerHTML=entries.map(([id,a])=>appCard('delivery',id,a||{})).join('')||`<p class="small text-stone-400">${filter} application अभी नहीं मिली।</p>`;
+    $('deliveryAppsSync').textContent='Firebase live sync · '+Object.keys(data||{}).length+' delivery applications · deliveryApplications + deliveryProfiles';
+  }
+}
+function startApplicationListeners(){
+  if(applicationListenersStarted)return;applicationListenersStarted=true;
+  db.ref('sellerApplications').on('value',snap=>{
+    sellerApplicationsData=snap.val()||{};
+    sellerApplicationsData=mergeApplicationRecords(sellerApplicationsData,sellerProfilesData);
+    renderApplications('seller');
+  },err=>{$('sellerAppsSync').textContent='Seller application read error: '+err.message;});
+  db.ref('sellerProfiles').on('value',snap=>{
+    sellerProfilesData=snap.val()||{};
+    sellerApplicationsData=mergeApplicationRecords(sellerApplicationsData,sellerProfilesData);
+    renderApplications('seller');
+  },err=>{$('sellerAppsSync').textContent='Seller profile read error: '+err.message;});
+  db.ref('deliveryApplications').on('value',snap=>{
+    deliveryApplicationsData=snap.val()||{};
+    deliveryApplicationsData=mergeApplicationRecords(deliveryApplicationsData,deliveryProfilesData);
+    renderApplications('delivery');
+  },err=>{$('deliveryAppsSync').textContent='Delivery application read error: '+err.message;});
+  // The delivery registration flow writes to BOTH nodes. Read deliveryProfiles as a fallback
+  // so older/partially-written applications are still visible in the correct status tab.
+  db.ref('deliveryProfiles').on('value',snap=>{
+    deliveryProfilesData=snap.val()||{};
+    deliveryApplicationsData=mergeApplicationRecords(deliveryApplicationsData,deliveryProfilesData);
+    renderApplications('delivery');
+  },err=>{$('deliveryAppsSync').textContent='Delivery profile read error: '+err.message;});
+}
+async function decideApplication(type,id,decision){
+  id=decodeURIComponent(id);
+  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+  if(!['approved','cancelled','suspended'].includes(decision))return;
+  const data=type==='seller'?sellerApplicationsData:deliveryApplicationsData;
+  const app=data[id];
+  if(!app)return alert('Application nahi mili.');
+  const currentStatus=normalizeApplicationStatus(app);
+  // Pending is the only state from which a decision can be made. Approved can only be suspended.
+  if(currentStatus==='pending'){
+    // all three decisions are allowed from pending
+  }else if(currentStatus==='approved' && decision==='suspended'){
+    // approved account may be suspended once
+  }else{
+    return alert(currentStatus==='approved'?'Approved application par sirf Suspend kiya ja sakta hai.':'Is application ka final status pehle hi set ho chuka hai.');
+  }
+  const label=type==='seller'?'Seller':'Delivery';
+  const actionLabel={approved:'Approve',cancelled:'Cancel',suspended:'Suspend'}[decision];
+  const subject=app.shopName||app.storeName||app.name||app.deliveryName||id;
+  if(!confirm(`Kya aap ${subject} ki application ko ${actionLabel} karna chahte hain? Status dobara change nahi kiya ja sakega.`))return;
+  const now=new Date().toISOString();
+  const root=type==='seller'?'seller':'delivery';
+  const patch={status:decision,applicationStatus:decision,updatedAt:now,reviewedAt:now,adminUpdatedBy:signedInPhone,adminDecision:decision};
+  try{
+    // Prefer the application record; if this is an older profile-only application, transact there.
+    let primaryRef=db.ref(`${root}Applications/${id}`);
+    let primarySnap=await primaryRef.once('value');
+    if(!primarySnap.exists()){
+      primaryRef=db.ref(`${root}Profiles/${id}`);
+      primarySnap=await primaryRef.once('value');
+    }
+    if(!primarySnap.exists())throw new Error('Firebase mein application record nahi mila.');
+    const result=await primaryRef.transaction(current=>{
+      if(!current)return;
+      const liveStatus=normalizeApplicationStatus(current);
+      const allowed=liveStatus==='pending' || (liveStatus==='approved' && decision==='suspended');
+      if(!allowed)return;
+      return {...current,...patch};
+    });
+    if(!result.committed)throw new Error('Application ka status pehle hi change ho chuka hai. List refresh karke dobara dekhein.');
+    // Mirror the final decision to the paired node so both application/profile views stay in sync.
+    const mirrorPath=`${root}${primaryRef.toString().includes(`${root}Applications`)?'Profiles':'Applications'}/${id}`;
+    const mirrorRef=db.ref(mirrorPath);
+    const mirrorSnap=await mirrorRef.once('value');
+    if(mirrorSnap.exists())await mirrorRef.update(patch);
+    addNotification(label+' application '+actionLabel.toLowerCase(),`${subject} ki application ${actionLabel.toLowerCase()} kar di gayi.`,'success');
+  }catch(e){alert(actionLabel+' nahi hua: '+(e.message||e));}
+}
+async function suspendApplication(type,id){return decideApplication(type,id,'suspended');}
 
 function updateUnitChoices(){
   const sel=$('productUnit'); if(!sel) return;
@@ -727,8 +831,9 @@ function updateUnitChoices(){
   updateProductPreview();
 }
 function updateProductPreview(){const q=$('productQty')?.value?.trim()||'—';const u=$('productUnit')?.value||'';const p=$('productPreview');if(p)p.textContent=(q+' '+u).trim();}
-$('productQty').addEventListener('input',updateProductPreview);
-$('productUnit').addEventListener('change',updateProductPreview);
+// Product management UI is intentionally removed from Admin; listings are managed only in Seller Panel.
+if($('productQty')) $('productQty').addEventListener('input',updateProductPreview);
+if($('productUnit')) $('productUnit').addEventListener('change',updateProductPreview);
 function startProducts(){
   if(productListener)db.ref('sellerProducts').off('value',productListener);
   productListener=snap=>{productsData=snap.val()||{};$('productsSyncMsg').textContent='Products Firebase se live sync active · '+new Date().toLocaleTimeString();renderProducts();};
