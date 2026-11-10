@@ -1,59 +1,34 @@
 <!doctype html>
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#062b78"><title>ModeLuxe Mart — Delivery Panel</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script>
-(function(){
- window.__loadModeLuxeQrLibrary=function(){
-  if(typeof window.Html5Qrcode!=='undefined')return Promise.resolve(true);
-  if(window.__modeLuxeQrLoading)return window.__modeLuxeQrLoading;
-  const urls=['https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js','https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'];
-  window.__modeLuxeQrLoading=new Promise(resolve=>{let i=0;const next=()=>{if(typeof window.Html5Qrcode!=='undefined')return resolve(true);if(i>=urls.length)return resolve(false);const tag=document.createElement('script');tag.src=urls[i++];tag.onload=()=>resolve(typeof window.Html5Qrcode!=='undefined');tag.onerror=next;document.head.appendChild(tag);};next();});
-  return window.__modeLuxeQrLoading;
- };
-})();
-</script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.head-actions{display:flex;align-items:center;gap:8px}.summary-card{cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:94px;display:flex;flex-direction:column;justify-content:center;padding:12px}.summary-card:active{transform:scale(.99)}.summary-card.selected{border:2px solid #075fc4;background:#eff6ff}.summary-card .big{font-size:34px;font-weight:900;color:#075fc4}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-actions a{display:inline-block;text-decoration:none}.notification-box{position:relative}.notification-menu{position:fixed;right:12px;top:92px;z-index:100;background:#fff;border:1px solid #dbe5f1;border-radius:14px;box-shadow:0 12px 35px #0f172a22;width:min(340px,calc(100vw - 24px));padding:12px;max-height:65vh;overflow:auto}.notification-item{padding:9px;border-bottom:1px solid #e2e8f0;font-size:13px}.back-btn{margin-bottom:12px}.map-frame{width:100%;height:280px;border:0;border-radius:12px;background:#e2e8f0}.wallet-value{font-size:28px;font-weight:900;color:#075fc4}.brand{color:#075fc4;font-size:12px;letter-spacing:.2em;font-weight:800}.panel,.order{background:#fff;border:1px solid #dbe5f1;border-radius:16px;padding:16px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#075fc4;color:#fff}.muted{background:#e7f2ff;color:#164e84}.danger{background:#b91c1c;color:white}input,select{width:100%;padding:11px;border:1px solid #dbe5f1;border-radius:10px;background:#f8fafc;color:#111827}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dashboard-grid>.summary-card{min-width:0;min-height:112px}.dashboard-grid .wallet-value{font-size:30px}.small{font-size:12px;color:#64748b}.blue{color:#075fc4}.hidden{display:none!important}.order{margin-top:12px}.topline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{font-weight:800;color:#075fc4}.modal{position:fixed;inset:0;background:#000d;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modalbox{background:white;border-radius:16px;padding:16px;width:min(520px,100%);height:auto;max-height:calc(100dvh - 32px);min-height:0;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain}.modalbox #shipPopupList{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:0 3px 12px 0}.modal{align-items:center;overflow:hidden}.order-list-card{display:block;width:100%;text-align:left;color:inherit}.order-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.order-card-actions .btn{min-width:140px}.daily-bar-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:210px;gap:8px}.daily-bar-count{font-weight:800;color:#111827;font-size:15px}.daily-bar{width:min(54px,75%);min-height:3px;background:linear-gradient(180deg,#4387ef,#075fc4);border-radius:12px 12px 3px 3px}.daily-bar-date{font-size:12px;color:#64748b;white-space:nowrap}#reader{overflow:hidden;border-radius:12px;background:#111;min-height:180px;margin-top:12px}@media(max-width:540px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.panel,.order{padding:12px}.summary-card{min-height:90px;padding:10px}.summary-card .big{font-size:28px}header{align-items:flex-start}header h1{font-size:22px}.head-actions{gap:6px}.notification-menu{right:12px;left:auto;top:86px}}
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.head-actions{display:flex;align-items:center;gap:8px}.summary-card{cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:94px;display:flex;flex-direction:column;justify-content:center;padding:12px}.summary-card:active{transform:scale(.99)}.summary-card.selected{border:2px solid #075fc4;background:#eff6ff}.dashboard-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.dashboard-quick-grid .summary-card{width:100%;min-width:0;min-height:112px;border-radius:16px}.dashboard-quick-grid .summary-card .big{font-size:30px}.dashboard-expand-panel{padding:14px}.dashboard-expand-panel .topline{align-items:center}.dashboard-quick-grid .summary-card[aria-expanded="true"]{border:2px solid #075fc4;background:#eff6ff;box-shadow:0 5px 16px #075fc41a}.summary-card .big{font-size:34px;font-weight:900;color:#075fc4}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-actions a{display:inline-block;text-decoration:none}.notification-box{position:relative}.notification-menu{position:fixed;right:12px;top:92px;z-index:100;background:#fff;border:1px solid #dbe5f1;border-radius:14px;box-shadow:0 12px 35px #0f172a22;width:min(340px,calc(100vw - 24px));padding:12px;max-height:65vh;overflow:auto}.notification-item{padding:9px;border-bottom:1px solid #e2e8f0;font-size:13px}.back-btn{margin-bottom:12px}.map-frame{width:100%;height:280px;border:0;border-radius:12px;background:#e2e8f0}.wallet-value{font-size:28px;font-weight:900;color:#075fc4}.brand{color:#075fc4;font-size:12px;letter-spacing:.2em;font-weight:800}.panel,.order{background:#fff;border:1px solid #dbe5f1;border-radius:16px;padding:16px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#075fc4;color:#fff}.muted{background:#e7f2ff;color:#164e84}.danger{background:#b91c1c;color:white}input,select{width:100%;padding:11px;border:1px solid #dbe5f1;border-radius:10px;background:#f8fafc;color:#111827}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.small{font-size:12px;color:#64748b}.blue{color:#075fc4}.hidden{display:none!important}.order{margin-top:12px}.topline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{font-weight:800;color:#075fc4}.modal{position:fixed;inset:0;background:#000d;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modalbox{background:white;border-radius:16px;padding:16px;width:min(520px,100%)}#reader{overflow:hidden;border-radius:12px;background:#111;min-height:180px;margin-top:12px}.graph-title{margin:0 0 12px;font-size:18px;line-height:1.3;white-space:nowrap;overflow-x:auto}#deliveryDailyGraph{width:100%;overflow-x:auto}#deliveryDailyGraph .daily-chart{min-width:420px}@media(max-width:540px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.panel,.order{padding:12px}.summary-card{min-height:90px;padding:10px}.summary-card .big{font-size:28px}header{align-items:flex-start}header h1{font-size:22px}.head-actions{gap:6px}.notification-menu{right:12px;left:auto;top:86px}}
 </style></head><body><main>
 <header><div><div class="brand">MODELUXE MART</div><h1 style="margin:4px 0">Delivery Panel</h1><p class="small" style="margin:0">Deliveries · Wallet · Notifications</p></div><div class="head-actions"><div class="notification-box"><button id="bellBtn" class="btn muted" aria-label="Notifications">🔔 <span id="bellBadge">0</span></button><div id="notificationMenu" class="notification-menu hidden"><div class="topline"><b>Notifications</b><button id="clearNotifications" class="btn muted" style="padding:5px 8px">Clear</button></div><div id="notificationList"><p class="small">अभी कोई notification नहीं है।</p></div></div></div><button id="logout" class="btn muted hidden">Logout</button></div></header>
-<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="button">Login</button><p id="loginMsg" class="small" aria-live="polite"></p></div></section>
-<section id="pendingApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Application Status</h2><p id="applicationStatus" class="small">आपका आवेदन Admin की मंजूरी के लिए Pending है।</p><button id="pendingRefresh" class="btn primary" type="button">Refresh Status</button><button id="pendingLogout" class="btn muted" type="button">Logout</button></section>
+<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p></div></section>
+<section id="pendingApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Application Status</h2><p id="applicationStatus" class="small">आपका आवेदन Admin की मंजूरी के लिए Pending है।</p><p id="applicationIdentity" class="small"></p><button id="pendingRefresh" class="btn primary" type="button">Refresh Status</button><button id="syncDeliveryApplication" class="btn muted" type="button" style="margin-left:6px">Sync Application</button><button id="pendingLogout" class="btn muted" type="button">Logout</button><p id="applicationSyncMsg" class="small" aria-live="polite"></p></section>
+<section id="recoverApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Complete Delivery Application</h2><p class="small">इस Login UID पर पुराना Application/Profile record नहीं मिला। इसी पुराने Login को रखते हुए अपना नाम और मोबाइल भरकर आवेदन दोबारा Firebase में सुरक्षित करें।</p><label class="small">Full Name *</label><input id="recoverDeliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="recoverDeliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="recoverDeliverySubmit" class="btn primary" type="button" style="width:100%;margin-top:12px">Save / Recover Application</button><button id="recoverDeliveryLogout" class="btn muted" type="button" style="margin-top:8px">Logout</button><p id="recoverDeliveryMsg" class="small" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
-<div class="grid dashboard-grid">
-<div class="panel summary-card"><div class="small">Delivery Wallet</div><div id="walletBalance" class="wallet-value">₹0</div><div class="small">Wallet balance · Admin-managed</div></div>
-<div class="panel summary-card"><div class="small">Delivery boy earning per delivery</div><div id="deliveryPayout" class="wallet-value">₹0</div><div class="small">Per delivery · Admin-managed</div></div>
-<button id="activeBox" class="panel summary-card selected" type="button" style="text-align:left"><div class="small">Active deliveries</div><div id="activeCount" class="big">0</div><div class="small">ऑर्डर की सूची खोलें →</div></button>
-<button id="deliveredBox" class="panel summary-card" type="button" style="text-align:left"><div class="small">Delivered orders</div><div id="deliveredCount" class="big">0</div><div class="small">Delivered सूची खोलें →</div></button>
+<div class="grid dashboard-quick-grid" aria-label="Delivery dashboard summary">
+<button id="walletBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="walletDetails" style="text-align:left"><div class="small">Delivery Wallet</div><div id="walletBalance" class="big">₹0</div><div class="small">Wallet balance · खोलें →</div></button>
+<button id="payoutBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="payoutDetails" style="text-align:left"><div class="small">Delivery boy earning</div><div id="deliveryPayout" class="big">₹0</div><div class="small">Per delivery · खोलें →</div></button>
+<button id="activeBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="listView" style="text-align:left"><div class="small">Active deliveries</div><div id="activeCount" class="big">0</div><div class="small">ऑर्डर की सूची खोलें →</div></button>
+<button id="deliveredBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="listView" style="text-align:left"><div class="small">Delivered orders</div><div id="deliveredCount" class="big">0</div><div class="small">Delivered सूची खोलें →</div></button>
 </div>
-<div class="panel" style="margin-top:12px;padding:12px">
-<button id="myAccountBtn" class="btn muted" type="button" style="width:100%">👤 My Account</button>
-<div id="myAccountPanel" class="hidden" style="margin-top:12px;padding:14px;background:#f8fafc;border:1px solid #dbe5f1;border-radius:12px">
-<h3 style="margin:0 0 12px;color:#075fc4">My Account Details</h3>
-<div class="small">Login ID (Gmail / Email)</div><b id="accountEmail">—</b>
-<div class="small" style="margin-top:9px">Mobile number</div><b id="accountPhone">Not added</b>
-<div class="small" style="margin-top:9px">Login method</div><b id="accountLoginMethod">Email & Password</b>
-<button id="editAccountBtn" class="btn muted" type="button" style="width:100%;margin-top:14px">✏️ Update Mobile / Gmail</button>
-<div id="editAccountForm" class="hidden" style="margin-top:12px;padding:12px;border:1px solid #dbe5f1;border-radius:12px;background:#fff">
-<label class="small">New Gmail / Email (Login ID)</label><input id="editAccountEmail" type="email" autocomplete="email" placeholder="name@gmail.com">
-<label class="small" style="display:block;margin-top:10px">Mobile number</label><input id="editAccountPhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
-<label class="small" style="display:block;margin-top:10px">Current password (only if changing Gmail)</label><input id="editAccountPassword" type="password" autocomplete="current-password" placeholder="Current password">
-<button id="saveAccountBtn" class="btn primary" type="button" style="width:100%;margin-top:12px">Save Changes</button>
-<div id="accountUpdateMsg" class="small" style="margin-top:8px"></div>
-</div>
-</div>
-<button id="orderGraphBtn" class="btn primary" type="button" style="width:100%;margin-top:12px">📊 Order Graph</button>
-<div id="orderGraphPanel" class="hidden" style="margin-top:14px;border:1px solid #dbe5f1;border-radius:14px;padding:14px;background:#fff">
-<h2 style="font-size:22px;line-height:1.2;margin:2px 0 20px;white-space:nowrap">Daily Orders (Last 7 Days)</h2>
-<div id="dailyOrderChart" style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;min-height:230px;border-bottom:1px solid #dbe5f1;padding:12px 4px 0"></div>
-<div id="dailyOrderTotal" style="font-size:16px;color:#64748b;margin-top:14px">Total: 0 orders</div>
-</div></div>
-<div class="panel" style="margin-top:12px"><input id="search" placeholder="Order ID, customer, phone search karein"><button id="scanBtn" class="btn primary" type="button" style="width:100%;margin-top:10px">📷 Scan Invoice Delivery QR</button><p id="sync" class="small" style="margin-bottom:0">Connecting…</p></div>
+<section id="walletDetails" class="panel hidden dashboard-expand-panel" style="margin-top:10px" aria-label="Wallet details"><div class="topline"><b>Wallet Withdrawal</b><button class="btn muted close-top-panel" type="button" data-close-panel="walletDetails">Close ✕</button></div><p class="small">Request submit karte hi amount available balance se reserve ho jayega. Admin cancel karega to refund milega.</p><input id="deliveryWithdrawAmount" type="number" min="1" step="0.01" placeholder="Withdrawal amount ₹"><button id="deliveryWithdrawBtn" class="btn primary" style="width:100%;margin-top:9px">Submit Withdrawal Request</button><p id="deliveryWithdrawMsg" class="small" aria-live="polite"></p><div id="deliveryWithdrawHistory" class="small"></div></section>
+<section id="payoutDetails" class="panel hidden dashboard-expand-panel" style="margin-top:10px" aria-label="Earning details"><div class="topline"><b>Delivery Earning Details</b><button class="btn muted close-top-panel" type="button" data-close-panel="payoutDetails">Close ✕</button></div><p class="small">हर सफल Delivery पर आपको Admin Panel में तय की गई राशि मिलेगी।</p><p class="small">आपकी मौजूदा प्रति Delivery कमाई: <strong id="payoutDetailValue" class="blue">₹0</strong></p><p class="small">कमाई Delivered order confirm होने के बाद Wallet में जोड़ी जाएगी।</p></section>
+<div class="panel" style="margin-top:10px;padding:12px"><button id="deliveryGraphToggle" class="btn primary" type="button" style="width:100%">📊 Order Graph</button><section id="deliveryGraphPanel" class="hidden" style="margin-top:12px"><h3 class="graph-title">Daily Orders (Last 7 Days)</h3><div id="deliveryDailyGraph" aria-live="polite"></div></section></div>
+<div class="panel" style="margin-top:12px"><input id="search" placeholder="Order ID, customer, phone search karein"><button id="scanBtn" class="btn primary" style="width:100%;margin-top:10px">📷 Scan Invoice Delivery QR</button><p id="sync" class="small" style="margin-bottom:0">Firebase se connect ho raha hai…</p></div>
 <section id="listView" class="hidden"><div class="topline" style="align-items:center;margin-top:16px"><button id="backHome" class="btn muted">← Dashboard</button><h2 id="listTitle" class="blue" style="margin:0">Active deliveries</h2></div><div id="orders"></div></section>
 <section id="detailView" class="hidden"><button id="backList" class="btn muted back-btn">← Orders list</button><div id="orderDetail" class="panel"></div></section>
-</section></main></main>
-<div id="shipPopup" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">🚚 New delivery request</h2><span class="small" id="shipPopupCount">0 orders</span></div><p class="small">Naya shipped order aaya hai. Accept karne par order sirf isi Delivery Panel ko assign hoga.</p><div id="shipPopupList"></div></div></div>
-<div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR ko camera ke andar rakhein.</p><div id="reader" style="width:100%;min-height:240px"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
+</section></main>
+<div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR ko camera ke andar rakhein.</p><div id="reader"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
 <script>
+if (!window.firebase || !firebase.auth || !firebase.database) {
+  document.getElementById('loginMsg').textContent = 'Firebase SDK load nahi hua. Internet connection ya Firebase CDN check karein, phir page reload karein.';
+  throw new Error('Firebase SDK unavailable');
+}
+
 const firebaseConfig = {
             apiKey: "AIzaSyBu5BiTQssyHdRBQXi2vmlZRGYby-SuSiQ",
             authDomain: "vaishu-modeluxe-mart.firebaseapp.com",
@@ -64,94 +39,186 @@ const firebaseConfig = {
             appId: "1:467862693441:web:49998f19ec7bb87ac5c8c0",
             measurementId: "G-HZEKJT5YZX"
         };
-// Keep Delivery authentication isolated from Admin/User/Seller panels.
-// A dedicated Firebase app name gives this panel its own LOCAL auth session.
-const deliveryFirebaseApp=firebase.apps.find(app=>app.name==='modeluxe-delivery-panel')||firebase.initializeApp(firebaseConfig,'modeluxe-delivery-panel');
-const db=deliveryFirebaseApp.database(),auth=deliveryFirebaseApp.auth();
-// Finish enabling persistent storage before any new account/login operation.
-const deliveryPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.warn('Delivery auth persistence:',e);return false;});
-const ADMIN_PHONE='7818995955',ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
-let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login',ordersData={},listener=null,scanner=null,scanBusy=false,assignmentData={},assignmentListener=null;
-// Delivery ownership is tied to the authenticated Firebase UID, never a browser-generated device ID.
-const deliveryUid=()=>auth.currentUser&&auth.currentUser.uid||'';
-const dismissedShipIds=new Set();
-const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// Restore the Delivery Panel after refresh when Firebase still has a valid signed-in session.
-function setDeliveryAuthMode(mode){authMode=mode;const reg=mode==='register';$('deliveryAuthForm').classList.remove('hidden');$('registerFields').classList.toggle('hidden',!reg);$('deliveryName').required=reg;$('deliveryPhone').required=reg;$('authSubmit').textContent=reg?'Create Delivery Account':'Login';$('password').autocomplete=reg?'new-password':'current-password';$('loginMsg').textContent='';}
-function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingApplication').classList.add('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden'); }
-$('choiceApplyBtn').onclick=()=>setDeliveryAuthMode('register');$('choiceLoginBtn').onclick=()=>setDeliveryAuthMode('login');
-async function submitDeliveryAuth(){
- const email=$('email').value.trim().toLowerCase();
- const password=$('password').value;
- const btn=$('authSubmit');
- const msg=$('loginMsg');
- btn.disabled=true;
- msg.textContent='Firebase se login ho raha hai…';
- try{
-  // Persistence is best-effort. A browser storage restriction must NOT block login.
-  try{await deliveryPersistenceReady;}catch(persistenceError){console.warn('Auth persistence unavailable; continuing sign-in:',persistenceError);}
-  if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');
-  if(authMode==='register'){
-   const name=$('deliveryName').value.trim();
-   const phone=$('deliveryPhone').value.trim();
-   if(!name)throw Error('Apna naam bharein.');
-   if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
-   const cred=await auth.createUserWithEmailAndPassword(email,password);
-   const now=new Date().toISOString();
-   const profile={uid:cred.user.uid,email,name,phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,updatedAt:now};
-   try{
-    await db.ref('deliveryProfiles/'+cred.user.uid).set(profile);
-    await db.ref('deliveryApplications/'+cred.user.uid).set({...profile,submittedAt:now});
-    msg.textContent='Application submit ho gayi. Admin approval ka wait karein.';
-   }catch(writeErr){throw Error('Account ban gaya, lekin application save nahi hui: '+writeErr.message+'. Firebase Rules mein deliveryProfiles aur deliveryApplications ki write permission check karein.');}
-  }else{
-   await auth.signInWithEmailAndPassword(email,password);
-   msg.textContent='Login successful. Profile load ho rahi hai…';
-  }
- }catch(e){
-  const c=String(e.code||'');
-  console.error('Delivery login error:',e);
-  msg.textContent=
-   c.includes('invalid-email')?'Email address sahi nahi hai.':
-   c.includes('user-disabled')?'Yeh account disabled hai. Admin se sampark karein.':
-   c.includes('too-many-requests')?'Bahut baar login try hua. Thodi der baad dobara try karein.':
-   c.includes('network-request-failed')?'Internet connection ya Firebase connection check karein.':
-   c.includes('operation-not-allowed')?'Firebase Console → Authentication → Sign-in method mein Email/Password enable karein.':
-   c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':
-   c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':
-   c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':
-   (e.message||'Login nahi ho paya.')+(c?' ('+c+')':'');
- }finally{btn.disabled=false;}
+const panelFirebaseApp=firebase.apps.find(app=>app.name==="modeluxe-delivery-panel")||firebase.initializeApp(firebaseConfig,"modeluxe-delivery-panel");
+const db=panelFirebaseApp.database(),auth=panelFirebaseApp.auth();
+// Configure Firebase persistence once. If browser storage is unavailable,
+// continue with Firebase's default in-memory session instead of blocking login.
+const persistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(error => { console.warn('Firebase persistence unavailable; continuing:', error); });
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(label + ' timeout. Internet/Firebase connection check karein.')), ms); })
+  ]).finally(() => clearTimeout(timer));
 }
-$('authSubmit').addEventListener('click',submitDeliveryAuth);
-$('password').addEventListener('keydown',e=>{if(e.key==='Enter')submitDeliveryAuth();});
-$('email').addEventListener('keydown',e=>{if(e.key==='Enter')$('password').focus();});
-$('pendingRefresh').onclick=()=>currentDeliveryUser&&currentDeliveryUser.reload().then(()=>location.reload());$('pendingLogout').onclick=()=>auth.signOut();
-auth.onAuthStateChanged(async user=>{currentDeliveryUser=user;$('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('logout').classList.add('hidden');if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}$('login').classList.add('hidden');try{const snap=await db.ref('deliveryProfiles/'+user.uid).once('value');deliveryProfile=snap.val()||{};if(!snap.exists()){ $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Delivery profile nahi mila. Admin se sampark karein.';return;}if(deliveryProfile.status==='suspended'||deliveryProfile.applicationStatus==='suspended'||deliveryProfile.applicationStatus!=='approved'){ $('pendingApplication').classList.remove('hidden');$('applicationStatus').textContent=deliveryProfile.applicationStatus==='rejected'?'Application reject ho gayi. Admin se sampark karein.':deliveryProfile.applicationStatus==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega. (applicationStatus: '+String(deliveryProfile.applicationStatus||'blank')+', status: '+String(deliveryProfile.status||'blank')+')';return;}signedInPhone=user.uid;$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders();startDeliveryWithdrawals();}catch(e){$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');$('loginMsg').textContent='Profile load error: '+e.message;}});
+let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login',ordersData={},listener=null,scanner=null,scanBusy=false,deliverySettingsListener=null,deliveryWalletListener=null;
+const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function setDeliveryAuthMode(mode){authMode=mode;const reg=mode==='register';$('deliveryAuthForm').classList.remove('hidden');$('registerFields').classList.toggle('hidden',!reg);$('deliveryName').required=reg;$('deliveryPhone').required=reg;$('authSubmit').textContent=reg?'Create Delivery Account':'Login';$('password').autocomplete=reg?'new-password':'current-password';$('loginMsg').textContent='';}
+function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingApplication').classList.add('hidden');$('recoverApplication').classList.add('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden'); }
+$('choiceApplyBtn').onclick=()=>setDeliveryAuthMode('register');$('choiceLoginBtn').onclick=()=>setDeliveryAuthMode('login');
+let registrationInProgress=false;
+function deliveryStatusOf(record){
+ const raw=String(record?.applicationStatus||record?.status||'pending').toLowerCase();
+ if(['approved','active','accepted'].includes(raw))return 'approved';
+ if(['cancelled','canceled','rejected','declined'].includes(raw))return 'cancelled';
+ if(['suspended','blocked'].includes(raw))return 'suspended';
+ return 'pending';
+}
+function showDeliveryApplicationStatus(record){
+ const status=deliveryStatusOf(record);
+ $('pendingApplication').classList.remove('hidden');
+ $('logout').classList.remove('hidden');
+ $('applicationStatus').textContent=status==='approved'?'Application approved hai. Dashboard khol rahe hain…':status==='cancelled'?'Application cancel/reject kar di gayi hai. Admin se sampark karein.':status==='suspended'?'Account suspend hai. Admin se sampark karein.':'Application Pending hai. Admin approval ke baad dashboard khulega.';
+ $('applicationIdentity').textContent='Account: '+(currentDeliveryUser?.email||'')+' · UID: '+(currentDeliveryUser?.uid||'');
+ return status;
+}
+async function loadDeliveryAccount(user){
+ currentDeliveryUser=user;
+ $('dashboard').classList.add('hidden');$('pendingApplication').classList.add('hidden');$('recoverApplication').classList.add('hidden');$('logout').classList.add('hidden');
+ if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}
+ $('login').classList.add('hidden');
+ try{
+   const [appSnap,profileSnap]=await withTimeout(Promise.all([
+     db.ref('deliveryApplications/'+user.uid).once('value'),
+     db.ref('deliveryProfiles/'+user.uid).once('value')
+   ]),12000,'Delivery profile read');
+   let app=appSnap.val()||null, profile=profileSnap.val()||null;
+   if(!app&&!profile){
+     // Do not silently claim Pending when Firebase has no record. Keep the authenticated UID
+     // and let the user complete/recover the application without creating another account.
+     $('login').classList.add('hidden');$('recoverApplication').classList.remove('hidden');
+     $('recoverDeliveryMsg').textContent='Login successful: '+(user.email||'')+'. Is UID par application record nahi mila. Neeche details save karein.';
+     return;
+   }
+   const base={...(profile||{}),...(app||{}),uid:user.uid,email:(app&&app.email)||(profile&&profile.email)||user.email,accountType:'delivery'};
+   deliveryProfile=base;
+   // Keep both records aligned. If one path is missing, restore it from the existing record.
+   const restored={...base,applicationStatus:base.applicationStatus||base.status||'pending',status:base.status||base.applicationStatus||'pending',submittedAt:base.submittedAt||base.createdAt||new Date().toISOString()};
+   if(!app){try{await db.ref('deliveryApplications/'+user.uid).set(restored);}catch(syncErr){console.warn('Delivery application auto-sync:',syncErr);}}
+   if(!profile){try{await db.ref('deliveryProfiles/'+user.uid).set(restored);}catch(syncErr){console.warn('Delivery profile auto-sync:',syncErr);}}
+   const status=deliveryStatusOf(base);
+   if(status==='cancelled'||status==='suspended'||status!=='approved'){
+     showDeliveryApplicationStatus(base);return;
+   }
+   signedInPhone=user.uid;
+   $('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');
+   startOrders();startDeliveryWithdrawals();
+ }catch(e){
+   $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');
+   $('loginMsg').textContent='Firebase read error: '+(e.message||e)+' — deliveryApplications aur deliveryProfiles ke apne UID read permissions check karein.';
+ }
+}
+$('authSubmit').onclick=async()=>{
+ const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;
+ try{
+   if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');
+   if(authMode==='register'){
+     const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();
+     if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
+     registrationInProgress=true;
+     const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString(),uid=cred.user.uid;
+     const record={uid,email,name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};
+     // Write each own-UID record separately so Firebase reports the exact denied path.
+     try{await db.ref('deliveryApplications/'+uid).set(record);}
+     catch(e){throw Error('deliveryApplications/'+uid+' save failed: '+(e.message||e));}
+     try{await db.ref('deliveryProfiles/'+uid).set(record);}
+     catch(e){throw Error('deliveryProfiles/'+uid+' save failed: '+(e.message||e));}
+     const [pCheck,aCheck]=await Promise.all([db.ref('deliveryProfiles/'+uid).once('value'),db.ref('deliveryApplications/'+uid).once('value')]);
+     if(!pCheck.exists()||!aCheck.exists())throw Error('Firebase save verification failed. Application exists='+aCheck.exists()+', Profile exists='+pCheck.exists());
+     $('loginMsg').textContent='Application Firebase mein successfully submit aur verify ho gayi. Admin approval ka wait karein.';
+     await loadDeliveryAccount(cred.user);
+   }else{
+     $('loginMsg').textContent='Firebase se login ho raha hai…';
+     // Wait briefly for persistence setup, but never let it hold authentication forever.
+     await Promise.race([persistenceReady,new Promise(resolve=>setTimeout(resolve,5000))]);
+     await withTimeout(
+       auth.signInWithEmailAndPassword(email,password),
+       18000,
+       'Firebase login'
+     );
+     // onAuthStateChanged is the single owner of post-login profile loading.
+     $('loginMsg').textContent='Login successful. Delivery account load ho raha hai…';
+   }
+ }catch(e){
+   const c=e.code||'';
+   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':(e.message||'Login nahi ho paya.');
+ }finally{registrationInProgress=false;btn.disabled=false;}
+};
+$('pendingRefresh').onclick=async()=>{const user=auth.currentUser;if(user){$('applicationStatus').textContent='Status refresh ho raha hai…';await loadDeliveryAccount(user);}};
+$('pendingLogout').onclick=()=>auth.signOut();
+async function syncOwnDeliveryApplication(){
+ const user=auth.currentUser;if(!user)throw Error('Pehle Delivery account se login karein.');
+ const [pSnap,aSnap]=await Promise.all([db.ref('deliveryProfiles/'+user.uid).once('value'),db.ref('deliveryApplications/'+user.uid).once('value')]);
+ const existing={...(pSnap.val()||{}),...(aSnap.val()||{})};
+ if(!pSnap.exists()&&!aSnap.exists())throw Error('Is UID par profile ya application ka record nahi mila. Purani application Firebase mein save nahi hui thi.');
+ const now=new Date().toISOString(),record={...existing,uid:user.uid,email:existing.email||user.email,accountType:'delivery',applicationStatus:existing.applicationStatus||existing.status||'pending',status:existing.status||existing.applicationStatus||'pending',submittedAt:existing.submittedAt||existing.createdAt||now,updatedAt:now};
+ if(!aSnap.exists())await db.ref('deliveryApplications/'+user.uid).set(record);
+ if(!pSnap.exists())await db.ref('deliveryProfiles/'+user.uid).set(record);
+ const [pv,av]=await Promise.all([db.ref('deliveryProfiles/'+user.uid).once('value'),db.ref('deliveryApplications/'+user.uid).once('value')]);
+ if(!pv.exists()||!av.exists())throw Error('Sync verify nahi hua. Firebase Rules mein own UID read/write permission check karein.');
+ deliveryProfile={...record};$('applicationSyncMsg').textContent='Application aur Profile dono Firebase mein verify ho gaye. Admin Panel refresh karein.';
+}
+$('syncDeliveryApplication').onclick=async()=>{const m=$('applicationSyncMsg');m.textContent='Application sync ho rahi hai…';try{await syncOwnDeliveryApplication();}catch(e){m.textContent='Sync error: '+(e.message||e);}};
+async function recoverDeliveryApplication(){
+ const user=auth.currentUser;if(!user)throw Error('Login session nahi mila. Dobara login karein.');
+ const name=$('recoverDeliveryName').value.trim(),phone=$('recoverDeliveryPhone').value.trim();
+ if(!name)throw Error('Apna poora naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
+ const now=new Date().toISOString();
+ const record={uid:user.uid,email:user.email||'',name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now,recoveredApplication:true};
+ const btn=$('recoverDeliverySubmit');btn.disabled=true;$('recoverDeliveryMsg').textContent='Application Firebase mein save ho rahi hai…';
+ try{
+   await db.ref('deliveryApplications/'+user.uid).set(record);
+   await db.ref('deliveryProfiles/'+user.uid).set(record);
+   const [a,p]=await Promise.all([db.ref('deliveryApplications/'+user.uid).once('value'),db.ref('deliveryProfiles/'+user.uid).once('value')]);
+   if(!a.exists()||!p.exists())throw Error('Save verify nahi hua. Application='+a.exists()+', Profile='+p.exists());
+   deliveryProfile=record;$('recoverApplication').classList.add('hidden');showDeliveryApplicationStatus(record);
+   $('applicationSyncMsg').textContent='Application aur Profile Firebase mein save aur verify ho gaye. Admin Panel mein Refresh karein.';
+ }catch(e){$('recoverDeliveryMsg').textContent='Save error: '+(e.message||e)+' — Firebase Rules mein deliveryApplications aur deliveryProfiles ke own UID write rules check karein.';throw e;}
+ finally{btn.disabled=false;}
+}
+$('recoverDeliverySubmit').onclick=()=>recoverDeliveryApplication().catch(()=>{});
+$('recoverDeliveryLogout').onclick=()=>auth.signOut();
+auth.onAuthStateChanged(async user=>{
+ if(registrationInProgress)return;
+ try{await loadDeliveryAccount(user);}
+ catch(error){
+   console.error('Delivery auth-state handler:',error);
+   $('login').classList.remove('hidden');
+   $('deliveryAuthForm').classList.remove('hidden');
+   $('loginMsg').textContent='Account load error: '+(error.message||error);
+ }
+});
+function closeDashboardExpansions(){['walletDetails','payoutDetails'].forEach(id=>$(id).classList.add('hidden'));['walletBox','payoutBox'].forEach(id=>{$(id).classList.remove('selected');$(id).setAttribute('aria-expanded','false')});}
+function toggleDashboardPanel(panelId,buttonId){const panel=$(panelId),opening=panel.classList.contains('hidden');closeDashboardExpansions();setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false');if(opening){panel.classList.remove('hidden');$(buttonId).classList.add('selected');$(buttonId).setAttribute('aria-expanded','true')}else{panel.classList.add('hidden');$(buttonId).setAttribute('aria-expanded','false')}}
+$('walletBox').onclick=()=>toggleDashboardPanel('walletDetails','walletBox');$('payoutBox').onclick=()=>toggleDashboardPanel('payoutDetails','payoutBox');
+$('activeBox').onclick=()=>{if(!$('listView').classList.contains('hidden')&&selectedBucket==='active'){setView('home');$('activeBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false')}else{closeDashboardExpansions();$('deliveredBox').classList.remove('selected');$('deliveredBox').setAttribute('aria-expanded','false');$('activeBox').setAttribute('aria-expanded','true');showBucket('active')}};
+$('deliveredBox').onclick=()=>{if(!$('listView').classList.contains('hidden')&&selectedBucket==='delivered'){setView('home');$('deliveredBox').classList.remove('selected');$('deliveredBox').setAttribute('aria-expanded','false')}else{closeDashboardExpansions();$('activeBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','true');showBucket('delivered')}};
+document.querySelectorAll('[data-close-panel]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.getAttribute('data-close-panel');$(id).classList.add('hidden');if(id==='walletDetails'){$('walletBox').classList.remove('selected');$('walletBox').setAttribute('aria-expanded','false')}if(id==='payoutDetails'){$('payoutBox').classList.remove('selected');$('payoutBox').setAttribute('aria-expanded','false')}}));
+$('backHome').onclick=()=>{setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false')};$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
 let deliveryWithdrawalListener=null;
 function startDeliveryWithdrawals(){
  const ref=db.ref('withdrawalRequests/delivery/'+signedInPhone);
  if(deliveryWithdrawalListener)ref.off('value',deliveryWithdrawalListener);
- deliveryWithdrawalListener=snap=>{
-  const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));
-  const target=$('deliveryWithdrawHistory');
-  if(target)target.innerHTML=rows.length?rows.map(([id,r])=>'<div style="padding:8px 0;border-top:1px solid #e2e8f0">₹'+Number(r.amount||0).toLocaleString('en-IN')+' · '+esc(r.status||'pending')+' · '+esc(r.createdAt||'')+'</div>').join(''):'No withdrawal requests yet.';
- };
- ref.on('value',deliveryWithdrawalListener,e=>{const target=$('deliveryWithdrawHistory');if(target)target.textContent='History load error: '+e.message;});
+ deliveryWithdrawalListener=snap=>{const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));$('deliveryWithdrawHistory').innerHTML=rows.length?rows.map(([id,r])=>'<div style="padding:8px 0;border-top:1px solid #e2e8f0">₹'+Number(r.amount||0).toLocaleString('en-IN')+' · '+esc(r.status||'pending')+' · '+esc(r.createdAt||'')+'</div>').join(''):'No withdrawal requests yet.';};
+ ref.on('value',deliveryWithdrawalListener,e=>$('deliveryWithdrawHistory').textContent='History load error: '+e.message);
 }
-$('activeBox').onclick=()=>showBucket('active');$('deliveredBox').onclick=()=>showBucket('delivered');$('myAccountBtn').onclick=()=>{const p=$('myAccountPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))renderMyAccount()};$('orderGraphBtn').onclick=()=>{$('orderGraphPanel').classList.toggle('hidden');if(!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph()};$('backHome').onclick=()=>setView('home');$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
-function startOrders(){
- if(listener)db.ref('orders').off('value',listener);
- $('sync').textContent='Firebase se connect ho raha hai…';
- listener=s=>{const next=s.val()||{};for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New delivery order','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();renderShipPopups();refreshDeliveryAssignments();if($('orderGraphPanel')&&!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};
- db.ref('orders').on('value',listener,e=>{$('sync').textContent='Firebase /orders read failed: '+(e&&e.message||'unknown error')+' · UID: '+(auth.currentUser&&auth.currentUser.uid||'not signed in')+' · Approved delivery profile aur /orders .read rule check karein.';});
- refreshDeliveryAssignments();
- db.ref('deliverySettings').on('value',snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');},e=>{console.warn('Delivery settings read:',e.message)});
- // This panel's existing rules do not expose deliveryWallets; don't let an unrelated
- // denied wallet listener obscure the Orders connection state.
+$('deliveryWithdrawBtn').onclick=async()=>{
+ if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Delivery login required');
+ const amount=Math.round(Number($('deliveryWithdrawAmount').value)*100)/100;if(!Number.isFinite(amount)||amount<=0){$('deliveryWithdrawMsg').textContent='Sahi amount enter karein.';return;}
+ const btn=$('deliveryWithdrawBtn'),id=db.ref('withdrawalRequests/delivery/'+signedInPhone).push().key,now=new Date().toISOString(),walletRef=db.ref('deliveryWallets/'+signedInPhone);btn.disabled=true;let reserved=false;
+ try{const tx=await walletRef.transaction(current=>{current=current||{balance:0,totalEarned:0};const balance=Math.round(Number(current.balance||0)*100)/100;if(balance<amount)return;current.balance=Math.round((balance-amount)*100)/100;current.withdrawals=current.withdrawals||{};current.withdrawals[id]={amount,status:'pending',createdAt:now};return current;});if(!tx.committed)throw Error('Wallet balance kam hai ya reserve nahi ho saka.');reserved=true;await db.ref('withdrawalRequests/delivery/'+signedInPhone+'/'+id).set({id,uid:signedInPhone,name:deliveryProfile.name||'Delivery Account',amount,status:'pending',walletReserved:true,createdAt:now});$('deliveryWithdrawAmount').value='';$('deliveryWithdrawMsg').textContent='Request submit ho gayi. ₹'+amount.toLocaleString('en-IN')+' reserve kiye gaye hain.';}catch(e){if(reserved){try{await walletRef.transaction(current=>{if(!current)return current;const hold=current.withdrawals&&current.withdrawals[id];if(hold&&hold.status==='pending'){current.balance=Math.round((Number(current.balance||0)+amount)*100)/100;delete current.withdrawals[id];}return current;});}catch(rollback){console.error('Delivery withdrawal rollback failed',rollback);}}$('deliveryWithdrawMsg').textContent='Request submit nahi hui: '+e.message;}finally{btn.disabled=false;}
+};
+function renderDeliveryDailyGraph(){
+ const host=$("deliveryDailyGraph");if(!host)return;
+ const counts={};const today=new Date();today.setHours(0,0,0,0);
+ for(let i=6;i>=0;i--){const d=new Date(today);d.setDate(today.getDate()-i);counts[d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")]=0;}
+ Object.values(ordersData||{}).forEach(o=>{const raw=o&&o.createdAt;if(!raw)return;const dt=new Date(raw);if(Number.isNaN(dt.getTime()))return;const key=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");if(Object.prototype.hasOwnProperty.call(counts,key))counts[key]++;});
+ const max=Math.max(1,...Object.values(counts));
+ host.innerHTML='<div class="daily-chart" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:190px;padding:12px 6px 5px;border-bottom:1px solid #dbe5f1">'+Object.entries(counts).map(([day,n])=>{const h=Math.max(n?8:2,Math.round(n/max*132));return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:6px;min-width:0"><b style="font-size:12px">${n}</b><div title="${day}: ${n} orders" style="width:22px;max-width:75%;height:${h}px;background:linear-gradient(180deg,#3b82f6,#075fc4);border-radius:7px 7px 2px 2px"></div><span style="font-size:11px;line-height:1.2;white-space:nowrap;color:#64748b">${day.slice(8,10)}/${day.slice(5,7)}</span></div>`}).join('')+'</div><p class="small" style="margin:9px 0 0">Total: '+Object.values(counts).reduce((a,b)=>a+b,0)+' orders</p>';
 }
-
-
+$("deliveryGraphToggle")?.addEventListener("click",()=>{const p=$("deliveryGraphPanel");p.classList.toggle("hidden");if(!p.classList.contains("hidden"))renderDeliveryDailyGraph();});
+function startOrders(){if(listener)db.ref('orders').off('value',listener);listener=s=>{const next=s.val()||{};for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New order received','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));renderDeliveryDailyGraph();$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};db.ref('orders').on('value',listener,e=>$('sync').textContent='Firebase error: '+e.message);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');if($('payoutDetailValue'))$('payoutDetailValue').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');};db.ref('deliverySettings').on('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWalletListener=snap=>{$('walletBalance').textContent='₹'+Number(snap.val()||0).toLocaleString('en-IN')};db.ref('deliveryWallets/'+signedInPhone+'/balance').on('value',deliveryWalletListener)};
 let selectedBucket='active',selectedOrderId='',previousOrders={};
 let deliverySettings={deliveryBoyPayout:0};
 const NOTIFY_KEY='modeluxeDeliveryNotificationsV1';
@@ -159,263 +226,68 @@ function getNotifications(){try{return JSON.parse(localStorage.getItem(NOTIFY_KE
 function saveNotifications(list){try{localStorage.setItem(NOTIFY_KEY,JSON.stringify(list.slice(0,40)))}catch{} renderNotifications()}
 function addNotice(title,detail){const a=getNotifications();a.unshift({title,detail,time:new Date().toLocaleString(),read:false});saveNotifications(a)}
 function renderNotifications(){const a=getNotifications();$('bellBadge').textContent=a.filter(n=>!n.read).length;$('notificationList').innerHTML=a.length?a.map((n,i)=>`<div class="notification-item"><b>${esc(n.title)}</b><div>${esc(n.detail||'')}</div><div class="small">${esc(n.time||'')}</div></div>`).join(''):'<p class="small">अभी कोई notification नहीं है।</p>'}
-function renderMyAccount(){
- const u=auth.currentUser||{};
- const email=u.email||deliveryProfile.email||'Not available';
- const phone=deliveryProfile.phone||'Not added';
- $('accountEmail').textContent=email;
- $('accountPhone').textContent=phone;
- $('accountLoginMethod').textContent='Gmail / Email & Password';
- $('editAccountEmail').value=u.email||deliveryProfile.email||'';
- $('editAccountPhone').value=deliveryProfile.phone||'';
- $('editAccountPassword').value='';
- $('accountUpdateMsg').textContent='';
-}
-$('editAccountBtn').onclick=()=>{$('editAccountForm').classList.toggle('hidden');if(!$('editAccountForm').classList.contains('hidden'))renderMyAccount()};
-$('saveAccountBtn').onclick=async()=>{
- const u=auth.currentUser;
- if(!u)return;
- const newEmail=$('editAccountEmail').value.trim().toLowerCase();
- const newPhone=$('editAccountPhone').value.trim();
- const currentPassword=$('editAccountPassword').value;
- const msg=$('accountUpdateMsg'),btn=$('saveAccountBtn');
- if(newPhone&&!/^\\d{10}$/.test(newPhone)){msg.textContent='Mobile number 10 digits ka hona chahiye.';return;}
- if(!newEmail||!/^\\S+@\\S+\\.\\S+$/.test(newEmail)){msg.textContent='Valid Gmail / Email enter karein.';return;}
- btn.disabled=true;msg.textContent='Updating…';
- try{
-   if(newEmail!==String(u.email||'').toLowerCase()){
-     if(!currentPassword)throw Error('Gmail change karne ke liye current password enter karein.');
-     const credential=firebase.auth.EmailAuthProvider.credential(u.email,currentPassword);
-     await u.reauthenticateWithCredential(credential);
-     await u.updateEmail(newEmail);
-     await u.sendEmailVerification();
-   }
-   const updated={...deliveryProfile,email:newEmail,phone:newPhone,updatedAt:new Date().toISOString()};
-   await db.ref('deliveryProfiles/'+u.uid).update({email:newEmail,phone:newPhone,updatedAt:updated.updatedAt});
-   await db.ref('deliveryApplications/'+u.uid).update({email:newEmail,phone:newPhone,updatedAt:updated.updatedAt}).catch(()=>{});
-   deliveryProfile=updated;
-   renderMyAccount();
-   msg.textContent=newEmail!==String(u.email||'').toLowerCase()?'Details updated. New email verify karein; next login se naya Gmail/Login ID use hoga.':'Mobile number updated successfully.';
- }catch(e){msg.textContent=e.code==='auth/requires-recent-login'?'Gmail change ke liye logout karke dobara login karein.':e.code==='auth/email-already-in-use'?'Ye Gmail kisi doosre account par already use ho rahi hai.':(e.message||'Update nahi ho paya.');}
- finally{btn.disabled=false;}
-};
-function renderDailyOrderGraph(){
- const now=new Date(),days=[];
- for(let n=6;n>=0;n--){const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-n);days.push({date:d,key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),count:0});}
- for(const o of Object.values(ordersData||{})){
-   const raw=o&&(o.createdAt||o.dateTime||o.timestamp);if(!raw)continue;
-   const dt=typeof raw==='number'?new Date(raw):new Date(raw);if(Number.isNaN(dt.getTime()))continue;
-   const key=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-   const day=days.find(x=>x.key===key);if(day)day.count++;
- }
- const max=Math.max(1,...days.map(x=>x.count));
- $('dailyOrderChart').innerHTML=days.map(x=>{const h=x.count?Math.max(8,Math.round(x.count/max*155)):3;const label=String(x.date.getDate()).padStart(2,'0')+'/'+String(x.date.getMonth()+1).padStart(2,'0');return `<div class="daily-bar-col"><div class="daily-bar-count">${x.count}</div><div class="daily-bar" style="height:${h}px"></div><div class="daily-bar-date">${label}</div></div>`}).join('');
- $('dailyOrderTotal').textContent='Total: '+days.reduce((a,x)=>a+x.count,0)+' orders';
-}
 function setView(view){$('listView').classList.toggle('hidden',view!=='list');$('detailView').classList.toggle('hidden',view!=='detail');if(view==='home'){$('listView').classList.add('hidden');$('detailView').classList.add('hidden')} }
 function showBucket(bucket){selectedBucket=bucket;selectedOrderId='';$('activeBox').classList.toggle('selected',bucket==='active');$('deliveredBox').classList.toggle('selected',bucket==='delivered');$('listTitle').textContent=bucket==='active'?'Active deliveries':'Delivered orders';setView('list');renderOrders();window.scrollTo({top:0,behavior:'smooth'})}
-async function refreshDeliveryAssignments(){
- const uid=deliveryUid();if(!uid)return;
- const ids=Object.keys(ordersData||{});
- await Promise.all(ids.map(async id=>{
-  try{const snap=await db.ref('deliveryAssignments/'+id).once('value');const a=snap.val();if(a)assignmentData[id]=a;else delete assignmentData[id];}
-  catch(e){assignmentData[id]={__readError:true,error:String(e&&e.message||e)};console.warn('Assignment read denied for order',id,e.message);}
- }));
- renderOrders();renderShipPopups();
-}
-function assignedToThisDevice(id){const a=assignmentData[id];return !!a&&String(a.deliveryUid||'')===deliveryUid()&&String(a.status||'accepted')==='accepted'}
-function renderShipPopups(){if(!$('shipPopup'))return;const available=Object.entries(ordersData).filter(([id,o])=>String(o.status||'').toLowerCase()==='shipped'&&(!assignmentData[id]||assignmentData[id].__readError===true||String(assignmentData[id].deliveryUid||'')===deliveryUid())&&!dismissedShipIds.has(id));$('shipPopupCount').textContent=available.length+' orders';$('shipPopupList').innerHTML=available.map(([id,o])=>`<div class="order" style="margin-top:10px"><b>Order #${esc(id)}</b><div style="margin:5px 0">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</div><div class="small">${esc(o.shippingAddress||'Address not available')}</div><div class="detail-actions" style="margin-top:10px"><button class="btn primary" onclick="acceptDelivery('${esc(id)}')">Accept</button><button class="btn danger" onclick="cancelDeliveryPopup('${esc(id)}')">Cancel</button></div></div>`).join('');$('shipPopup').classList.toggle('hidden',available.length===0)}
-window.cancelDeliveryPopup=function(id){dismissedShipIds.add(id);renderShipPopups()};
-window.acceptDelivery=async function(id){const o=ordersData[id];if(!o||String(o.status||'').toLowerCase()!=='shipped')return alert('Ye order ab available nahi hai.');const ref=db.ref('deliveryAssignments/'+id);try{const result=await ref.transaction(current=>{if(current)return;return {status:'accepted',deliveryUid:deliveryUid(),acceptedAt:new Date().toISOString()};});const assigned=result.snapshot&&result.snapshot.val();if(!result.committed&&String((assigned||{}).deliveryUid||'')!==deliveryUid()){alert('Ye order kisi doosre Delivery Panel ne accept kar liya.');}else{const pickedAt=(assigned&&assigned.acceptedAt)||new Date().toISOString();await db.ref('orders/'+id).update({status:'Picked by Delivery Partner',deliveryStatus:'Picked by Delivery Partner',deliveryPickedAt:pickedAt,deliveryPickedBy:deliveryUid()});dismissedShipIds.delete(id);addNotice('Delivery accepted','Order #'+id+' picked by delivery partner ho gaya.');showBucket('active')}renderShipPopups();renderOrders()}catch(e){alert('Order accept ho gaya ho sakta hai, lekin status update mein error aaya: '+e.message);renderShipPopups();renderOrders()}};
-function renderOrders(){const entries=Object.entries(ordersData).filter(([id,o])=>assignedToThisDevice(id)).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const total=active.length+delivered.length,activePct=total?Math.round(active.length/total*100):0,deliveredPct=total?Math.round(delivered.length/total*100):0;if($('graphActiveText'))$('graphActiveText').textContent=active.length;if($('graphDeliveredText'))$('graphDeliveredText').textContent=delivered.length;if($('graphActiveBar'))$('graphActiveBar').style.width=activePct+'%';if($('graphDeliveredBar'))$('graphDeliveredBar').style.width=deliveredPct+'%';const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—',st=String(o.status||'').toLowerCase(),canOut=selectedBucket!=='delivered'&&st==='picked by delivery partner';return `<div class="order order-list-card"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="order-card-actions"><button class="btn muted" onclick="openOrderDetail('${esc(id)}')">Order Details</button>${canOut?`<button class="btn primary" onclick="markOutForDelivery('${esc(id)}')">Out for Delivery</button>`:''}</div></div>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
-
-window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selectedOrderId=id;const address=o.shippingAddress||o.address||'';const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';const locked=!!o.adminStatusLocked;const mapUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address);$('orderDetail').innerHTML=`<div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h2 style="margin:5px 0">${esc(o.customerName||'Customer')}</h2><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(address||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><p><b>Payment:</b> ${esc(o.paymentMethod||o.payment||'Not available')} · ₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><div class="detail-actions"><a class="btn primary" target="_blank" rel="noopener" href="${mapUrl}">📍 Google Maps में रास्ता खोलें</a><a class="btn muted" href="tel:${esc(String(o.customerPhone||'').replace(/[^+\d]/g,''))}">📞 ग्राहक को कॉल करें</a></div><div style="margin-top:12px"><iframe class="map-frame" title="Delivery map" loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed"></iframe></div>`;setView('detail');window.scrollTo({top:0,behavior:'smooth'})};
-window.markOutForDelivery=async function(id){const o=ordersData[id];if(!o||!assignedToThisDevice(id))return alert('Ye order is Delivery Panel ko assign nahi hai.');if(String(o.status||'').toLowerCase()!=='picked by delivery partner')return alert('Order abhi Picked by Delivery Partner status mein nahi hai.');try{const now=new Date().toISOString();await db.ref('orders/'+id).update({status:'Out for Delivery',deliveryStatus:'Out for Delivery',outForDeliveryAt:now,outForDeliveryBy:deliveryUid()});addNotice('Out for Delivery','Order #'+id+' Out for Delivery mark ho gaya.');renderOrders();}catch(e){alert('Status update nahi hua: '+e.message)}};
-window.saveStatus=async id=>{if(!signedInPhone||signedInPhone!==ADMIN_PHONE)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
-async function confirmQr(value){
-  let id='';
-  const raw=String(value||'').trim();
-
-  // Accept the invoice QR URL query parameters used by ModeLuxe.
-  try{
-    const parsed=new URL(raw);
-    const params=parsed.searchParams;
-    id=params.get('deliveryConfirm')||
-       params.get('orderId')||
-       params.get('order')||
-       params.get('id')||'';
-
-    // Also accept a Firebase order ID as the final URL path segment.
-    if(!id){
-      const parts=parsed.pathname.split('/').filter(Boolean);
-      const tail=parts.length?parts[parts.length-1]:'';
-      if(/^[A-Za-z0-9_-]{1,128}$/.test(tail))id=tail;
-    }
-  }catch(e){
-    const m=raw.match(/(?:deliveryConfirm|orderId|order|id)=([^&]+)/i);
-    if(m){
-      try{id=decodeURIComponent(m[1]);}catch(e){id=m[1];}
-    }else if(/^[A-Za-z0-9_-]{1,128}$/.test(raw)){
-      id=raw;
-    }
-  }
-
-  id=String(id||'').trim();
-
-  if(!id||!/^[A-Za-z0-9_-]{1,128}$/.test(id)){
-    $('scanMsg').textContent='यह ModeLuxe Delivery QR नहीं है। सही Invoice QR scan करें।';
-    scanBusy=false;
-    return;
-  }
-
-  try{
-    const uid=deliveryUid();
-    if(!uid)throw Error('Delivery login session नहीं मिला। दोबारा login करें।');
-
-    const assignmentSnap=await db.ref('deliveryAssignments/'+id).once('value');
-    const assignment=assignmentSnap.val();
-
-    if(
-      !assignment||
-      String(assignment.deliveryUid||'')!==uid||
-      String(assignment.status||'')!=='accepted'
-    ){
-      throw Error('यह Order आपके Delivery UID को assign नहीं है।');
-    }
-
-    const orderSnap=await db.ref('orders/'+id).once('value');
-    const order=orderSnap.val();
-
-    if(!order)throw Error('इस QR का Order Firebase में नहीं मिला।');
-
-    const status=String(order.status||'').toLowerCase();
-
-    if(status==='delivered'){
-      $('scanMsg').textContent='यह Order पहले ही Delivered है।';
-      alert('यह Order पहले ही Delivered है।');
-      scanBusy=false;
-      return;
-    }
-
-    if(['cancelled','refunded'].includes(status)){
-      throw Error('यह Order '+order.status+' है; Delivered नहीं किया जा सकता।');
-    }
-
-    if(!['picked by delivery partner','out for delivery'].includes(status)){
-      throw Error('पहले Order को Picked by Delivery Partner / Out for Delivery होना चाहिए।');
-    }
-
-    if(!confirm(
-      'Delivery Confirm करें?\nOrder #'+id+
-      '\nCustomer: '+(order.customerName||'Customer')+
-      '\nOK दबाने पर Delivered mark होगा।'
-    )){
-      $('scanMsg').textContent='Confirmation cancel कर दी गई।';
-      scanBusy=false;
-      return;
-    }
-
-    const now=new Date().toISOString();
-
-    await db.ref('orders/'+id).update({
-      status:'Delivered',
-      deliveryStatus:'Delivered',
-      deliveryConfirmedAt:now,
-      deliveryConfirmedBy:uid,
-      deliveryConfirmedByQr:true
+function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>['shipped','picked up by delivery partner','out for delivery'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';return `<button class="order" style="width:100%;text-align:left;cursor:pointer;color:inherit" onclick="openOrderDetail('${esc(id)}')"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="small">ऑर्डर की पूरी जानकारी और मैप खोलने के लिए टैप करें →</div></button>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
+window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selectedOrderId=id;const address=o.shippingAddress||o.address||'';const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';const locked=!!o.adminStatusLocked;const mapUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address);$('orderDetail').innerHTML=`<div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h2 style="margin:5px 0">${esc(o.customerName||'Customer')}</h2><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(address||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><p><b>Payment:</b> ${esc(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||'Not available')} · ${esc(o.paymentStatus||'Pending')}</p><p><b>Product Cost:</b> ₹${Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)).toLocaleString('en-IN')}</p><p><b>Delivery Charges:</b> ₹${Math.max(0,Math.round((Number(o.grandTotal??o.totalAmount??o.total??o.price??0)-Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)))*100)/100).toLocaleString('en-IN')}</p><p><b>Grand Total:</b> ₹${Number(o.grandTotal??o.totalAmount??o.total??o.price??0).toLocaleString('en-IN')}</p><p><b>Delivery boy earning per delivery:</b> ₹${Number(deliverySettings.deliveryBoyPayout||0).toLocaleString('en-IN')}</p><div class="detail-actions"><a class="btn primary" target="_blank" rel="noopener" href="${mapUrl}">📍 Google Maps में रास्ता खोलें</a><a class="btn muted" href="tel:${esc(String(o.customerPhone||'').replace(/[^+\d]/g,''))}">📞 ग्राहक को कॉल करें</a></div><div class="grid" style="margin-top:12px"><select id="detailStatus" ${locked?'disabled':''}><option ${o.status==='Picked Up by Delivery Partner'?'selected':''}>Picked Up by Delivery Partner</option><option ${o.status==='Out for Delivery'?'selected':''}>Out for Delivery</option><option ${o.status==='Delivered'?'selected':''}>Delivered</option></select><button class="btn primary" onclick="saveStatus('${esc(id)}')" ${locked?'disabled':''}>Update Status</button></div>${locked?'<p class="small">Final status locked.</p>':''}`;setView('detail');window.scrollTo({top:0,behavior:'smooth'})};
+window.saveStatus=async id=>{if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
+async function openScanner(){if(!signedInPhone)return alert('पहले login करें');if(typeof Html5Qrcode==='undefined')return alert('QR library load नहीं हुई; internet check करें।');$('scanner').classList.remove('hidden');$('scanMsg').textContent='Camera permission का इंतजार है…';scanBusy=false;try{scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async value=>{if(scanBusy)return;scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';try{await scanner.stop()}catch{}await confirmQr(value)},()=>{});$('scanMsg').textContent='QR को frame के अंदर रखें।'}catch(e){$('scanMsg').textContent='Camera start नहीं हुआ: '+(e.message||e);scanBusy=false}}
+async function creditSellerWalletsForOrder(orderId,order){
+  const items=Array.isArray(order.items)?order.items:Object.values(order.items||{});
+  const grouped={};
+  items.forEach(item=>{
+    const uid=String((item||{}).sellerUid||"");
+    if(!uid)return;
+    const qty=Math.max(0,Number(item.qty??item.quantity??1));
+    const unitPrice=Math.max(0,Number(item.sellerPrice??item.price??0));
+    if(!grouped[uid])grouped[uid]={gross:0,items:[]};
+    grouped[uid].gross+=unitPrice*qty;
+    grouped[uid].items.push({name:String(item.name||item.productName||"Product"),qty,unitPrice});
+  });
+  const commissionSnap=await db.ref('commissionSettings/defaultCommission').once('value');
+  const rawCommission=Number(commissionSnap.val());
+  const commissionPercent=Number.isFinite(rawCommission)&&rawCommission>=0&&rawCommission<=100?rawCommission:10;
+  const credited=[];
+  for(const uid of Object.keys(grouped)){
+    const gross=Math.round(grouped[uid].gross*100)/100;
+    const commissionAmount=Math.round((gross*commissionPercent/100)*100)/100;
+    const netAmount=Math.max(0,Math.round((gross-commissionAmount)*100)/100);
+    const walletRef=db.ref('sellerWallets/'+uid);
+    const result=await walletRef.transaction(current=>{
+      current=current||{balance:0,totalEarned:0,credits:{}};
+      current.credits=current.credits||{};
+      if(current.credits[orderId])return;
+      current.balance=Math.round((Number(current.balance||0)+netAmount)*100)/100;
+      current.totalEarned=Math.round((Number(current.totalEarned||0)+netAmount)*100)/100;
+      current.credits[orderId]={
+        orderId:String(orderId),grossAmount:gross,commissionPercent,
+        commissionAmount,netAmount,creditedAt:new Date().toISOString(),
+        source:'delivery-qr-confirmation',items:grouped[uid].items
+      };
+      return current;
     });
-
-    addNotice('Delivery confirmed','Order #'+id+' Delivered mark हो गया।');
-    $('scanMsg').textContent='Order #'+id+' सफलतापूर्वक Delivered हो गया।';
-    alert('Delivery Confirmed! Order #'+id+' Delivered हो गया।');
-    await closeScanner();
-
-  }catch(e){
-    $('scanMsg').textContent='Delivery confirm नहीं हुई: '+(e.message||'Firebase error');
-    alert('Delivery confirm नहीं हुई: '+(e.message||'Firebase error'));
-    scanBusy=false;
+    if(result.committed)credited.push(uid);
   }
+  return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
-let nativeCameraStream=null,nativeVideo=null,nativeScanFrame=0,nativeBarcodeDetector=null;
-async function stopNativeScanner(){
- if(nativeScanFrame)cancelAnimationFrame(nativeScanFrame);nativeScanFrame=0;
- if(nativeCameraStream){nativeCameraStream.getTracks().forEach(t=>t.stop());nativeCameraStream=null;}
- if(nativeVideo){try{nativeVideo.pause();nativeVideo.srcObject=null;}catch{}nativeVideo.remove();nativeVideo=null;}
+async function creditDeliveryWalletForOrder(orderId,order){
+ const settingsSnap=await db.ref('deliverySettings/deliveryBoyPayout').once('value');
+ const fallbackSnap=await db.ref('commissionSettings/deliveryBoyPayout').once('value');
+ const payoutRaw=settingsSnap.exists()?settingsSnap.val():fallbackSnap.val();
+ const payout=Math.max(0,Math.round(Number(payoutRaw||0)*100)/100);
+ if(!payout)return {credited:false,amount:0};
+ const ref=db.ref('deliveryWallets/'+signedInPhone);
+ const result=await ref.transaction(current=>{
+  current=current||{balance:0,totalEarned:0,credits:{}};current.credits=current.credits||{};
+  if(current.credits[orderId])return;
+  current.balance=Math.round((Number(current.balance||0)+payout)*100)/100;
+  current.totalEarned=Math.round((Number(current.totalEarned||0)+payout)*100)/100;
+  current.credits[orderId]={orderId:String(orderId),amount:payout,creditedAt:new Date().toISOString(),source:'delivery-qr-confirmation',deliveryUid:signedInPhone};
+  return current;
+ });
+ return {credited:result.committed,amount:payout};
 }
-async function startNativeScanner(){
- if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw Error('इस browser में camera access उपलब्ध नहीं है।');
- if(!('BarcodeDetector' in window))throw Error('इस browser में native QR scanner support नहीं है। Chrome को update करें या Html5Qrcode library की अनुमति दें।');
- nativeBarcodeDetector=new BarcodeDetector({formats:['qr_code']});
- nativeCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
- nativeVideo=document.createElement('video');
- nativeVideo.setAttribute('playsinline','');
- nativeVideo.setAttribute('autoplay','');
- nativeVideo.muted=true;
- nativeVideo.style.width='100%';
- nativeVideo.style.maxHeight='55vh';
- nativeVideo.style.objectFit='contain';
- nativeVideo.srcObject=nativeCameraStream;
- $('reader').innerHTML='';
- $('reader').appendChild(nativeVideo);
- await nativeVideo.play();
- $('scanMsg').textContent='Native camera चालू है। QR code को frame में रखें।';
-
- const scanFrame=async()=>{
-  if(!nativeVideo||!nativeCameraStream)return;
-  try{
-   if(nativeVideo.readyState>=2){
-    const codes=await nativeBarcodeDetector.detect(nativeVideo);
-    if(codes&&codes.length&&codes[0].rawValue){
-     if(scanBusy)return;
-     scanBusy=true;
-     $('scanMsg').textContent='QR scan हो गया। Order verify हो रहा है…';
-     await stopNativeScanner();
-     await confirmQr(codes[0].rawValue);
-     return;
-    }
-   }
-  }catch(e){console.warn('Native QR scan:',e);}
-  nativeScanFrame=requestAnimationFrame(scanFrame);
- };
- nativeScanFrame=requestAnimationFrame(scanFrame);
-}
-
-async function openScanner(){
- if(!auth.currentUser)return alert('पहले Delivery Panel में login करें।');
- if(!window.isSecureContext){$('sync').textContent='Camera के लिए HTTPS जरूरी है।';return alert('Camera चलाने के लिए HTTPS वेबसाइट खोलें।');}
- $('scanner').classList.remove('hidden');$('scanMsg').textContent='QR Scanner library load हो रही है…';$('reader').innerHTML='';scanBusy=false;
- try{
-  // Use the exact Html5Qrcode camera flow used by the working Admin Panel.
-  if(typeof Html5Qrcode==='undefined'){
-   const loaded=await (window.__loadModeLuxeQrLibrary?window.__loadModeLuxeQrLibrary():Promise.resolve(false));
-   if(!loaded||typeof Html5Qrcode==='undefined')throw Error('QR Scanner library load नहीं हुई। Internet/CDN connection check करें।');
-  }
-  scanner=new Html5Qrcode('reader');
-  $('scanMsg').textContent='Camera permission का इंतजार है…';
-  await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async decodedText=>{
-   if(scanBusy)return;
-   scanBusy=true;$('scanMsg').textContent='QR scan हो गया। Order verify हो रहा है…';
-   try{if(scanner&&scanner.isScanning)await scanner.stop();}catch(e){}
-   await confirmQr(decodedText);
-  },()=>{});
-  $('scanMsg').textContent='QR code को camera frame के अंदर रखें।';
- }catch(e){
-  const msg=String(e&&e.message||e||'Unknown error');
-  try{if(scanner){if(scanner.isScanning)await scanner.stop();await scanner.clear();}}catch(e){}
-  scanner=null;
-
-  // Fallback: use the phone browser's native BarcodeDetector when CDN/library fails.
-  try{
-   await startNativeScanner();
-   return;
-  }catch(nativeError){
-   const nativeMsg=String(nativeError&&nativeError.message||nativeError||'Unknown error');
-   $('scanMsg').textContent=/permission|notallowed|denied/i.test(msg+' '+nativeMsg)
-    ?'Camera permission बंद है। Chrome Site settings → Camera → Allow करें।'
-    :'Camera start नहीं हुआ: '+msg+' | Fallback: '+nativeMsg;
-   scanBusy=false;
-  }
- }
-}
-async function closeScanner(){await stopNativeScanner();if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null;}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').addEventListener('click',e=>{e.preventDefault();openScanner()});$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{await closeScanner();if(listener)db.ref('orders').off('value',listener);listener=null;assignmentListener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden');$('password').value='';};</script></body></html>
+async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');if(st==='delivered'){try{const credit=await creditSellerWalletsForOrder(id,o),deliveryCredit=await creditDeliveryWalletForOrder(id,o);alert('यह order पहले ही Delivered है। Wallet check पूरा: Seller '+credit.creditedCount+' · Delivery '+(deliveryCredit.credited?'₹'+deliveryCredit.amount:'पहले credit / ₹0 payout')+'.');}catch(walletErr){alert('Order Delivered है, लेकिन wallet reconciliation पूरा नहीं हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। Delivery confirm नहीं हो सकती।');if(!['shipped','picked up by delivery partner','out for delivery'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए। इसके बाद Picked Up / Out for Delivery status पर भी QR confirm किया जा सकता है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा और Seller Wallet में net earning credit होगी।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});try{const credit=await creditSellerWalletsForOrder(id,{...o,status:'Delivered'});let deliveryCredit={credited:false,amount:0};try{deliveryCredit=await creditDeliveryWalletForOrder(id,o);}catch(deliveryErr){console.error('Delivery wallet credit failed',deliveryErr);alert('Seller Wallet credit हो गया, लेकिन Delivery Wallet credit fail हुआ: '+deliveryErr.message+'. QR दोबारा scan करके retry करें।')}if(deliveryCredit.credited)alert('Delivery confirmed! Order #'+id+' Delivered है। Seller Wallet: '+credit.creditedCount+' · Delivery Wallet: ₹'+deliveryCredit.amount+' · Commission '+credit.commissionPercent+'%.');else if(deliveryCredit.amount===0)alert('Delivery confirmed! Seller Wallet credit: '+credit.creditedCount+' · Delivery payout अभी ₹0 set है.');else alert('Delivery confirmed! Wallet credits पहले से मौजूद हैं।');}catch(walletErr){alert('Delivery Delivered mark हो गई, लेकिन Seller Wallet credit fail हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
+async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
+</script></body></html>
