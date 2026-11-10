@@ -2,7 +2,7 @@
 <!-- IMPORTANT: Firebase Realtime Database Rules + trusted backend authorization must be deployed before production. Browser-side UI checks are not security boundaries. KYC full Aadhaar/PAN must be processed only by a secure KYC provider/backend; this build stores masked last-four only. -->
 
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#062b78"><title>ModeLuxe Mart — Admin Panel</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-storage.js'"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-storage.js'"></script>
 <script src="https://cdn.tailwindcss.com"></script><script>
 /* QR scanner loader: try jsDelivr first, then unpkg as fallback. */
 (function(){
@@ -244,6 +244,46 @@ async function uploadImageToR2(file){
 // Do not fire-and-forget this: signInWithCustomToken must wait for LOCAL persistence.
 const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.warn('Auth persistence:',e);return false;});
 const ADMIN_PHONE='7818995955';
+// ModeLuxe Mart Firebase Cloud Messaging registration (web push).
+const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
+const MLM_PUSH_REGISTER_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
+let mlmPushRegistrationPromise = null;
+async function registerModeLuxePush(role, user) {
+  if (!user || !user.uid) return false;
+  if (!('serviceWorker' in navigator) || !('Notification' in window) || !firebase.messaging) {
+    console.info('Push notifications are not supported in this browser/WebView.'); return false;
+  }
+  if (Notification.permission === 'denied') { console.info('Push permission is blocked by browser settings.'); return false; }
+  if (mlmPushRegistrationPromise) return mlmPushRegistrationPromise;
+  mlmPushRegistrationPromise = (async () => {
+    try {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return false;
+      }
+      const sw = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.ready;
+      const messaging = firebase.messaging();
+      const token = await messaging.getToken({ vapidKey: MLM_FCM_VAPID_KEY, serviceWorkerRegistration: sw });
+      if (!token) throw new Error('FCM token nahi mila.');
+      const idToken = await user.getIdToken();
+      const response = await fetch(MLM_PUSH_REGISTER_URL, {
+        method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit',
+        headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'registerToken', role, uid: user.uid, token })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success === false) throw new Error(result.error || ('Token registration failed: HTTP ' + response.status));
+      console.info('ModeLuxe push token registered for', role);
+      return true;
+    } catch (error) {
+      console.warn('ModeLuxe push registration failed:', error && error.message || error);
+      return false;
+    } finally { mlmPushRegistrationPromise = null; }
+  })();
+  return mlmPushRegistrationPromise;
+}
+
 const ADMIN_PHONE_ALLOWLIST=[ADMIN_PHONE];
 const ADMIN_WORKER='https://modeluxe-admin-auth.vaishumodeluxe.workers.dev';
 let pendingPhone='', requestId='', ordersData={}, orderListener=null, productListener=null, productsData={}, signedInPhone='', initialOrdersLoaded=false;
@@ -394,6 +434,7 @@ async function verifyOTP(){
     }
 
     signedInPhone=phone;
+    registerModeLuxePush('admin',auth.currentUser);
     $('adminPassword').value='';
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
