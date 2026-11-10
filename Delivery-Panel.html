@@ -5,7 +5,7 @@
 *{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.head-actions{display:flex;align-items:center;gap:8px}.summary-card{cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:94px;display:flex;flex-direction:column;justify-content:center;padding:12px}.summary-card:active{transform:scale(.99)}.summary-card.selected{border:2px solid #075fc4;background:#eff6ff}.dashboard-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.dashboard-quick-grid .summary-card{width:100%;min-width:0;min-height:112px;border-radius:16px}.dashboard-quick-grid .summary-card .big{font-size:30px}.dashboard-expand-panel{padding:14px}.dashboard-expand-panel .topline{align-items:center}.dashboard-quick-grid .summary-card[aria-expanded="true"]{border:2px solid #075fc4;background:#eff6ff;box-shadow:0 5px 16px #075fc41a}.summary-card .big{font-size:34px;font-weight:900;color:#075fc4}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-actions a{display:inline-block;text-decoration:none}.notification-box{position:relative}.notification-menu{position:fixed;right:12px;top:92px;z-index:100;background:#fff;border:1px solid #dbe5f1;border-radius:14px;box-shadow:0 12px 35px #0f172a22;width:min(340px,calc(100vw - 24px));padding:12px;max-height:65vh;overflow:auto}.notification-item{padding:9px;border-bottom:1px solid #e2e8f0;font-size:13px}.back-btn{margin-bottom:12px}.map-frame{width:100%;height:280px;border:0;border-radius:12px;background:#e2e8f0}.wallet-value{font-size:28px;font-weight:900;color:#075fc4}.brand{color:#075fc4;font-size:12px;letter-spacing:.2em;font-weight:800}.panel,.order{background:#fff;border:1px solid #dbe5f1;border-radius:16px;padding:16px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#075fc4;color:#fff}.muted{background:#e7f2ff;color:#164e84}.danger{background:#b91c1c;color:white}input,select{width:100%;padding:11px;border:1px solid #dbe5f1;border-radius:10px;background:#f8fafc;color:#111827}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.small{font-size:12px;color:#64748b}.blue{color:#075fc4}.hidden{display:none!important}.order{margin-top:12px}.topline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{font-weight:800;color:#075fc4}.modal{position:fixed;inset:0;background:#000d;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modalbox{background:white;border-radius:16px;padding:16px;width:min(520px,100%)}#reader{overflow:hidden;border-radius:12px;background:#111;min-height:180px;margin-top:12px}.graph-title{margin:0 0 12px;font-size:18px;line-height:1.3;white-space:nowrap;overflow-x:auto}#deliveryDailyGraph{width:100%;overflow-x:auto}#deliveryDailyGraph .daily-chart{min-width:420px}@media(max-width:540px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.panel,.order{padding:12px}.summary-card{min-height:90px;padding:10px}.summary-card .big{font-size:28px}header{align-items:flex-start}header h1{font-size:22px}.head-actions{gap:6px}.notification-menu{right:12px;left:auto;top:86px}}
 </style></head><body><main>
 <header><div><div class="brand">MODELUXE MART</div><h1 style="margin:4px 0">Delivery Panel</h1><p class="small" style="margin:0">Deliveries · Wallet · Notifications</p></div><div class="head-actions"><div class="notification-box"><button id="bellBtn" class="btn muted" aria-label="Notifications">🔔 <span id="bellBadge">0</span></button><div id="notificationMenu" class="notification-menu hidden"><div class="topline"><b>Notifications</b><button id="clearNotifications" class="btn muted" style="padding:5px 8px">Clear</button></div><div id="notificationList"><p class="small">अभी कोई notification नहीं है।</p></div></div></div><button id="logout" class="btn muted hidden">Logout</button></div></header>
-<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p></div></section>
+<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p><div id="forgotPasswordWrap" style="margin-top:8px"><button id="forgotPasswordOpen" type="button" class="btn muted" style="width:100%">Forgot Password?</button></div><div id="forgotPasswordPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fafc"><h3 style="margin:0 0 8px;color:#075fc4">Reset Delivery Password</h3><p class="small">Registered email aur mobile number bharein. OTP registered mobile par aayega.</p><label class="small">Registered Email *</label><input id="resetEmail" type="email" autocomplete="email" placeholder="delivery@example.com"><label class="small" style="display:block;margin-top:9px">Registered Mobile Number *</label><input id="resetPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="resetSendOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Send OTP</button><div id="resetOtpStep" class="hidden"><label class="small" style="display:block;margin-top:10px">6 Digit OTP *</label><input id="resetOtp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><button id="resetVerifyOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Verify OTP</button></div><div id="resetPasswordStep" class="hidden"><label class="small" style="display:block;margin-top:10px">New Password *</label><input id="resetNewPassword" type="password" minlength="6" autocomplete="new-password" placeholder="New password (min 6 characters)"><label class="small" style="display:block;margin-top:9px">Confirm New Password *</label><input id="resetConfirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Confirm new password"><button id="resetSavePassword" type="button" class="btn primary" style="width:100%;margin-top:10px">Update Password</button></div><p id="resetMsg" class="small" aria-live="polite"></p><button id="forgotPasswordClose" type="button" class="btn muted" style="width:100%;margin-top:6px">Back to Login</button></div></div></section>
 <section id="pendingApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Application Status</h2><p id="applicationStatus" class="small">आपका आवेदन Admin की मंजूरी के लिए Pending है।</p><p id="applicationIdentity" class="small"></p><button id="pendingRefresh" class="btn primary" type="button">Refresh Status</button><button id="syncDeliveryApplication" class="btn muted" type="button" style="margin-left:6px">Sync Application</button><button id="pendingLogout" class="btn muted" type="button">Logout</button><p id="applicationSyncMsg" class="small" aria-live="polite"></p></section>
 <section id="recoverApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Complete Delivery Application</h2><p class="small">इस Login UID पर पुराना Application/Profile record नहीं मिला। इसी पुराने Login को रखते हुए अपना नाम और मोबाइल भरकर आवेदन दोबारा Firebase में सुरक्षित करें।</p><label class="small">Full Name *</label><input id="recoverDeliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="recoverDeliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="recoverDeliverySubmit" class="btn primary" type="button" style="width:100%;margin-top:12px">Save / Recover Application</button><button id="recoverDeliveryLogout" class="btn muted" type="button" style="margin-top:8px">Logout</button><p id="recoverDeliveryMsg" class="small" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
@@ -24,6 +24,11 @@
 </section></main>
 <div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR ko camera ke andar rakhein.</p><div id="reader"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
 <script>
+if (!window.firebase || !firebase.auth || !firebase.database) {
+  document.getElementById('loginMsg').textContent = 'Firebase SDK load nahi hua. Internet connection ya Firebase CDN check karein, phir page reload karein.';
+  throw new Error('Firebase SDK unavailable');
+}
+
 const firebaseConfig = {
             apiKey: "AIzaSyBu5BiTQssyHdRBQXi2vmlZRGYby-SuSiQ",
             authDomain: "vaishu-modeluxe-mart.firebaseapp.com",
@@ -36,11 +41,19 @@ const firebaseConfig = {
         };
 const panelFirebaseApp=firebase.apps.find(app=>app.name==="modeluxe-delivery-panel")||firebase.initializeApp(firebaseConfig,"modeluxe-delivery-panel");
 const db=panelFirebaseApp.database(),auth=panelFirebaseApp.auth();
-// Keep Firebase sign-in across page refreshes on this device.
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
+// Configure Firebase persistence once. If browser storage is unavailable,
+// continue with Firebase's default in-memory session instead of blocking login.
+const persistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(error => { console.warn('Firebase persistence unavailable; continuing:', error); });
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(label + ' timeout. Internet/Firebase connection check karein.')), ms); })
+  ]).finally(() => clearTimeout(timer));
+}
 let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login',ordersData={},listener=null,scanner=null,scanBusy=false,deliverySettingsListener=null,deliveryWalletListener=null;
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence:',e));
 function setDeliveryAuthMode(mode){authMode=mode;const reg=mode==='register';$('deliveryAuthForm').classList.remove('hidden');$('registerFields').classList.toggle('hidden',!reg);$('deliveryName').required=reg;$('deliveryPhone').required=reg;$('authSubmit').textContent=reg?'Create Delivery Account':'Login';$('password').autocomplete=reg?'new-password':'current-password';$('loginMsg').textContent='';}
 function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingApplication').classList.add('hidden');$('recoverApplication').classList.add('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden'); }
 $('choiceApplyBtn').onclick=()=>setDeliveryAuthMode('register');$('choiceLoginBtn').onclick=()=>setDeliveryAuthMode('login');
@@ -66,10 +79,10 @@ async function loadDeliveryAccount(user){
  if(!user){signedInPhone='';deliveryProfile={};showDeliveryLogin();return;}
  $('login').classList.add('hidden');
  try{
-   const [appSnap,profileSnap]=await Promise.all([
+   const [appSnap,profileSnap]=await withTimeout(Promise.all([
      db.ref('deliveryApplications/'+user.uid).once('value'),
      db.ref('deliveryProfiles/'+user.uid).once('value')
-   ]);
+   ]),12000,'Delivery profile read');
    let app=appSnap.val()||null, profile=profileSnap.val()||null;
    if(!app&&!profile){
      // Do not silently claim Pending when Firebase has no record. Keep the authenticated UID
@@ -116,14 +129,71 @@ $('authSubmit').onclick=async()=>{
      $('loginMsg').textContent='Application Firebase mein successfully submit aur verify ho gayi. Admin approval ka wait karein.';
      await loadDeliveryAccount(cred.user);
    }else{
-     const cred=await auth.signInWithEmailAndPassword(email,password);
-     await loadDeliveryAccount(cred.user);
+     $('loginMsg').textContent='Firebase se login ho raha hai…';
+     // Wait briefly for persistence setup, but never let it hold authentication forever.
+     await Promise.race([persistenceReady,new Promise(resolve=>setTimeout(resolve,5000))]);
+     await withTimeout(
+       auth.signInWithEmailAndPassword(email,password),
+       18000,
+       'Firebase login'
+     );
+     // onAuthStateChanged is the single owner of post-login profile loading.
+     $('loginMsg').textContent='Login successful. Delivery account load ho raha hai…';
    }
  }catch(e){
    const c=e.code||'';
-   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('invalid-credential')||c.includes('user-not-found')||c.includes('wrong-password')?'Email ya password galat hai.':(e.message||'Login nahi ho paya.');
+   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('wrong-password')||c.includes('invalid-credential')||c.includes('invalid-login-credentials')?'Incorrect password. Please try again.':c.includes('user-not-found')?'Email account nahi mila.':(e.message||'Login nahi ho paya.');
  }finally{registrationInProgress=false;btn.disabled=false;}
 };
+
+// Delivery account password recovery: OTP is checked by the Cloudflare Worker,
+// which verifies the email/mobile pair against the existing delivery UID before changing its password.
+const DELIVERY_OTP_WORKER='https://modeluxe-otp.vaishumodeluxe.workers.dev/';
+let deliveryResetRequestId='',deliveryResetToken='';
+$('forgotPasswordOpen').onclick=()=>{$('forgotPasswordPanel').classList.remove('hidden');$('resetMsg').textContent='';};
+$('forgotPasswordClose').onclick=()=>{$('forgotPasswordPanel').classList.add('hidden');$('resetOtpStep').classList.add('hidden');$('resetPasswordStep').classList.add('hidden');$('resetMsg').textContent='';deliveryResetRequestId='';deliveryResetToken='';};
+async function deliveryResetApi(payload){
+ const response=await fetch(DELIVERY_OTP_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+ let data={};try{data=await response.json()}catch{}
+ if(!response.ok||!data.success)throw Error(data.message||'Password reset request failed.');
+ return data;
+}
+$('resetSendOtp').onclick=async()=>{
+ const btn=$('resetSendOtp'),email=$('resetEmail').value.trim().toLowerCase(),phone=$('resetPhone').value.trim();
+ btn.disabled=true;$('resetMsg').textContent='Registered account verify ho raha hai…';
+ try{
+  if(!email||!/^\d{10}$/.test(phone))throw Error('Registered email aur 10-digit mobile number sahi bharein.');
+  const data=await deliveryResetApi({action:'reset-send',email,phone});
+  deliveryResetRequestId=data.requestId;$('resetOtpStep').classList.remove('hidden');$('resetMsg').textContent='OTP registered mobile par bhej diya gaya hai. OTP 5 minute tak valid hai.';
+ }catch(e){$('resetMsg').textContent=e.message||'OTP send nahi hua.';}
+ finally{btn.disabled=false;}
+};
+$('resetVerifyOtp').onclick=async()=>{
+ const btn=$('resetVerifyOtp');btn.disabled=true;$('resetMsg').textContent='OTP verify ho raha hai…';
+ try{
+  const code=$('resetOtp').value.trim();if(!deliveryResetRequestId||!/^\d{6}$/.test(code))throw Error('6 digit OTP bharein.');
+  const data=await deliveryResetApi({action:'reset-verify',requestId:deliveryResetRequestId,otpCode:code});
+  deliveryResetToken=data.resetToken;if(!deliveryResetToken)throw Error('Reset session token nahi mila. OTP dobara verify karein.');
+  $('resetOtpStep').classList.add('hidden');$('resetPasswordStep').classList.remove('hidden');$('resetMsg').textContent='OTP verified. Ab naya password set karein.';
+ }catch(e){$('resetMsg').textContent=e.message||'OTP verify nahi hua.';}
+ finally{btn.disabled=false;}
+};
+$('resetSavePassword').onclick=async()=>{
+ const btn=$('resetSavePassword'),password=$('resetNewPassword').value,confirm=$('resetConfirmPassword').value;
+ btn.disabled=true;$('resetMsg').textContent='Password update ho raha hai…';
+ try{
+  if(!deliveryResetToken)throw Error('Pehle OTP verify karein.');
+  if(password.length<6)throw Error('Password kam-se-kam 6 characters ka hona chahiye.');
+  if(password!==confirm)throw Error('Dono password match nahi karte.');
+  const data=await deliveryResetApi({action:'reset-password',resetToken:deliveryResetToken,newPassword:password});
+  $('resetMsg').textContent=data.message||'Password update ho gaya.';
+  $('password').value=password;$('email').value=$('resetEmail').value.trim().toLowerCase();
+  $('resetNewPassword').value='';$('resetConfirmPassword').value='';$('resetPasswordStep').classList.add('hidden');
+  deliveryResetRequestId='';deliveryResetToken='';
+ }catch(e){$('resetMsg').textContent=e.message||'Password update nahi hua.';}
+ finally{btn.disabled=false;}
+};
+
 $('pendingRefresh').onclick=async()=>{const user=auth.currentUser;if(user){$('applicationStatus').textContent='Status refresh ho raha hai…';await loadDeliveryAccount(user);}};
 $('pendingLogout').onclick=()=>auth.signOut();
 async function syncOwnDeliveryApplication(){
@@ -158,7 +228,16 @@ async function recoverDeliveryApplication(){
 }
 $('recoverDeliverySubmit').onclick=()=>recoverDeliveryApplication().catch(()=>{});
 $('recoverDeliveryLogout').onclick=()=>auth.signOut();
-auth.onAuthStateChanged(async user=>{if(registrationInProgress)return;await loadDeliveryAccount(user);});
+auth.onAuthStateChanged(async user=>{
+ if(registrationInProgress)return;
+ try{await loadDeliveryAccount(user);}
+ catch(error){
+   console.error('Delivery auth-state handler:',error);
+   $('login').classList.remove('hidden');
+   $('deliveryAuthForm').classList.remove('hidden');
+   $('loginMsg').textContent='Account load error: '+(error.message||error);
+ }
+});
 function closeDashboardExpansions(){['walletDetails','payoutDetails'].forEach(id=>$(id).classList.add('hidden'));['walletBox','payoutBox'].forEach(id=>{$(id).classList.remove('selected');$(id).setAttribute('aria-expanded','false')});}
 function toggleDashboardPanel(panelId,buttonId){const panel=$(panelId),opening=panel.classList.contains('hidden');closeDashboardExpansions();setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false');if(opening){panel.classList.remove('hidden');$(buttonId).classList.add('selected');$(buttonId).setAttribute('aria-expanded','true')}else{panel.classList.add('hidden');$(buttonId).setAttribute('aria-expanded','false')}}
 $('walletBox').onclick=()=>toggleDashboardPanel('walletDetails','walletBox');$('payoutBox').onclick=()=>toggleDashboardPanel('payoutDetails','payoutBox');
