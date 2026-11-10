@@ -95,8 +95,6 @@ function startDeliveryWithdrawals(){
  ref.on('value',deliveryWithdrawalListener,e=>{const target=$('deliveryWithdrawHistory');if(target)target.textContent='History load error: '+e.message;});
 }
 $('activeBox').onclick=()=>showBucket('active');$('deliveredBox').onclick=()=>showBucket('delivered');$('myAccountBtn').onclick=()=>{const p=$('myAccountPanel');p.classList.toggle('hidden');if(!p.classList.contains('hidden'))renderMyAccount()};$('orderGraphBtn').onclick=()=>{$('orderGraphPanel').classList.toggle('hidden');if(!$('orderGraphPanel').classList.contains('hidden'))renderDailyOrderGraph()};$('backHome').onclick=()=>setView('home');$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
-$('send').onclick=async()=>{const phone=$('phone').value.trim(),password=$('password').value;if(phone!==ADMIN_PHONE){$('loginMsg').textContent='यह मोबाइल नंबर अधिकृत नहीं है।';return}if(password.length<12){$('loginMsg').textContent='Admin password कम-से-कम 12 अक्षरों का होना चाहिए।';return}try{$('send').disabled=true;$('loginMsg').textContent='Password जाँचा जा रहा है और OTP भेजा जा रहा है…';const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_send',phone,password})});const j=await r.json();if(!r.ok||j.success!==true||!j.requestId)throw Error(j.message||'OTP request fail हुई');pendingPhone=phone;requestId=j.requestId;$('otpArea').classList.remove('hidden');$('loginMsg').textContent='OTP भेज दिया गया है।'}catch(e){$('loginMsg').textContent='Login error: '+(e.message||'Unknown error')}finally{$('send').disabled=false}};
-$('verify').onclick=async()=>{const otp=$('otp').value.trim();if($('phone').value.trim()!==pendingPhone||!requestId){$('loginMsg').textContent='पहले नया OTP भेजें।';return}if(!/^\d{6}$/.test(otp)){$('loginMsg').textContent='6 अंकों का OTP डालें।';return}try{$('verify').disabled=true;$('loginMsg').textContent='OTP verify हो रहा है…';const r=await fetch(ADMIN_WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_verify',requestId,otpCode:otp})});const j=await r.json();if(!r.ok||j.success!==true||j.verified!==true||!j.customToken)throw Error(j.message||'OTP verify नहीं हुआ');await auth.signInWithCustomToken(j.customToken);signedInPhone=pendingPhone;$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('logout').classList.remove('hidden');startOrders()}catch(e){$('loginMsg').textContent='Login error: '+(e.message||'Unknown error')}finally{$('verify').disabled=false}};
 function startOrders(){
  if(listener)db.ref('orders').off('value',listener);
  $('sync').textContent='Firebase se connect ho raha hai…';
@@ -176,42 +174,122 @@ async function refreshDeliveryAssignments(){
  const ids=Object.keys(ordersData||{});
  await Promise.all(ids.map(async id=>{
   try{const snap=await db.ref('deliveryAssignments/'+id).once('value');const a=snap.val();if(a)assignmentData[id]=a;else delete assignmentData[id];}
-  catch(e){assignmentData[id]={status:'assigned_elsewhere',deliveryUid:'__not_readable__'};console.warn('Assignment read denied for order',id,e.message);}
+  catch(e){assignmentData[id]={__readError:true,error:String(e&&e.message||e)};console.warn('Assignment read denied for order',id,e.message);}
  }));
  renderOrders();renderShipPopups();
 }
 function assignedToThisDevice(id){const a=assignmentData[id];return !!a&&String(a.deliveryUid||'')===deliveryUid()&&String(a.status||'accepted')==='accepted'}
-function renderShipPopups(){if(!$('shipPopup'))return;const available=Object.entries(ordersData).filter(([id,o])=>String(o.status||'').toLowerCase()==='shipped'&&(!assignmentData[id]||String(assignmentData[id].deliveryUid||'')===deliveryUid())&&!dismissedShipIds.has(id));$('shipPopupCount').textContent=available.length+' orders';$('shipPopupList').innerHTML=available.map(([id,o])=>`<div class="order" style="margin-top:10px"><b>Order #${esc(id)}</b><div style="margin:5px 0">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</div><div class="small">${esc(o.shippingAddress||'Address not available')}</div><div class="detail-actions" style="margin-top:10px"><button class="btn primary" onclick="acceptDelivery('${esc(id)}')">Accept</button><button class="btn danger" onclick="cancelDeliveryPopup('${esc(id)}')">Cancel</button></div></div>`).join('');$('shipPopup').classList.toggle('hidden',available.length===0)}
+function renderShipPopups(){if(!$('shipPopup'))return;const available=Object.entries(ordersData).filter(([id,o])=>String(o.status||'').toLowerCase()==='shipped'&&(!assignmentData[id]||assignmentData[id].__readError===true||String(assignmentData[id].deliveryUid||'')===deliveryUid())&&!dismissedShipIds.has(id));$('shipPopupCount').textContent=available.length+' orders';$('shipPopupList').innerHTML=available.map(([id,o])=>`<div class="order" style="margin-top:10px"><b>Order #${esc(id)}</b><div style="margin:5px 0">${esc(o.customerName||'Customer')} · ${esc(o.customerPhone||'')}</div><div class="small">${esc(o.shippingAddress||'Address not available')}</div><div class="detail-actions" style="margin-top:10px"><button class="btn primary" onclick="acceptDelivery('${esc(id)}')">Accept</button><button class="btn danger" onclick="cancelDeliveryPopup('${esc(id)}')">Cancel</button></div></div>`).join('');$('shipPopup').classList.toggle('hidden',available.length===0)}
 window.cancelDeliveryPopup=function(id){dismissedShipIds.add(id);renderShipPopups()};
 window.acceptDelivery=async function(id){const o=ordersData[id];if(!o||String(o.status||'').toLowerCase()!=='shipped')return alert('Ye order ab available nahi hai.');const ref=db.ref('deliveryAssignments/'+id);try{const result=await ref.transaction(current=>{if(current)return;return {status:'accepted',deliveryUid:deliveryUid(),acceptedAt:new Date().toISOString()};});const assigned=result.snapshot&&result.snapshot.val();if(!result.committed&&String((assigned||{}).deliveryUid||'')!==deliveryUid()){alert('Ye order kisi doosre Delivery Panel ne accept kar liya.');}else{const pickedAt=(assigned&&assigned.acceptedAt)||new Date().toISOString();await db.ref('orders/'+id).update({status:'Picked by Delivery Partner',deliveryStatus:'Picked by Delivery Partner',deliveryPickedAt:pickedAt,deliveryPickedBy:deliveryUid()});dismissedShipIds.delete(id);addNotice('Delivery accepted','Order #'+id+' picked by delivery partner ho gaya.');showBucket('active')}renderShipPopups();renderOrders()}catch(e){alert('Order accept ho gaya ho sakta hai, lekin status update mein error aaya: '+e.message);renderShipPopups();renderOrders()}};
-function renderOrders(){const entries=Object.entries(ordersData).filter(([id,o])=>assignedToThisDevice(id)).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const total=active.length+delivered.length,activePct=total?Math.round(active.length/total*100):0,deliveredPct=total?Math.round(delivered.length/total*100):0;$('graphActiveText').textContent=active.length;$('graphDeliveredText').textContent=delivered.length;$('graphActiveBar').style.width=activePct+'%';$('graphDeliveredBar').style.width=deliveredPct+'%';const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—',st=String(o.status||'').toLowerCase(),canOut=selectedBucket!=='delivered'&&st==='picked by delivery partner';return `<div class="order order-list-card"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="order-card-actions"><button class="btn muted" onclick="openOrderDetail('${esc(id)}')">Order Details</button>${canOut?`<button class="btn primary" onclick="markOutForDelivery('${esc(id)}')">Out for Delivery</button>`:''}</div></div>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
+function renderOrders(){const entries=Object.entries(ordersData).filter(([id,o])=>assignedToThisDevice(id)).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>!['delivered','cancelled','refunded'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const total=active.length+delivered.length,activePct=total?Math.round(active.length/total*100):0,deliveredPct=total?Math.round(delivered.length/total*100):0;if($('graphActiveText'))$('graphActiveText').textContent=active.length;if($('graphDeliveredText'))$('graphDeliveredText').textContent=delivered.length;if($('graphActiveBar'))$('graphActiveBar').style.width=activePct+'%';if($('graphDeliveredBar'))$('graphDeliveredBar').style.width=deliveredPct+'%';const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—',st=String(o.status||'').toLowerCase(),canOut=selectedBucket!=='delivered'&&st==='picked by delivery partner';return `<div class="order order-list-card"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="order-card-actions"><button class="btn muted" onclick="openOrderDetail('${esc(id)}')">Order Details</button>${canOut?`<button class="btn primary" onclick="markOutForDelivery('${esc(id)}')">Out for Delivery</button>`:''}</div></div>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
 
 window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selectedOrderId=id;const address=o.shippingAddress||o.address||'';const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';const locked=!!o.adminStatusLocked;const mapUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address);$('orderDetail').innerHTML=`<div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h2 style="margin:5px 0">${esc(o.customerName||'Customer')}</h2><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(address||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><p><b>Payment:</b> ${esc(o.paymentMethod||o.payment||'Not available')} · ₹${Number(o.totalAmount||0).toLocaleString('en-IN')}</p><div class="detail-actions"><a class="btn primary" target="_blank" rel="noopener" href="${mapUrl}">📍 Google Maps में रास्ता खोलें</a><a class="btn muted" href="tel:${esc(String(o.customerPhone||'').replace(/[^+\d]/g,''))}">📞 ग्राहक को कॉल करें</a></div><div style="margin-top:12px"><iframe class="map-frame" title="Delivery map" loading="lazy" src="https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed"></iframe></div>`;setView('detail');window.scrollTo({top:0,behavior:'smooth'})};
 window.markOutForDelivery=async function(id){const o=ordersData[id];if(!o||!assignedToThisDevice(id))return alert('Ye order is Delivery Panel ko assign nahi hai.');if(String(o.status||'').toLowerCase()!=='picked by delivery partner')return alert('Order abhi Picked by Delivery Partner status mein nahi hai.');try{const now=new Date().toISOString();await db.ref('orders/'+id).update({status:'Out for Delivery',deliveryStatus:'Out for Delivery',outForDeliveryAt:now,outForDeliveryBy:deliveryUid()});addNotice('Out for Delivery','Order #'+id+' Out for Delivery mark ho gaya.');renderOrders();}catch(e){alert('Status update nahi hua: '+e.message)}};
 window.saveStatus=async id=>{if(!signedInPhone||signedInPhone!==ADMIN_PHONE)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),adminUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
 async function confirmQr(value){
- let id='';
- try{id=new URL(String(value)).searchParams.get('deliveryConfirm')||'';}catch(e){const m=String(value).match(/(?:deliveryConfirm=)([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim();}
- if(!id){$('scanMsg').textContent='यह ModeLuxe Delivery QR नहीं है। सही Invoice QR scan करें।';scanBusy=false;return;}
- try{
-  const uid=deliveryUid();if(!uid)throw Error('Delivery login session नहीं मिला। दोबारा login करें।');
-  const assignmentSnap=await db.ref('deliveryAssignments/'+id).once('value');
-  const assignment=assignmentSnap.val();
-  if(!assignment||String(assignment.deliveryUid||'')!==uid||String(assignment.status||'')!=='accepted')throw Error('यह Order आपके Delivery UID को assign नहीं है।');
-  const orderSnap=await db.ref('orders/'+id).once('value');const order=orderSnap.val();
-  if(!order)throw Error('इस QR का Order Firebase में नहीं मिला।');
-  const status=String(order.status||'').toLowerCase();
-  if(status==='delivered'){ $('scanMsg').textContent='यह Order पहले ही Delivered है।';alert('यह Order पहले ही Delivered है।');scanBusy=false;return; }
-  if(['cancelled','refunded'].includes(status))throw Error('यह Order '+order.status+' है; Delivered नहीं किया जा सकता।');
-  if(!['picked by delivery partner','out for delivery'].includes(status))throw Error('पहले Order को Picked by Delivery Partner / Out for Delivery होना चाहिए।');
-  if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(order.customerName||'Customer')+'\nOK दबाने पर Delivered mark होगा।')){$('scanMsg').textContent='Confirmation cancel कर दी गई।';scanBusy=false;return;}
-  const now=new Date().toISOString();
-  await db.ref('orders/'+id).update({status:'Delivered',deliveryStatus:'Delivered',deliveryConfirmedAt:now,deliveryConfirmedBy:uid,deliveryConfirmedByQr:true});
-  addNotice('Delivery confirmed','Order #'+id+' Delivered mark हो गया।');
-  $('scanMsg').textContent='Order #'+id+' सफलतापूर्वक Delivered हो गया।';
-  alert('Delivery Confirmed! Order #'+id+' Delivered हो गया।');
-  await closeScanner();
- }catch(e){$('scanMsg').textContent='Delivery confirm नहीं हुई: '+(e.message||'Firebase error');alert('Delivery confirm नहीं हुई: '+(e.message||'Firebase error'));scanBusy=false;}
+  let id='';
+  const raw=String(value||'').trim();
+
+  // Accept the invoice QR URL query parameters used by ModeLuxe.
+  try{
+    const parsed=new URL(raw);
+    const params=parsed.searchParams;
+    id=params.get('deliveryConfirm')||
+       params.get('orderId')||
+       params.get('order')||
+       params.get('id')||'';
+
+    // Also accept a Firebase order ID as the final URL path segment.
+    if(!id){
+      const parts=parsed.pathname.split('/').filter(Boolean);
+      const tail=parts.length?parts[parts.length-1]:'';
+      if(/^[A-Za-z0-9_-]{1,128}$/.test(tail))id=tail;
+    }
+  }catch(e){
+    const m=raw.match(/(?:deliveryConfirm|orderId|order|id)=([^&]+)/i);
+    if(m){
+      try{id=decodeURIComponent(m[1]);}catch(e){id=m[1];}
+    }else if(/^[A-Za-z0-9_-]{1,128}$/.test(raw)){
+      id=raw;
+    }
+  }
+
+  id=String(id||'').trim();
+
+  if(!id||!/^[A-Za-z0-9_-]{1,128}$/.test(id)){
+    $('scanMsg').textContent='यह ModeLuxe Delivery QR नहीं है। सही Invoice QR scan करें।';
+    scanBusy=false;
+    return;
+  }
+
+  try{
+    const uid=deliveryUid();
+    if(!uid)throw Error('Delivery login session नहीं मिला। दोबारा login करें।');
+
+    const assignmentSnap=await db.ref('deliveryAssignments/'+id).once('value');
+    const assignment=assignmentSnap.val();
+
+    if(
+      !assignment||
+      String(assignment.deliveryUid||'')!==uid||
+      String(assignment.status||'')!=='accepted'
+    ){
+      throw Error('यह Order आपके Delivery UID को assign नहीं है।');
+    }
+
+    const orderSnap=await db.ref('orders/'+id).once('value');
+    const order=orderSnap.val();
+
+    if(!order)throw Error('इस QR का Order Firebase में नहीं मिला।');
+
+    const status=String(order.status||'').toLowerCase();
+
+    if(status==='delivered'){
+      $('scanMsg').textContent='यह Order पहले ही Delivered है।';
+      alert('यह Order पहले ही Delivered है।');
+      scanBusy=false;
+      return;
+    }
+
+    if(['cancelled','refunded'].includes(status)){
+      throw Error('यह Order '+order.status+' है; Delivered नहीं किया जा सकता।');
+    }
+
+    if(!['picked by delivery partner','out for delivery'].includes(status)){
+      throw Error('पहले Order को Picked by Delivery Partner / Out for Delivery होना चाहिए।');
+    }
+
+    if(!confirm(
+      'Delivery Confirm करें?\nOrder #'+id+
+      '\nCustomer: '+(order.customerName||'Customer')+
+      '\nOK दबाने पर Delivered mark होगा।'
+    )){
+      $('scanMsg').textContent='Confirmation cancel कर दी गई।';
+      scanBusy=false;
+      return;
+    }
+
+    const now=new Date().toISOString();
+
+    await db.ref('orders/'+id).update({
+      status:'Delivered',
+      deliveryStatus:'Delivered',
+      deliveryConfirmedAt:now,
+      deliveryConfirmedBy:uid,
+      deliveryConfirmedByQr:true
+    });
+
+    addNotice('Delivery confirmed','Order #'+id+' Delivered mark हो गया।');
+    $('scanMsg').textContent='Order #'+id+' सफलतापूर्वक Delivered हो गया।';
+    alert('Delivery Confirmed! Order #'+id+' Delivered हो गया।');
+    await closeScanner();
+
+  }catch(e){
+    $('scanMsg').textContent='Delivery confirm नहीं हुई: '+(e.message||'Firebase error');
+    alert('Delivery confirm नहीं हुई: '+(e.message||'Firebase error'));
+    scanBusy=false;
+  }
 }
 let nativeCameraStream=null,nativeVideo=null,nativeScanFrame=0,nativeBarcodeDetector=null;
 async function stopNativeScanner(){
@@ -219,6 +297,44 @@ async function stopNativeScanner(){
  if(nativeCameraStream){nativeCameraStream.getTracks().forEach(t=>t.stop());nativeCameraStream=null;}
  if(nativeVideo){try{nativeVideo.pause();nativeVideo.srcObject=null;}catch{}nativeVideo.remove();nativeVideo=null;}
 }
+async function startNativeScanner(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw Error('इस browser में camera access उपलब्ध नहीं है।');
+ if(!('BarcodeDetector' in window))throw Error('इस browser में native QR scanner support नहीं है। Chrome को update करें या Html5Qrcode library की अनुमति दें।');
+ nativeBarcodeDetector=new BarcodeDetector({formats:['qr_code']});
+ nativeCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+ nativeVideo=document.createElement('video');
+ nativeVideo.setAttribute('playsinline','');
+ nativeVideo.setAttribute('autoplay','');
+ nativeVideo.muted=true;
+ nativeVideo.style.width='100%';
+ nativeVideo.style.maxHeight='55vh';
+ nativeVideo.style.objectFit='contain';
+ nativeVideo.srcObject=nativeCameraStream;
+ $('reader').innerHTML='';
+ $('reader').appendChild(nativeVideo);
+ await nativeVideo.play();
+ $('scanMsg').textContent='Native camera चालू है। QR code को frame में रखें।';
+
+ const scanFrame=async()=>{
+  if(!nativeVideo||!nativeCameraStream)return;
+  try{
+   if(nativeVideo.readyState>=2){
+    const codes=await nativeBarcodeDetector.detect(nativeVideo);
+    if(codes&&codes.length&&codes[0].rawValue){
+     if(scanBusy)return;
+     scanBusy=true;
+     $('scanMsg').textContent='QR scan हो गया। Order verify हो रहा है…';
+     await stopNativeScanner();
+     await confirmQr(codes[0].rawValue);
+     return;
+    }
+   }
+  }catch(e){console.warn('Native QR scan:',e);}
+  nativeScanFrame=requestAnimationFrame(scanFrame);
+ };
+ nativeScanFrame=requestAnimationFrame(scanFrame);
+}
+
 async function openScanner(){
  if(!auth.currentUser)return alert('पहले Delivery Panel में login करें।');
  if(!window.isSecureContext){$('sync').textContent='Camera के लिए HTTPS जरूरी है।';return alert('Camera चलाने के लिए HTTPS वेबसाइट खोलें।');}
@@ -240,10 +356,20 @@ async function openScanner(){
   $('scanMsg').textContent='QR code को camera frame के अंदर रखें।';
  }catch(e){
   const msg=String(e&&e.message||e||'Unknown error');
-  $('scanMsg').textContent=/permission|notallowed|denied/i.test(msg)?'Camera permission बंद है। Chrome Site settings → Camera → Allow करें।':/notfound|no camera|device/i.test(msg)?'Camera नहीं मिला या दूसरी app में busy है।':'Camera start नहीं हुआ: '+msg;
-  scanBusy=false;
   try{if(scanner){if(scanner.isScanning)await scanner.stop();await scanner.clear();}}catch(e){}
   scanner=null;
+
+  // Fallback: use the phone browser's native BarcodeDetector when CDN/library fails.
+  try{
+   await startNativeScanner();
+   return;
+  }catch(nativeError){
+   const nativeMsg=String(nativeError&&nativeError.message||nativeError||'Unknown error');
+   $('scanMsg').textContent=/permission|notallowed|denied/i.test(msg+' '+nativeMsg)
+    ?'Camera permission बंद है। Chrome Site settings → Camera → Allow करें।'
+    :'Camera start नहीं हुआ: '+msg+' | Fallback: '+nativeMsg;
+   scanBusy=false;
+  }
  }
 }
 async function closeScanner(){await stopNativeScanner();if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null;}$('scanner').classList.add('hidden');scanBusy=false}
