@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#062b78"><title>ModeLuxe Mart — Delivery Panel</title>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-app.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-database.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/firebase@9.22.0/compat/firebase-auth.js'"></script><script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script><script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js'"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.head-actions{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:stretch;justify-items:stretch;gap:8px;min-width:0}.head-actions .notification-box{grid-column:1;grid-row:1;align-self:stretch}.head-actions #logout{grid-column:2;grid-row:1;width:100%}.head-actions #myAccountBtn{grid-column:2;grid-row:2;width:100%}.summary-card{cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:94px;display:flex;flex-direction:column;justify-content:center;padding:12px}.summary-card:active{transform:scale(.99)}.summary-card.selected{border:2px solid #075fc4;background:#eff6ff}.dashboard-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.dashboard-quick-grid .summary-card{width:100%;min-width:0;min-height:112px;border-radius:16px}.dashboard-quick-grid .summary-card .big{font-size:30px}.dashboard-expand-panel{padding:14px}.dashboard-expand-panel .topline{align-items:center}.dashboard-quick-grid .summary-card[aria-expanded="true"]{border:2px solid #075fc4;background:#eff6ff;box-shadow:0 5px 16px #075fc41a}.summary-card .big{font-size:34px;font-weight:900;color:#075fc4}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-actions a{display:inline-block;text-decoration:none}.notification-box{position:relative}.notification-menu{position:fixed;right:12px;top:92px;z-index:100;background:#fff;border:1px solid #dbe5f1;border-radius:14px;box-shadow:0 12px 35px #0f172a22;width:min(340px,calc(100vw - 24px));padding:12px;max-height:65vh;overflow:auto}.notification-item{padding:9px;border-bottom:1px solid #e2e8f0;font-size:13px}.back-btn{margin-bottom:12px}.map-frame{width:100%;height:280px;border:0;border-radius:12px;background:#e2e8f0}.wallet-value{font-size:28px;font-weight:900;color:#075fc4}.brand{color:#075fc4;font-size:12px;letter-spacing:.2em;font-weight:800}.panel,.order{background:#fff;border:1px solid #dbe5f1;border-radius:16px;padding:16px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#075fc4;color:#fff}.muted{background:#e7f2ff;color:#164e84}.danger{background:#b91c1c;color:white}input,select{width:100%;padding:11px;border:1px solid #dbe5f1;border-radius:10px;background:#f8fafc;color:#111827}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.small{font-size:12px;color:#64748b}.blue{color:#075fc4}.hidden{display:none!important}.order{margin-top:12px}.topline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{font-weight:800;color:#075fc4}.modal{position:fixed;inset:0;background:#000d;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modalbox{background:white;border-radius:16px;padding:16px;width:min(520px,100%)}#reader{overflow:hidden;border-radius:12px;background:#111;min-height:180px;margin-top:12px}.graph-title{margin:0 0 12px;font-size:18px;line-height:1.3;white-space:nowrap;overflow-x:auto}#deliveryDailyGraph{width:100%;overflow-x:auto}#deliveryDailyGraph .daily-chart{min-width:420px}@media(max-width:540px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.panel,.order{padding:12px}.summary-card{min-height:90px;padding:10px}.summary-card .big{font-size:28px}header{align-items:flex-start}header h1{font-size:22px}.head-actions{gap:6px;grid-template-columns:auto auto}.notification-menu{right:12px;left:auto;top:86px}}
 </style></head><body><main>
@@ -54,6 +54,46 @@ function withTimeout(promise, ms, label) {
   ]).finally(() => clearTimeout(timer));
 }
 let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login',ordersData={},listener=null,scanner=null,scanBusy=false,deliverySettingsListener=null,deliveryWalletListener=null;
+// ModeLuxe Mart Firebase Cloud Messaging registration (web push).
+const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
+const MLM_PUSH_REGISTER_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
+let mlmPushRegistrationPromise = null;
+async function registerModeLuxePush(role, user) {
+  if (!user || !user.uid) return false;
+  if (!('serviceWorker' in navigator) || !('Notification' in window) || !firebase.messaging) {
+    console.info('Push notifications are not supported in this browser/WebView.'); return false;
+  }
+  if (Notification.permission === 'denied') { console.info('Push permission is blocked by browser settings.'); return false; }
+  if (mlmPushRegistrationPromise) return mlmPushRegistrationPromise;
+  mlmPushRegistrationPromise = (async () => {
+    try {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return false;
+      }
+      const sw = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.ready;
+      const messaging = firebase.messaging();
+      const token = await messaging.getToken({ vapidKey: MLM_FCM_VAPID_KEY, serviceWorkerRegistration: sw });
+      if (!token) throw new Error('FCM token nahi mila.');
+      const idToken = await user.getIdToken();
+      const response = await fetch(MLM_PUSH_REGISTER_URL, {
+        method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit',
+        headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'registerToken', role, uid: user.uid, token })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success === false) throw new Error(result.error || ('Token registration failed: HTTP ' + response.status));
+      console.info('ModeLuxe push token registered for', role);
+      return true;
+    } catch (error) {
+      console.warn('ModeLuxe push registration failed:', error && error.message || error);
+      return false;
+    } finally { mlmPushRegistrationPromise = null; }
+  })();
+  return mlmPushRegistrationPromise;
+}
+
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function setDeliveryAuthMode(mode){authMode=mode;const reg=mode==='register';$('deliveryAuthForm').classList.remove('hidden');$('registerFields').classList.toggle('hidden',!reg);$('deliveryName').required=reg;$('deliveryPhone').required=reg;$('authSubmit').textContent=reg?'Create Delivery Account':'Login';$('password').autocomplete=reg?'new-password':'current-password';$('loginMsg').textContent='';}
 function showDeliveryLogin(){ $('login').classList.remove('hidden');$('pendingApplication').classList.add('hidden');$('recoverApplication').classList.add('hidden');$('dashboard').classList.add('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('deliveryAuthForm').classList.add('hidden');$('registerFields').classList.add('hidden'); }
@@ -231,7 +271,7 @@ $('recoverDeliverySubmit').onclick=()=>recoverDeliveryApplication().catch(()=>{}
 $('recoverDeliveryLogout').onclick=()=>auth.signOut();
 auth.onAuthStateChanged(async user=>{
  if(registrationInProgress)return;
- try{await loadDeliveryAccount(user);}
+ try{await loadDeliveryAccount(user); if(user && currentDeliveryUser && !$('dashboard').classList.contains('hidden')) registerModeLuxePush('delivery',user);}
  catch(error){
    console.error('Delivery auth-state handler:',error);
    $('login').classList.remove('hidden');
