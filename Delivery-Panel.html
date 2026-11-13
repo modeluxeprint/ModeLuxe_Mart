@@ -403,9 +403,9 @@ async function creditSellerWalletsForOrder(orderId,order){
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
 
-  // डिलीवरी पैनल के लिए फिक्स्ड नोटिफिकेशन और पॉप-अप लॉजिक (Clear याद रखने के साथ)
+  // केवल नए, पेंडिंग और आज के ऑर्डर्स को दिखाने के लिए अपडेटेड लिसनर
 let currentActiveOrderId = null;
-const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV1';
+const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV2';
 
 function getClearedOrders() {
   try {
@@ -435,11 +435,17 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
     let hasUnreadPopup = false;
     
     for (const [orderId, data] of Object.entries(assignments)) {
-      // अगर यह आर्डर इस डिलीवरी बॉय का है और पहले से Clear नहीं किया गया है
-      if (data.deliveryUid === deliveryUid && !clearedOrders.includes(String(orderId))) {
+      // शर्त 1: आर्डर इसी डिलीवरी बॉय का हो
+      // शर्त 2: आर्डर का स्टेटस 'pending' या 'assigned' हो (पुराने या डिलीवर हो चुके न हों)
+      // शर्त 3: यूजर ने इसे पहले 'Clear' न किया हो
+      if (
+        data.deliveryUid === deliveryUid && 
+        (data.status === 'pending' || data.status === 'assigned') && 
+        !clearedOrders.includes(String(orderId))
+      ) {
         
-        // यदि आर्डर नया/लंबित है, तो पॉप-अप दिखाएं
-        if ((data.status === 'pending' || data.status === 'assigned') && !hasUnreadPopup) {
+        // नया पॉप-अप दिखाएं (सिर्फ एक बार)
+        if (!hasUnreadPopup) {
           showIncomingOrderPopup(orderId, data);
           playNotificationSound();
           hasUnreadPopup = true;
@@ -525,7 +531,6 @@ function updateDeliveryBellUI(notifications) {
   `).join('');
 }
 
-// जब यूजर 'Clear all' बटन दबाए या सिंगल नोटिफिकेशन हटाए
 function clearAllDeliveryNotifications() {
   db.ref('deliveryAssignments').once('value').then(snap => {
     const assignments = snap.val() || {};
@@ -538,7 +543,6 @@ function clearAllDeliveryNotifications() {
 
 function clearSingleNotification(orderId) {
   saveClearedOrder(orderId);
-  // तुरंत UI से हटाने के लिए री-रेंडर या रिफ्रेश कर सकते हैं
   const user = auth.currentUser;
   if (user) initDeliveryNotificationsAndPopup(user.uid);
 }
