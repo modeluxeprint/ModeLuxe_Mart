@@ -403,42 +403,59 @@ async function creditSellerWalletsForOrder(orderId,order){
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
 
-  // डिलीवरी पैनल के लिए सिंक्रोनाइज्ड आर्डर और नोटिफिकेशन लिसनर
+  // डिलीवरी पैनल के लिए फिक्स्ड नोटिफिकेशन और पॉप-अप लॉजिक (Clear याद रखने के साथ)
 let currentActiveOrderId = null;
+const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV1';
+
+function getClearedOrders() {
+  try {
+    return JSON.parse(localStorage.getItem(CLEARED_NOTIFICATIONS_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveClearedOrder(orderId) {
+  try {
+    let cleared = getClearedOrders();
+    if (!cleared.includes(String(orderId))) {
+      cleared.push(String(orderId));
+      localStorage.setItem(CLEARED_NOTIFICATIONS_KEY, JSON.stringify(cleared));
+    }
+  } catch (e) {}
+}
 
 function initDeliveryNotificationsAndPopup(deliveryUid) {
   if (!deliveryUid) return;
   
-  // सीधे deliveryAssignments पाथ पर नजर रखें
   db.ref('deliveryAssignments').on('value', snap => {
     const assignments = snap.val() || {};
-    let activeOrdersCount = 0;
-    
-    // पुराना नोटिफिकेशन लिस्ट साफ करके नए असाइनमेंट के हिसाब से अपडेट करें
+    const clearedOrders = getClearedOrders();
     let deliveryNotifications = [];
+    let hasUnreadPopup = false;
     
     for (const [orderId, data] of Object.entries(assignments)) {
-      // अगर यह आर्डर इस डिलीवरी बॉय को असाइन किया गया है
-      if (data.deliveryUid === deliveryUid) {
+      // अगर यह आर्डर इस डिलीवरी बॉय का है और पहले से Clear नहीं किया गया है
+      if (data.deliveryUid === deliveryUid && !clearedOrders.includes(String(orderId))) {
         
-        // यदि आर्डर अभी 'pending' या 'assigned' है, तो पॉप-अप दिखाएं
-        if (data.status === 'pending' || data.status === 'assigned') {
+        // यदि आर्डर नया/लंबित है, तो पॉप-अप दिखाएं
+        if ((data.status === 'pending' || data.status === 'assigned') && !hasUnreadPopup) {
           showIncomingOrderPopup(orderId, data);
           playNotificationSound();
+          hasUnreadPopup = true;
         }
         
-        // बेल नोटिफिकेशन के लिए आर्डर सूची में जोड़ें
-        deliveryNotifications.unshift({
+        // बेल नोटिफिकेशन सूची में जोड़ें
+        deliveryNotifications.push({
           id: orderId,
-          title: 'New Delivery Assigned',
-          detail: `Order #${orderId} · ${data.customerName || 'Customer'} · ₹${data.totalAmount || 0}`,
-          time: new Date().toLocaleString(),
+          title: 'New order received',
+          detail: `Order #${orderId} · ${data.customerName || 'Customer'}`,
+          time: data.createdAt ? new Date(data.createdAt).toLocaleString() : new Date().toLocaleString(),
           read: false
         });
       }
     }
     
-    // बेल नोटिफिकेशन काउंटर और लिस्ट अपडेट करें
     updateDeliveryBellUI(deliveryNotifications);
   });
 }
@@ -475,7 +492,6 @@ function showIncomingOrderPopup(orderId, orderDetails) {
   modal.classList.remove('hidden');
 }
 
-// नोटिफिकेशन साउंड प्ले करने के लिए
 function playNotificationSound() {
   try {
     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
@@ -490,23 +506,41 @@ function updateDeliveryBellUI(notifications) {
   
   if (!badge || !list) return;
   
-  const unreadCount = notifications.filter(n => !n.read).length;
-  badge.textContent = unreadCount;
-  badge.classList.toggle('hidden', unreadCount === 0);
+  badge.textContent = notifications.length;
+  badge.classList.toggle('hidden', notifications.length === 0);
   
   if (emptyMsg) {
     emptyMsg.classList.toggle('hidden', notifications.length > 0);
   }
   
   list.innerHTML = notifications.map(n => `
-    <div class="rounded-lg border border-blue-100 p-2 bg-blue-50">
+    <div class="rounded-lg border border-blue-100 p-2 bg-blue-50 relative">
       <div class="flex justify-between gap-2">
         <b class="text-sm text-blue-600">${n.title}</b>
         <span class="text-[10px] text-stone-400">${n.time}</span>
       </div>
       <p class="small text-stone-700 mt-1">${n.detail}</p>
+      <button onclick="clearSingleNotification('${n.id}')" class="absolute top-2 right-2 text-xs text-red-500 font-bold px-1">✕</button>
     </div>
   `).join('');
+}
+
+// जब यूजर 'Clear all' बटन दबाए या सिंगल नोटिफिकेशन हटाए
+function clearAllDeliveryNotifications() {
+  db.ref('deliveryAssignments').once('value').then(snap => {
+    const assignments = snap.val() || {};
+    for (const orderId of Object.keys(assignments)) {
+      saveClearedOrder(orderId);
+    }
+    updateDeliveryBellUI([]);
+  });
+}
+
+function clearSingleNotification(orderId) {
+  saveClearedOrder(orderId);
+  // तुरंत UI से हटाने के लिए री-रेंडर या रिफ्रेश कर सकते हैं
+  const user = auth.currentUser;
+  if (user) initDeliveryNotificationsAndPopup(user.uid);
 }
 
 async function acceptIncomingOrder() {
@@ -515,6 +549,7 @@ async function acceptIncomingOrder() {
   if (!user) return alert('Login required');
   
   try {
+    saveClearedOrder(currentActiveOrderId);
     await db.ref('deliveryAssignments/' + currentActiveOrderId).update({
       status: 'accepted',
       acceptedAt: new Date().toISOString()
@@ -534,6 +569,7 @@ async function acceptIncomingOrder() {
 
 async function rejectIncomingOrder() {
   if (!currentActiveOrderId) return;
+  saveClearedOrder(currentActiveOrderId);
   try {
     await db.ref('deliveryAssignments/' + currentActiveOrderId).remove();
     document.getElementById('incomingOrderModal').remove();
