@@ -334,36 +334,18 @@ updateUnitChoices();
 setTimeout(processDeliveryQr,800);
 
 // Restore the admin dashboard after refresh instead of showing the login form again.
+let isAdminDeviceUnlocked = false; // डिवाइस अनलॉक स्टेटस को सीधे मेमोरी में रखने के लिए
+
 auth.onAuthStateChanged(user=>{
   showActualAdminUid();
-  // A shared Firebase browser session must never grant admin access to a seller/customer UID.
-  if(user && user.uid!=='admin_7818995955'){
+  
+  // अगर Firebase यूज़र साइन-इन नहीं है या एडमिन UID मैच नहीं करती
+  if(!user || user.uid !== 'admin_7818995955'){
     signedInPhone='';
-    localStorage.removeItem('modeluxeAdminDeviceUnlocked');
+    isAdminDeviceUnlocked = false;
     if(orderListener)db.ref('orders').off('value',orderListener);
     if(productListener)db.ref('sellerProducts').off('value',productListener);
     orderListener=null;productListener=null;
-    $('dashboard').classList.add('hidden');$('logoutBtn').classList.add('hidden');
-    $('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');
-    $('loginPanel').classList.remove('hidden');
-    // Do not sign out a pre-existing customer/seller session here.
-    // Firebase can briefly emit that old user before the Admin Worker custom-token
-    // sign-in completes; signing out here races with signInWithCustomToken and
-    // can immediately cancel the new admin session.
-    setMsg('Admin login karein: password verify karke OTP enter karein.');
-    return;
-  }
-
-  // Never leave a cached dashboard visible after Firebase has signed out.
-  if(!user){
-    signedInPhone='';
-    localStorage.removeItem('modeluxeAdminDeviceUnlocked');
-    if(orderListener)db.ref('orders').off('value',orderListener);
-    if(productListener)db.ref('sellerProducts').off('value',productListener);
-    orderListener=null;productListener=null;
-    db.ref('sellerApplications').off('value');
-    db.ref('sellerProfiles').off('value');
-    db.ref('deliveryApplications').off('value');db.ref('deliveryProfiles').off('value');
     $('dashboard').classList.add('hidden');
     $('logoutBtn').classList.add('hidden');
     $('adminDeviceLockModal').classList.add('hidden');
@@ -372,8 +354,11 @@ auth.onAuthStateChanged(user=>{
     return;
   }
 
-  if(localStorage.getItem('modeluxeAdminDeviceUnlocked')==='yes'){
-    signedInPhone=ADMIN_PHONE;
+  // अगर Firebase सेशन एक्टिव है और यूज़र एडमिन है
+  signedInPhone=ADMIN_PHONE;
+  
+  // अगर पासकी/डिवाइस लॉक पहले ही इसी सेशन में वेरीफाई हो चुका है
+  if(isAdminDeviceUnlocked){
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
     $('adminDeviceLockModal').classList.add('hidden');
@@ -385,7 +370,8 @@ auth.onAuthStateChanged(user=>{
     startOwnerManagement();
     updateUnitChoices();
     setTimeout(processDeliveryQr,300);
-  }else{
+  } else {
+    // अगर Firebase से लॉगिन हो गया है लेकिन डिवाइस पासकी वेरीफ़िकेशन दिखाना बाकी है
     $('dashboard').classList.add('hidden');
     $('logoutBtn').classList.add('hidden');
     $('loginPanel').classList.remove('hidden');
@@ -509,20 +495,53 @@ async function verifyDevicePasskey(){
 async function submitDeviceLock(){
  const msg=$('deviceLockMsg');
  try{
-  if(!window.isSecureContext||!navigator.credentials||!window.PublicKeyCredential)throw Error('Passkey ke liye HTTPS aur supported browser zaroori hai.');
-  if(deviceLockAction==='setup'){msg.textContent='Phone par passkey register karein…';await registerDevicePasskey();}
-  else{msg.textContent='Fingerprint / face / screen-lock PIN verify karein…';await verifyDevicePasskey();}
-  localStorage.setItem('modeluxeAdminDeviceUnlocked','yes');showActualAdminUid();
+  if(!window.isSecureContext||!navigator.credentials||!window.PublicKeyCredential)throw Error('Passkey के लिए HTTPS और supported browser ज़रूरी है।');
+  if(deviceLockAction==='setup'){msg.textContent='Phone पर passkey register करें…';await registerDevicePasskey();}
+  else{msg.textContent='Fingerprint / face / screen-lock PIN verify करें…';await verifyDevicePasskey();}
+  
+  // LocalStorage के बिना सीधे मेमोरी स्टेट अपडेट
+  isAdminDeviceUnlocked = true;
+
+  showActualAdminUid();
   $('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');
   $('dashboard').classList.remove('hidden');$('loginPanel').classList.add('hidden');$('logoutBtn').classList.remove('hidden');
   addNotification('Admin login successful','Passkey verification complete.','success');
   startOrders();startProducts();startDeliverySettingsAdminListener();startOwnerManagement();updateUnitChoices();setTimeout(processDeliveryQr,300);
- }catch(e){msg.textContent=e?.message||'Passkey verification fail ho gayi.';}
+ }catch(e){msg.textContent=e?.message||'Passkey verification fail हो गई।';}
 }
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
 $('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
-async function logout(){if(orderListener)db.ref('orders').off('value',orderListener);if(productListener)db.ref('sellerProducts').off('value',productListener);orderListener=null;productListener=null;try{await auth.signOut()}catch(e){}if(signedInPhone)addNotification('Admin logged out','Admin session बंद किया गया।','info');signedInPhone='';ordersData={};showActualAdminUid();localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('dashboard').classList.add('hidden');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');$('logoutBtn').classList.add('hidden');$('loginPanel').classList.remove('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('adminPassword').value='';$('devicePassword').value='';$('devicePasswordConfirm').value='';requestId='';pendingPhone='';}
+async function logout(){
+  if(orderListener) db.ref('orders').off('value', orderListener);
+  if(productListener) db.ref('sellerProducts').off('value', productListener);
+  orderListener = null; 
+  productListener = null;
+
+  try { 
+    await auth.signOut(); 
+  } catch(e) {}
+
+  // मेमोरी से एडमिन डिवाइस अनलॉक स्टेटस को हटाना (लोकल स्टोरेज फ्री)
+  isAdminDeviceUnlocked = false;
+
+  if(signedInPhone) addNotification('Admin logged out','Admin session बंद किया गया।','info');
+  
+  signedInPhone='';
+  ordersData={};
+  showActualAdminUid();
+  
+  $('dashboard').classList.add('hidden');
+  $('adminDeviceLockModal').classList.add('hidden');
+  $('adminDeviceLockModal').classList.remove('flex');
+  $('logoutBtn').classList.add('hidden');
+  $('loginPanel').classList.remove('hidden');
+  $('otpArea').classList.add('hidden');
+  $('otp').value='';
+  $('adminPassword').value='';
+  requestId='';
+  pendingPhone='';
+}
 const statuses=['Order Placed','Processing','Packed','Picked Up by Delivery Partner','Shipped','Out for Delivery','Cancelled','Return Requested','Return Approved','Refund Pending','Refunded']; // Delivered is confirmed only by scanning the invoice QR.
 function filterOrdersBySummary(filter){
   // First tap opens the selected order list; tapping the same box again closes it.
@@ -1010,11 +1029,33 @@ function renderDeliveryApplications(status='pending'){
  const labels={pending:'Pending',approved:'Approved',cancelled:'Cancelled',suspended:'Suspended'};$('deliveryApplicationsList').innerHTML='<p class="small mb-3">Records: '+entries.length+' · Pending: '+counts.pending+' · Approved: '+counts.approved+' · Cancelled: '+counts.cancelled+' · Suspended: '+counts.suspended+'</p>'+(rows.length?rows.map(([uid,a])=>{const name=a.deliveryName||a.name||a.fullName||'Delivery Boy',phone=a.phone||a.mobile||a.phoneNumber||'';return `<article class="order-card mb-3"><h3 class="font-bold text-lg gold">${esc(name)}</h3><div class="small">${esc(a.email||'')} · ${esc(phone)}</div><div class="small">Status: ${esc(deliveryApplicationStatus(a))} · UID: ${esc(uid)}</div><div class="small">Applied: ${esc(a.submittedAt||a.createdAt||'Not available')}</div><div class="flex gap-2 mt-3 flex-wrap">${status!=='approved'?`<button class="btn success" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','approved',this)">Approve</button>`:''}${status!=='cancelled'?`<button class="btn danger" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','cancelled',this)">Cancel</button>`:''}${status!=='suspended'?`<button class="btn muted" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','suspended',this)">Suspend</button>`:''}${status==='suspended'||status==='cancelled'?`<button class="btn success" type="button" onclick="window.decideDeliveryApplication('${esc(uid)}','approved',this)">Restore / Approve</button>`:''}</div><p id="delivery-action-${esc(uid)}" class="small mt-2" aria-live="polite"></p></article>`;}).join(''):'<div class="order-card">Is status mein koi delivery application nahi hai.</div>');
 }
 async function loadDeliveryApplications(status='pending'){
- const list=$('deliveryApplicationsList'),diag=$('deliveryApplicationsDiagnostics');if(!list)return;deliveryAppStatusFilter=status;list.innerHTML='<div class="order-card">Firebase se delivery applications load ho rahi hain…</div>';if(diag)diag.textContent='Admin UID: '+(auth.currentUser&&auth.currentUser.uid||'Not signed in')+' · /deliveryApplications aur /deliveryProfiles read ho rahe hain…';
- try{if(!auth.currentUser)throw Error('Admin Firebase session missing.');const [a,p]=await Promise.all([db.ref('deliveryApplications').once('value'),db.ref('deliveryProfiles').once('value')]);deliveryAppsCache=mergeDeliveryApplicationSources(a.val()||{},p.val()||{});updateDeliveryPendingIndicator();renderDeliveryApplications(status);const total=Object.keys(deliveryAppsCache).length,shown=Object.values(deliveryAppsCache).filter(x=>deliveryApplicationStatus(x)===status).length;if(diag)diag.textContent='READ SUCCESS · '+labelsDelivery(status)+': '+shown+' · Total delivery records: '+total+' · /deliveryApplications OK · /deliveryProfiles OK · Admin UID: '+auth.currentUser.uid;if(!total)list.innerHTML+='<div class="order-card mt-3"><b>Abhi record nahi mila.</b><p class="small">Delivery Panel se submit kiye gaye records ke paths /deliveryApplications/{UID} aur /deliveryProfiles/{UID} hone chahiye.</p></div>';
- }catch(e){if(diag)diag.textContent='FIREBASE READ ERROR · '+(e.message||e);list.innerHTML='<div class="order-card"><b>Delivery application load nahi hui</b><p class="small">'+esc(e.message||String(e))+'</p><p class="small">Paths: /deliveryApplications and /deliveryProfiles</p><button class="btn primary mt-2" onclick="loadDeliveryApplications(deliveryAppStatusFilter)">Try Again</button></div>';}
+ const list=$('deliveryApplicationsList'),diag=$('deliveryApplicationsDiagnostics');
+ if(!list)return;
+ deliveryAppStatusFilter=status;
+ list.innerHTML='<div class="order-card">Firebase se delivery applications load ho rahi hain…</div>';
+ if(diag)diag.textContent='Admin UID checking… · /deliveryApplications aur /deliveryProfiles read ho rahe hain…';
+ try{
+  let user = auth.currentUser;
+  if(!user){
+    for(let i=0; i<5; i++){
+      await new Promise(r => setTimeout(r, 400));
+      user = auth.currentUser;
+      if(user) break;
+    }
+  }
+  if(!user)throw Error('Admin Firebase session missing.');
+
+  const [a,p]=await Promise.all([db.ref('deliveryApplications').once('value'),db.ref('deliveryProfiles').once('value')]);
+  deliveryAppsCache=mergeDeliveryApplicationSources(a.val()||{},p.val()||{});
+  updateDeliveryPendingIndicator();
+  renderDeliveryApplications(status);
+  const total=Object.keys(deliveryAppsCache).length,shown=Object.values(deliveryAppsCache).filter(x=>deliveryApplicationStatus(x)===status).length;
+  if(diag)diag.textContent='READ SUCCESS · Total delivery records: '+total+' · Admin UID: '+user.uid;
+ }catch(e){
+  if(diag)diag.textContent='FIREBASE READ ERROR · '+(e.message||e);
+  list.innerHTML='<div class="order-card"><b>Delivery application load nahi hui</b><p class="small">'+esc(e.message||String(e))+'</p><button class="btn primary mt-2" onclick="loadDeliveryApplications(deliveryAppStatusFilter)">Try Again</button></div>';
+ }
 }
-function labelsDelivery(s){return ({pending:'Pending',approved:'Approved',cancelled:'Cancelled',suspended:'Suspended'})[s]||'Pending';}
 window.loadDeliveryApplications=loadDeliveryApplications;
 window.decideDeliveryApplication=async function(uid,status,button){
  const valid=['approved','cancelled','suspended'];if(!valid.includes(status))return;const profileStatus=status==='cancelled'?'cancelled':status,now=new Date().toISOString(),card=button&&button.closest('article'),buttons=card?Array.from(card.querySelectorAll('button')):[];buttons.forEach(b=>b.disabled=true);const result=$('delivery-action-'+uid);if(result)result.textContent='Firebase mein status save ho raha hai…';
@@ -1087,16 +1128,6 @@ function renderSellerApplications(status='pending'){
 }
 
 async function loadSellerApplications(status='pending',clickedButton){
-
- if(!window.firebase||!firebase.apps||!firebase.apps.length||!window.firebase.database){
-  const box=$('sellerApplicationsList');
-  const diag=$('sellerApplicationsDiagnostics');
-  const msg='Firebase SDK/Library load nahi hui. Internet, CDN access aur firebase-app/database compat scripts check karein.';
-  if(diag)diag.textContent='LIBRARY LOAD ERROR · '+msg;
-  if(box)box.innerHTML='<div class="order-card"><b style="color:#b91c1c">Firebase Library Not Found</b><p class="small">'+esc(msg)+'</p><p class="small">Required: firebase-app-compat.js, firebase-database-compat.js, firebase-auth-compat.js</p></div>';
-  return;
- }
-
  const normalized=String(status||'pending').toLowerCase();
  const valid=['pending','approved','rejected','suspended'];
  status=valid.includes(normalized)?normalized:'pending';
@@ -1108,12 +1139,20 @@ async function loadSellerApplications(status='pending',clickedButton){
  const diag=$('sellerApplicationsDiagnostics');
  if(!list)return;
 
- list.innerHTML='<div class="order-card">'+labels[status]+' page open · Firebase records load ho rahe hain…</div>';
+ list.innerHTML='<div class="order-card">'+labels[status]+' page open · Firebase records load ho rahe हैं…</div>';
 
- if(diag)diag.textContent='Admin UID: '+(auth.currentUser&&auth.currentUser.uid||'Not signed in')+' · /sellerApplications aur /sellerProfiles read ho rahe hain…';
+ if(diag)diag.textContent='Admin UID checking… · /sellerApplications aur /sellerProfiles read ho rahe hain…';
 
  try{
-  const user=auth.currentUser;
+  // अगर Firebase auth session तुरंत नहीं मिला, तो थोड़ा इंतज़ार (retry) करें
+  let user = auth.currentUser;
+  if(!user){
+    for(let i=0; i<5; i++){
+      await new Promise(r => setTimeout(r, 400));
+      user = auth.currentUser;
+      if(user) break;
+    }
+  }
   if(!user)throw new Error('Firebase Auth session missing. Admin ko dobara sign-in karna hoga.');
 
   const timeout=(path)=>new Promise((_,reject)=>setTimeout(()=>reject(new Error(path+' read timeout (12 seconds). Network / Firebase connection check karein.')),12000));
@@ -1149,19 +1188,16 @@ async function loadSellerApplications(status='pending',clickedButton){
   const shown=Object.entries(sellerAppsCache).filter(([uid,a])=>sellerApplicationStatus(a)===status).length;
   const total=Object.keys(sellerAppsCache).length;
 
-  if(diag)diag.textContent='READ '+(Object.keys(sellerAppsReadErrors).length?'PARTIAL':'SUCCESS')+' · '+labels[status]+': '+shown+' · Total seller records: '+total+' · '+(appData!==null?'/sellerApplications OK':'/sellerApplications ERROR')+' · '+(profileData!==null?'/sellerProfiles OK':'/sellerProfiles ERROR')+' · Admin UID: '+user.uid;
+  if(diag)diag.textContent='READ '+(Object.keys(sellerAppsReadErrors).length?'PARTIAL':'SUCCESS')+' · '+labels[status]+': '+shown+' · Total seller records: '+total+' · Admin UID: '+user.uid;
 
   if(total===0){
-   list.innerHTML+='<div class="order-card mt-3"><b>Application kyu nahi dikh rahi?</b><p class="small">Firebase read successful hai lekin dono paths par record empty hai. Seller panel mein application submit karte waqt jis Firebase project/database URL ka use ho raha hai, use admin panel ke Firebase project se compare karein. Seller UID aur database path bhi check karein.</p><p class="small">Expected paths: /sellerApplications/{sellerUID} aur /sellerProfiles/{sellerUID}</p></div>';
+   list.innerHTML+='<div class="order-card mt-3"><b>Application kyu nahi dikh rahi?</b><p class="small">Firebase read successful hai lekin dono paths par record empty hai. Expected paths: /sellerApplications/{sellerUID} aur /sellerProfiles/{sellerUID}</p></div>';
   }
 
  }catch(err){
   const msg=err&&err.message?err.message:String(err);
-
-  if(diag)diag.textContent='FIREBASE READ ERROR · '+msg+' · Database: '+(firebaseConfig.databaseURL||'URL unavailable');
-
-  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' page load nahi ho paaya</b><p class="small mt-2">Error: '+esc(msg)+'</p><p class="small">Admin UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><p class="small">Database: '+esc(firebaseConfig.databaseURL||'Not available')+'</p><p class="small">Paths: /sellerApplications and /sellerProfiles</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter,this)">Try Again</button></div>';
-
+  if(diag)diag.textContent='FIREBASE READ ERROR · '+msg;
+  list.innerHTML='<div class="order-card"><b style="color:#b91c1c">'+labels[status]+' page load nahi ho paaya</b><p class="small mt-2">Error: '+esc(msg)+'</p><p class="small">Admin UID: '+esc(auth.currentUser&&auth.currentUser.uid||'Not signed in')+'</p><button class="btn primary mt-3" type="button" onclick="loadSellerApplications(appStatusFilter,this)">Try Again</button></div>';
   addNotification('Seller application read failed',msg,'error');
  }
 }
