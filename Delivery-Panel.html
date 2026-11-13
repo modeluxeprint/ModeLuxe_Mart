@@ -403,9 +403,9 @@ async function creditSellerWalletsForOrder(orderId,order){
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
 
-  // केवल नए, पेंडिंग और आज के ऑर्डर्स को दिखाने के लिए अपडेटेड लिसनर
+  // टाइम-बेस्ड फ्रेश नोटिफिकेशन लिसनर (पुराने ऑर्डर्स कभी नहीं दिखेंगे)
 let currentActiveOrderId = null;
-const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV2';
+const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV3';
 
 function getClearedOrders() {
   try {
@@ -434,14 +434,22 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
     let deliveryNotifications = [];
     let hasUnreadPopup = false;
     
+    const now = Date.now();
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000; // केवल पिछले 12 घंटे के ऑर्डर्स
+
     for (const [orderId, data] of Object.entries(assignments)) {
-      // शर्त 1: आर्डर इसी डिलीवरी बॉय का हो
-      // शर्त 2: आर्डर का स्टेटस 'pending' या 'assigned' हो (पुराने या डिलीवर हो चुके न हों)
-      // शर्त 3: यूजर ने इसे पहले 'Clear' न किया हो
+      if (!data) continue;
+      
+      // ऑर्डर का समय जांचें (अगर टाइम न हो तो करंट टाइम मान लें)
+      const orderTime = data.createdAt ? new Date(data.createdAt).getTime() : now;
+      const isRecent = (now - orderTime) < TWELVE_HOURS;
+
+      // शर्त: इसी डिलीवरी बॉय का हो, स्टेटस pending/assigned हो, क्लियर न किया हो, और 12 घंटे के अंदर का ताजा हो
       if (
         data.deliveryUid === deliveryUid && 
         (data.status === 'pending' || data.status === 'assigned') && 
-        !clearedOrders.includes(String(orderId))
+        !clearedOrders.includes(String(orderId)) &&
+        isRecent
       ) {
         
         // नया पॉप-अप दिखाएं (सिर्फ एक बार)
@@ -456,7 +464,7 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
           id: orderId,
           title: 'New order received',
           detail: `Order #${orderId} · ${data.customerName || 'Customer'}`,
-          time: data.createdAt ? new Date(data.createdAt).toLocaleString() : new Date().toLocaleString(),
+          time: new Date(orderTime).toLocaleString(),
           read: false
         });
       }
