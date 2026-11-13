@@ -403,9 +403,8 @@ async function creditSellerWalletsForOrder(orderId,order){
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
 
-  // टाइम-बेस्ड फ्रेश नोटिफिकेशन लिसनर (पुराने ऑर्डर्स कभी नहीं दिखेंगे)
-let currentActiveOrderId = null;
-const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV3';
+  let currentActiveOrderId = null;
+const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV4';
 
 function getClearedOrders() {
   try {
@@ -433,23 +432,15 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
     const clearedOrders = getClearedOrders();
     let deliveryNotifications = [];
     let hasUnreadPopup = false;
-    
-    const now = Date.now();
-    const TWELVE_HOURS = 12 * 60 * 60 * 1000; // केवल पिछले 12 घंटे के ऑर्डर्स
 
     for (const [orderId, data] of Object.entries(assignments)) {
       if (!data) continue;
-      
-      // ऑर्डर का समय जांचें (अगर टाइम न हो तो करंट टाइम मान लें)
-      const orderTime = data.createdAt ? new Date(data.createdAt).getTime() : now;
-      const isRecent = (now - orderTime) < TWELVE_HOURS;
 
-      // शर्त: इसी डिलीवरी बॉय का हो, स्टेटस pending/assigned हो, क्लियर न किया हो, और 12 घंटे के अंदर का ताजा हो
+      // शर्त: इसी डिलीवरी बॉय का हो, स्टेटस pending या assigned हो, और यूजर ने इसे Clear न किया हो
       if (
         data.deliveryUid === deliveryUid && 
         (data.status === 'pending' || data.status === 'assigned') && 
-        !clearedOrders.includes(String(orderId)) &&
-        isRecent
+        !clearedOrders.includes(String(orderId))
       ) {
         
         // नया पॉप-अप दिखाएं (सिर्फ एक बार)
@@ -464,7 +455,7 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
           id: orderId,
           title: 'New order received',
           detail: `Order #${orderId} · ${data.customerName || 'Customer'}`,
-          time: new Date(orderTime).toLocaleString(),
+          time: data.createdAt ? new Date(data.createdAt).toLocaleString() : new Date().toLocaleString(),
           read: false
         });
       }
