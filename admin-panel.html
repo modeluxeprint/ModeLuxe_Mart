@@ -135,7 +135,28 @@ header{color:#111827}
   window.addEventListener('load',function(){setTimeout(clearAdminPhone,250);setTimeout(clearAdminPhone,1000);});
 })();
 </script><main class="max-w-6xl mx-auto p-4 md:p-6">
-<header class="flex items-center justify-between gap-3 mb-6"><div><p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p><h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1><p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p><p id="adminFirebaseUid" class="text-[11px] text-stone-500 mt-1 break-all">Firebase UID: checking…</p></div><div class="flex flex-col items-end gap-2 shrink-0"><div class="flex items-center gap-2"><div class="relative"><button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button><div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl"><div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div><p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p><div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div></div></div><button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button></div><button id="headerScannerBtn" type="button" class="btn muted flex items-center justify-center gap-3" style="min-width:100%;padding:12px 16px;border-radius:18px;background:#e6f3ff;color:#174f7d;font-weight:800;box-shadow:0 3px 12px #00008" aria-label="Scan Delivery QR" title="Scan Delivery QR" onclick="openDeliveryScanner()"><span aria-hidden="true">📷</span><span>Scan QR</span></button></div></header>
+<header class="flex items-center justify-between gap-3 mb-6">
+  <div>
+    <p class="text-xs tracking-[.25em] gold font-bold">MODELUXE MART</p>
+    <h1 class="text-2xl md:text-3xl font-black">Admin Control Panel</h1>
+    <p class="text-xs text-stone-400 mt-1">Orders · Delivery status · Customer details</p>
+    <p id="adminFirebaseUid" class="text-[11px] text-stone-500 mt-1 break-all hidden">Firebase UID: checking…</p>
+  </div>
+  <div class="flex flex-col items-end gap-2 shrink-0">
+    <div class="flex items-center gap-2">
+      <div class="relative">
+        <button id="bellBtn" type="button" class="btn muted relative" aria-label="Notifications" aria-expanded="false" onclick="toggleNotifications()">🔔 <span id="bellBadge" class="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-xs hidden">0</span></button>
+        <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-[min(90vw,380px)] panel p-3 z-[80] shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-2"><b class="gold">Admin Notifications</b><button class="btn muted text-xs" type="button" onclick="clearNotifications()">Clear all</button></div>
+          <p id="notificationEmpty" class="small text-stone-400 py-3">Abhi koi notification nahi hai.</p>
+          <div id="notificationList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+        </div>
+      </div>
+      <button id="logoutBtn" class="btn muted hidden" onclick="logout()">Logout</button>
+    </div>
+    <button id="headerScannerBtn" type="button" class="btn muted flex items-center justify-center gap-3 hidden" style="min-width:100%;padding:12px 16px;border-radius:18px;background:#e6f3ff;color:#174f7d;font-weight:800;box-shadow:0 3px 12px #00008" aria-label="Scan Delivery QR" title="Scan Delivery QR" onclick="openDeliveryScanner()"><span aria-hidden="true">📷</span><span>Scan QR</span></button>
+  </div>
+</header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
 <div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="deliveryAppsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliveryApplications')">Delivery Applications <span id="deliveryPendingDot" class="hidden" style="display:none;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2" aria-label="Pending delivery applications"></span></button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
@@ -246,6 +267,12 @@ const firebaseConfig = {
 const adminFirebaseApp=firebase.apps.find(app=>app.name==='modeluxe-admin-panel')||firebase.initializeApp(firebaseConfig,'modeluxe-admin-panel');
 const db=adminFirebaseApp.database();
 const auth=adminFirebaseApp.auth();
+
+// रीफ्रेश करने पर लॉग-आउट न हो, इसके लिए LOCAL persistence सेट करना
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => {
+  console.warn('Auth persistence error:', e);
+});
+
 const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
 async function uploadImageToR2(file){
   if(!auth.currentUser)throw new Error("Admin Firebase login missing hai. Dobara login karein.");
@@ -312,11 +339,21 @@ const $=id=>document.getElementById(id);
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function setMsg(t){$('loginMsg').textContent=t;}
 function showActualAdminUid(){
- const el=$('adminFirebaseUid');
- if(!el)return;
- const user=auth.currentUser;
- el.textContent='Firebase UID: '+(user&&user.uid?user.uid:'Not signed in');
- el.style.color=user&&user.uid==='admin_7818995955'?'#16804a':'#b45309';
+ const el = $('adminFirebaseUid');
+ const scannerBtn = $('headerScannerBtn');
+ if(!el) return;
+ const user = auth.currentUser;
+ 
+ if(user && user.uid === 'admin_7818995955' && isAdminDeviceUnlocked){
+   el.textContent = 'Firebase UID: ' + user.uid;
+   el.style.color = '#16804a';
+   el.classList.remove('hidden');
+   if(scannerBtn) scannerBtn.classList.remove('hidden');
+ } else {
+   el.textContent = 'Firebase UID: Not signed in';
+   el.classList.add('hidden');
+   if(scannerBtn) scannerBtn.classList.add('hidden');
+ }
 }
 
 function loadNotifications(){try{return JSON.parse(localStorage.getItem(NOTIFICATION_KEY)||'[]').slice(0,50)}catch(e){return []}}
@@ -336,6 +373,11 @@ setTimeout(processDeliveryQr,800);
 // Restore the admin dashboard after refresh instead of showing the login form again.
 let isAdminDeviceUnlocked = false; // डिवाइस अनलॉक स्टेटस को सीधे मेमोरी में रखने के लिए
 
+// रीफ्रेश होने पर पासकी स्टेट को बनाए रखने के लिए sessionStorage का उपयोग
+if(sessionStorage.getItem('modeluxeAdminUnlocked') === 'true'){
+  isAdminDeviceUnlocked = true;
+}
+
 auth.onAuthStateChanged(user=>{
   showActualAdminUid();
   
@@ -343,6 +385,7 @@ auth.onAuthStateChanged(user=>{
   if(!user || user.uid !== 'admin_7818995955'){
     signedInPhone='';
     isAdminDeviceUnlocked = false;
+    sessionStorage.removeItem('modeluxeAdminUnlocked');
     if(orderListener)db.ref('orders').off('value',orderListener);
     if(productListener)db.ref('sellerProducts').off('value',productListener);
     orderListener=null;productListener=null;
@@ -357,8 +400,10 @@ auth.onAuthStateChanged(user=>{
   // अगर Firebase सेशन एक्टिव है और यूज़र एडमिन है
   signedInPhone=ADMIN_PHONE;
   
-  // अगर पासकी/डिवाइस लॉक पहले ही इसी सेशन में वेरीफाई हो चुका है
-  if(isAdminDeviceUnlocked){
+  // अगर पासकी पहले से वेरीफाइड है या रीफ्रेश के बाद सेशन जीवित है
+  if(isAdminDeviceUnlocked || sessionStorage.getItem('modeluxeAdminUnlocked') === 'true'){
+    isAdminDeviceUnlocked = true;
+    sessionStorage.setItem('modeluxeAdminUnlocked', 'true');
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
     $('adminDeviceLockModal').classList.add('hidden');
@@ -371,7 +416,7 @@ auth.onAuthStateChanged(user=>{
     updateUnitChoices();
     setTimeout(processDeliveryQr,300);
   } else {
-    // अगर Firebase से लॉगिन हो गया है लेकिन डिवाइस पासकी वेरीफ़िकेशन दिखाना बाकी है
+    // यदि पहली बार लॉगिन हो रहा है और पासकी मांगनी है
     $('dashboard').classList.add('hidden');
     $('logoutBtn').classList.add('hidden');
     $('loginPanel').classList.remove('hidden');
@@ -501,6 +546,7 @@ async function submitDeviceLock(){
   
   // LocalStorage के बिना सीधे मेमोरी स्टेट अपडेट
   isAdminDeviceUnlocked = true;
+   sessionStorage.setItem('modeluxeAdminUnlocked', 'true');
 
   showActualAdminUid();
   $('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');
@@ -522,13 +568,20 @@ async function logout(){
     await auth.signOut(); 
   } catch(e) {}
 
-  // मेमोरी से एडमिन डिवाइस अनलॉक स्टेटस को हटाना (लोकल स्टोरेज फ्री)
+  // मेमोरी से एडमिन डिवाइस अनलॉक स्टेटस को हटाना
   isAdminDeviceUnlocked = false;
 
   if(signedInPhone) addNotification('Admin logged out','Admin session बंद किया गया।','info');
   
   signedInPhone='';
   ordersData={};
+  
+  // लॉग-आउट होने पर स्कैनर और UID तुरंत छिपाएं
+  const scannerBtn = $('headerScannerBtn');
+  if(scannerBtn) scannerBtn.classList.add('hidden');
+  const uidEl = $('adminFirebaseUid');
+  if(uidEl) uidEl.classList.add('hidden');
+  
   showActualAdminUid();
   
   $('dashboard').classList.add('hidden');
