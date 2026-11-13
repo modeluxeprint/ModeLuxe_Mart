@@ -436,18 +436,24 @@ async function verifyOTP(){
 
     clearTimeout(fetchTimer);
     stage='Firebase custom token login';
-    setMsg('चरण 2/2: OTP सही है। Firebase login हो रहा है…');
+    setMsg('चरण 2/2: OTP सही है। Firebase login हो रहा है…लेखक/सेशन सेट हो रहा है…');
 
-    // Ensure Firebase LOCAL persistence is fully applied BEFORE exchanging the custom token.
-    // This prevents the admin session from behaving like a temporary tab/session login.
-    const persistenceOk=await adminPersistenceReady;
-    if(!persistenceOk)throw new Error('Firebase could not enable persistent login on this browser. Check browser storage/site-data settings and retry.');
+    // Persistence apply करें (अगर ब्लॉक हो तो भी आगे बढ़ने दें ताकि अटके नहीं)
+    try {
+      await Promise.race([
+        adminPersistenceReady,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Persistence timeout')), 5000))
+      ]);
+    } catch (persErr) {
+      console.warn('Persistence warning:', persErr);
+    }
 
-    // Also time out Firebase sign-in; the previous timeout covered fetch only.
+    // Firebase custom token sign-in with strict timeout
     await Promise.race([
       auth.signInWithCustomToken(j.customToken),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase custom-token login ने 20 सेकंड में जवाब नहीं दिया। Firebase Auth configuration/network जाँचें।')),20000))
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase custom-token login ने समय पर जवाब नहीं दिया। नेटवर्क जाँचें।')),15000))
     ]);
+
     if(!auth.currentUser || auth.currentUser.uid!=='admin_7818995955'){
       await auth.signOut();
       throw new Error('Admin Worker ने गलत Firebase UID वाला token दिया। Expected UID: admin_7818995955');
@@ -458,11 +464,11 @@ async function verifyOTP(){
     $('adminPassword').value='';
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
-    addNotification('OTP verified','OTP सत्यापित हुआ; device password/passkey check बाकी है।','success');
+    addNotification('OTP verified','OTP सत्यापित हुआ; passkey verification बाकी है।','success');
     showDeviceLockAfterOtp();
   }catch(e){
     const msg=e.name==='AbortError'
-      ?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया। Worker code/logs और OTP provider जाँचें।'
+      ?'Cloudflare Worker से 20 सेकंड में जवाब नहीं आया।'
       :('अटकने वाला चरण: '+stage+'. '+(e.message||'अज्ञात त्रुटि'));
     setMsg(msg);
     addNotification('OTP verification failed',msg,'error');
