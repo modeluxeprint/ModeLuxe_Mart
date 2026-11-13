@@ -404,11 +404,11 @@ async function creditSellerWalletsForOrder(orderId,order){
 }
 
   let currentActiveOrderId = null;
-const CLEARED_NOTIFICATIONS_KEY = 'modeluxeClearedDeliveryOrdersV4';
+const DELIVERY_CLEARED_KEY = 'modeluxeDeliveryClearedOrdersFinal';
 
 function getClearedOrders() {
   try {
-    return JSON.parse(localStorage.getItem(CLEARED_NOTIFICATIONS_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(DELIVERY_CLEARED_KEY) || '[]');
   } catch (e) {
     return [];
   }
@@ -419,7 +419,7 @@ function saveClearedOrder(orderId) {
     let cleared = getClearedOrders();
     if (!cleared.includes(String(orderId))) {
       cleared.push(String(orderId));
-      localStorage.setItem(CLEARED_NOTIFICATIONS_KEY, JSON.stringify(cleared));
+      localStorage.setItem(DELIVERY_CLEARED_KEY, JSON.stringify(cleared));
     }
   } catch (e) {}
 }
@@ -436,15 +436,14 @@ function initDeliveryNotificationsAndPopup(deliveryUid) {
     for (const [orderId, data] of Object.entries(assignments)) {
       if (!data) continue;
 
-      // शर्त: इसी डिलीवरी बॉय का हो, स्टेटस pending या assigned हो, और यूजर ने इसे Clear न किया हो
+      // अगर यह आर्डर इसी डिलीवरी बॉय का है और यूजर ने इसे पहले Clear नहीं किया है
       if (
-        data.deliveryUid === deliveryUid && 
-        (data.status === 'pending' || data.status === 'assigned') && 
+        String(data.deliveryUid) === String(deliveryUid) && 
         !clearedOrders.includes(String(orderId))
       ) {
         
-        // नया पॉप-अप दिखाएं (सिर्फ एक बार)
-        if (!hasUnreadPopup) {
+        // पेंडिंग/असाइन होने पर नया पॉप-अप दिखाएं (सिर्फ एक बार)
+        if ((data.status === 'pending' || data.status === 'assigned' || !data.status) && !hasUnreadPopup) {
           showIncomingOrderPopup(orderId, data);
           playNotificationSound();
           hasUnreadPopup = true;
@@ -530,7 +529,8 @@ function updateDeliveryBellUI(notifications) {
   `).join('');
 }
 
-function clearAllDeliveryNotifications() {
+// यह मुख्य फंक्शन है जो सभी नोटिफिकेशंस को हमेशा के लिए क्लियर कर देगा
+function clearNotifications() {
   db.ref('deliveryAssignments').once('value').then(snap => {
     const assignments = snap.val() || {};
     for (const orderId of Object.keys(assignments)) {
@@ -539,6 +539,9 @@ function clearAllDeliveryNotifications() {
     updateDeliveryBellUI([]);
   });
 }
+
+// दोनों नामों को आपस में जोड़ दिया ताकि कोई कंफ्यूजन न हो
+window.clearAllDeliveryNotifications = clearNotifications;
 
 function clearSingleNotification(orderId) {
   saveClearedOrder(orderId);
