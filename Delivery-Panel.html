@@ -270,15 +270,17 @@ async function recoverDeliveryApplication(){
 $('recoverDeliverySubmit').onclick=()=>recoverDeliveryApplication().catch(()=>{});
 $('recoverDeliveryLogout').onclick=()=>auth.signOut();
 auth.onAuthStateChanged(async user=>{
-  initDeliveryNotificationsAndPopup(user.uid);
- if(registrationInProgress)return;
- try{await loadDeliveryAccount(user); if(user && currentDeliveryUser && !$('dashboard').classList.contains('hidden')) registerModeLuxePush('delivery',user);}
- catch(error){
-   console.error('Delivery auth-state handler:',error);
-   $('login').classList.remove('hidden');
-   $('deliveryAuthForm').classList.remove('hidden');
-   $('loginMsg').textContent='Account load error: '+(error.message||error);
- }
+  if (user) {
+    initDeliveryNotificationsAndPopup(user.uid);
+  }
+  if(registrationInProgress)return;
+  try{await loadDeliveryAccount(user); if(user && currentDeliveryUser && !$('dashboard').classList.contains('hidden')) registerModeLuxePush('delivery',user);}
+  catch(error){
+    console.error('Delivery auth-state handler:',error);
+    $('login').classList.remove('hidden');
+    $('deliveryAuthForm').classList.remove('hidden');
+    $('loginMsg').textContent='Account load error: '+(error.message||error);
+  }
 });
 function closeDashboardExpansions(){['walletDetails','payoutDetails'].forEach(id=>$(id).classList.add('hidden'));['walletBox','payoutBox'].forEach(id=>{$(id).classList.remove('selected');$(id).setAttribute('aria-expanded','false')});}
 function toggleDashboardPanel(panelId,buttonId){const panel=$(panelId),opening=panel.classList.contains('hidden');closeDashboardExpansions();setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false');if(opening){panel.classList.remove('hidden');$(buttonId).classList.add('selected');$(buttonId).setAttribute('aria-expanded','true')}else{panel.classList.add('hidden');$(buttonId).setAttribute('aria-expanded','false')}}
@@ -427,36 +429,36 @@ function saveClearedOrder(orderId) {
 function initDeliveryNotificationsAndPopup(deliveryUid) {
   if (!deliveryUid) return;
   
-  db.ref('deliveryAssignments').on('value', snap => {
-    const assignments = snap.val() || {};
+  // orders और deliveryAssignments दोनों को ट्रैक करें ताकि सेलर द्वारा शिप्पेड करते ही तुरंत पॉप-अप आए
+  db.ref('orders').on('value', snap => {
+    const orders = snap.val() || {};
     const clearedOrders = getClearedOrders();
     let deliveryNotifications = [];
     let hasUnreadPopup = false;
 
-    for (const [orderId, data] of Object.entries(assignments)) {
-      if (!data) continue;
+    for (const [orderId, order] of Object.entries(orders)) {
+      if (!order) continue;
 
-      // अगर यह आर्डर इसी डिलीवरी बॉय का है और यूजर ने इसे पहले Clear नहीं किया है
-      if (
-        String(data.deliveryUid) === String(deliveryUid) && 
-        !clearedOrders.includes(String(orderId))
-      ) {
+      const orderStatus = String(order.status || '').toLowerCase();
+      // जब आर्डर Shipped या Out for Delivery हो जाए
+      if (['shipped', 'out for delivery', 'picked up by delivery partner'].includes(orderStatus)) {
         
-        // पेंडिंग/असाइन होने पर नया पॉप-अप दिखाएं (सिर्फ एक बार)
-        if ((data.status === 'pending' || data.status === 'assigned' || !data.status) && !hasUnreadPopup) {
-          showIncomingOrderPopup(orderId, data);
-          playNotificationSound();
-          hasUnreadPopup = true;
+        if (!clearedOrders.includes(String(orderId))) {
+          // अगर पॉप-अप नहीं खुला है तो दिखाएं
+          if (!hasUnreadPopup && (!order.deliveryUid || String(order.deliveryUid) === String(deliveryUid))) {
+            showIncomingOrderPopup(orderId, order);
+            playNotificationSound();
+            hasUnreadPopup = true;
+          }
+          
+          deliveryNotifications.push({
+            id: orderId,
+            title: 'New delivery order',
+            detail: `Order #${orderId} · ${order.customerName || 'Customer'}`,
+            time: order.createdAt ? new Date(order.createdAt).toLocaleString() : new Date().toLocaleString(),
+            read: false
+          });
         }
-        
-        // बेल नोटिफिकेशन सूची में जोड़ें
-        deliveryNotifications.push({
-          id: orderId,
-          title: 'New order received',
-          detail: `Order #${orderId} · ${data.customerName || 'Customer'}`,
-          time: data.createdAt ? new Date(data.createdAt).toLocaleString() : new Date().toLocaleString(),
-          read: false
-        });
       }
     }
     
@@ -471,16 +473,16 @@ function showIncomingOrderPopup(orderId, orderDetails) {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'incomingOrderModal';
-    modal.className = 'fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4';
+    modal.className = 'modal';
     modal.innerHTML = `
-      <div class="panel max-w-md w-full p-5 bg-white rounded-2xl shadow-2xl text-center">
-        <div class="text-3xl mb-2">📦</div>
-        <h2 class="text-xl font-bold text-blue-600 mb-1">New Delivery Request!</h2>
-        <p id="popupOrderId" class="text-sm font-semibold text-gray-700 mb-3"></p>
-        <div id="popupOrderDetails" class="text-left bg-gray-50 p-3 rounded-xl text-sm mb-4 space-y-1"></div>
-        <div class="grid grid-cols-2 gap-3">
-          <button onclick="rejectIncomingOrder()" class="btn bg-red-600 text-white py-3 rounded-xl font-bold">Cancel / Reject</button>
-          <button onclick="acceptIncomingOrder()" class="btn bg-green-600 text-white py-3 rounded-xl font-bold">Accept Order</button>
+      <div class="modalbox text-center">
+        <div style="font-size: 42px; margin-bottom: 8px;">🚀</div>
+        <h2 class="blue" style="margin:0 0 8px">New Delivery Assigned!</h2>
+        <p id="popupOrderId" class="small font-bold" style="margin-bottom: 12px;"></p>
+        <div id="popupOrderDetails" style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; line-height: 1.5;"></div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button type="button" onclick="rejectIncomingOrder()" class="btn danger" style="padding: 12px;">Cancel / Reject</button>
+          <button type="button" onclick="acceptIncomingOrder()" class="btn primary" style="padding: 12px;">Accept Order</button>
         </div>
       </div>
     `;
@@ -489,9 +491,10 @@ function showIncomingOrderPopup(orderId, orderDetails) {
   
   document.getElementById('popupOrderId').textContent = 'Order #' + orderId;
   document.getElementById('popupOrderDetails').innerHTML = `
-    <p><b>Customer:</b> ${orderDetails.customerName || 'Customer'}</p>
-    <p><b>Address:</b> ${orderDetails.shippingAddress || 'Address not available'}</p>
-    <p class="text-blue-700 font-bold mt-2"><b>Amount:</b> ₹${orderDetails.totalAmount || 0}</p>
+    <b>Customer:</b> ${orderDetails.customerName || 'Customer'}<br>
+    <b>Phone:</b> ${orderDetails.customerPhone || 'N/A'}<br>
+    <b>Address:</b> ${orderDetails.shippingAddress || 'Not provided'}<br>
+    <b style="color:#075fc4;">Amount: ₹${orderDetails.totalAmount || orderDetails.grandTotal || 0}</b>
   `;
   modal.classList.remove('hidden');
 }
@@ -506,41 +509,30 @@ function playNotificationSound() {
 function updateDeliveryBellUI(notifications) {
   const badge = document.getElementById('bellBadge');
   const list = document.getElementById('notificationList');
-  const emptyMsg = document.getElementById('notificationEmpty');
   
   if (!badge || !list) return;
   
   badge.textContent = notifications.length;
-  badge.classList.toggle('hidden', notifications.length === 0);
   
-  if (emptyMsg) {
-    emptyMsg.classList.toggle('hidden', notifications.length > 0);
-  }
-  
-  list.innerHTML = notifications.map(n => `
-    <div class="rounded-lg border border-blue-100 p-2 bg-blue-50 relative">
-      <div class="flex justify-between gap-2">
-        <b class="text-sm text-blue-600">${n.title}</b>
-        <span class="text-[10px] text-stone-400">${n.time}</span>
-      </div>
-      <p class="small text-stone-700 mt-1">${n.detail}</p>
-      <button onclick="clearSingleNotification('${n.id}')" class="absolute top-2 right-2 text-xs text-red-500 font-bold px-1">✕</button>
+  list.innerHTML = notifications.length ? notifications.map(n => `
+    <div class="notification-item" style="position:relative; padding-right:24px;">
+      <b>${esc(n.title)}</b>
+      <div>${esc(n.detail)}</div>
+      <div class="small">${esc(n.time)}</div>
+      <button onclick="clearSingleNotification('${n.id}')" style="position:absolute; top:8px; right:8px; border:none; background:none; color:red; font-weight:bold; cursor:pointer;">✕</button>
     </div>
-  `).join('');
+  `).join('') : '<p class="small">अभी कोई notification नहीं है।</p>';
 }
 
-// यह मुख्य फंक्शन है जो सभी नोटिफिकेशंस को हमेशा के लिए क्लियर कर देगा
 function clearNotifications() {
-  db.ref('deliveryAssignments').once('value').then(snap => {
-    const assignments = snap.val() || {};
-    for (const orderId of Object.keys(assignments)) {
+  db.ref('orders').once('value').then(snap => {
+    const orders = snap.val() || {};
+    for (const orderId of Object.keys(orders)) {
       saveClearedOrder(orderId);
     }
     updateDeliveryBellUI([]);
   });
 }
-
-// दोनों नामों को आपस में जोड़ दिया ताकि कोई कंफ्यूजन न हो
 window.clearAllDeliveryNotifications = clearNotifications;
 
 function clearSingleNotification(orderId) {
@@ -556,16 +548,15 @@ async function acceptIncomingOrder() {
   
   try {
     saveClearedOrder(currentActiveOrderId);
-    await db.ref('deliveryAssignments/' + currentActiveOrderId).update({
-      status: 'accepted',
-      acceptedAt: new Date().toISOString()
-    });
-    
     await db.ref('orders/' + currentActiveOrderId).update({
-      status: 'Picked Up by Delivery Partner'
+      status: 'Out for Delivery',
+      deliveryUid: user.uid,
+      adminUpdatedAt: new Date().toISOString()
     });
     
-    document.getElementById('incomingOrderModal').remove();
+    const modal = document.getElementById('incomingOrderModal');
+    if (modal) modal.classList.add('hidden');
+    
     alert('Order accepted successfully!');
     location.reload();
   } catch (err) {
@@ -576,13 +567,9 @@ async function acceptIncomingOrder() {
 async function rejectIncomingOrder() {
   if (!currentActiveOrderId) return;
   saveClearedOrder(currentActiveOrderId);
-  try {
-    await db.ref('deliveryAssignments/' + currentActiveOrderId).remove();
-    document.getElementById('incomingOrderModal').remove();
-    currentActiveOrderId = null;
-  } catch (err) {
-    alert('Error: ' + err.message);
-  }
+  const modal = document.getElementById('incomingOrderModal');
+  if (modal) modal.classList.add('hidden');
+  currentActiveOrderId = null;
 }
 async function creditDeliveryWalletForOrder(orderId,order){
  const settingsSnap=await db.ref('deliverySettings/deliveryBoyPayout').once('value');
@@ -604,4 +591,29 @@ async function creditDeliveryWalletForOrder(orderId,order){
 async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');if(st==='delivered'){try{const credit=await creditSellerWalletsForOrder(id,o),deliveryCredit=await creditDeliveryWalletForOrder(id,o);alert('यह order पहले ही Delivered है। Wallet check पूरा: Seller '+credit.creditedCount+' · Delivery '+(deliveryCredit.credited?'₹'+deliveryCredit.amount:'पहले credit / ₹0 payout')+'.');}catch(walletErr){alert('Order Delivered है, लेकिन wallet reconciliation पूरा नहीं हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। Delivery confirm नहीं हो सकती।');if(!['shipped','picked up by delivery partner','out for delivery'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए। इसके बाद Picked Up / Out for Delivery status पर भी QR confirm किया जा सकता है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा और Seller Wallet में net earning credit होगी।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});try{const credit=await creditSellerWalletsForOrder(id,{...o,status:'Delivered'});let deliveryCredit={credited:false,amount:0};try{deliveryCredit=await creditDeliveryWalletForOrder(id,o);}catch(deliveryErr){console.error('Delivery wallet credit failed',deliveryErr);alert('Seller Wallet credit हो गया, लेकिन Delivery Wallet credit fail हुआ: '+deliveryErr.message+'. QR दोबारा scan करके retry करें।')}if(deliveryCredit.credited)alert('Delivery confirmed! Order #'+id+' Delivered है। Seller Wallet: '+credit.creditedCount+' · Delivery Wallet: ₹'+deliveryCredit.amount+' · Commission '+credit.commissionPercent+'%.');else if(deliveryCredit.amount===0)alert('Delivery confirmed! Seller Wallet credit: '+credit.creditedCount+' · Delivery payout अभी ₹0 set है.');else alert('Delivery confirmed! Wallet credits पहले से मौजूद हैं।');}catch(walletErr){alert('Delivery Delivered mark हो गई, लेकिन Seller Wallet credit fail हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
 $('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
-</script></body></html>
+</script>
+  <!-- Delivery Incoming Order Popup Modal -->
+<div id="deliveryPopupModal" class="modal hidden" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div class="modalbox" style="background:#fff;border-radius:18px;padding:24px;width:min(440px,100%);text-align:center;box-shadow:0 15px 40px rgba(0,0,0,0.35);">
+    <div style="font-size: 48px; margin-bottom: 8px;">🚀</div>
+    <h2 style="margin: 0 0 8px; color: #075fc4; font-size: 22px;">New Delivery Assigned!</h2>
+    <p id="popupOrderDetails" style="margin-bottom: 20px; line-height: 1.5; color: #444; font-size: 15px; text-align: left; background: #f8f9fa; padding: 12px; border-radius: 10px;">
+      नया आर्डर उपलब्ध है। कृपया स्वीकार करें।
+    </p>
+    <div style="display: flex; gap: 12px;">
+      <button id="rejectOrderBtn" type="button" style="flex: 1; padding: 12px; font-size: 16px; background: #dc3545; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
+        Cancel / Reject
+      </button>
+      <button id="acceptOrderBtn" type="button" style="flex: 1; padding: 12px; font-size: 16px; background: #28a745; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
+        Accept Order
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Audio for Alert Sound -->
+<audio id="deliveryAlertSound" preload="auto">
+  <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+</body>
+</html>
