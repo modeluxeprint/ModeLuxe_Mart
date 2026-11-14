@@ -651,63 +651,185 @@ $("sellerWithdrawBtn").onclick=async()=>{
 let activeCourierPartners={};
 let sellerOrderRows={},sellerOrderRootRows={},sellerOrderRootListeners={};
 // Seller order notifications: new order/status changes create a bell entry, category badge and dashboard popup.
-let sellerNotifications=[];
-let sellerNotificationWriteKeys=new Set();
-let sellerNotificationListener=null;
-let sellerOrderInitialSnapshot=true;
-let sellerKnownOrderIds=new Set();
-let sellerKnownOrderStates={};
+// --- ModeLuxe Mart Seller Realtime Orders & Notifications Fix ---
+let sellerNotifications = [];
+let sellerNotificationWriteKeys = new Set();
+let sellerNotificationListener = null;
+let sellerOrderInitialSnapshot = true;
+let sellerKnownOrderIds = new Set();
+let sellerKnownOrderStates = {};
+
+function playNotificationSound() {
+  try {
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audio.play().catch(e => console.log('Audio autoplay blocked:', e));
+  } catch (err) {}
+}
+
 function sellerCategoryForNotification(status){
- const s=String(status||'').toLowerCase();
- if(/rto|return to origin|returned to origin/.test(s))return 'rto';
- if(/return|refund/.test(s))return 'return';
- if(s==='delivered')return 'delivered';
- return 'received';
+  const s = String(status||'').toLowerCase();
+  if(/rto|return to origin|returned to origin/.test(s)) return 'rto';
+  if(/return|refund/.test(s)) return 'return';
+  if(s === 'delivered') return 'delivered';
+  return 'received';
 }
-function sellerNotificationLabel(category){return ({received:'Received Order',rto:'RTO Order',delivered:'Delivered Order',return:'Return Order'})[category]||'Order Update';}
-function sellerAddNotification(id,category,title,detail){
- const key=String(id)+'|'+category+'|'+String(title);
- if(sellerNotifications.some(n=>n.key===key)||sellerNotificationWriteKeys.has(key))return;
- const now=new Date();
- const item={key,id:String(id),orderId:String(id),category,title,detail,time:now.toLocaleString(),createdAt:now.toISOString(),seen:false};
- sellerNotifications.unshift(item);sellerNotifications=sellerNotifications.slice(0,100);
- sellerRenderNotificationBadges();sellerRenderNotificationList();sellerShowDashboardPopup(item);
- if(currentUser&&currentUser.uid){
-  sellerNotificationWriteKeys.add(key);
-  const recordKey=encodeURIComponent(key).replace(/[.#$\[\]\/]/g,'_');
-  db.ref('sellerNotifications/'+currentUser.uid+'/'+recordKey).set(item).catch(err=>{sellerNotificationWriteKeys.delete(key);console.warn('Notification save failed',err&&err.message);});
- }
+
+function sellerAddNotification(id, category, title, detail, playSound = true){
+  const key = String(id) + '|' + category + '|' + String(title);
+  if(sellerNotifications.some(n => n.key === key) || sellerNotificationWriteKeys.has(key)) return;
+  
+  const now = new Date();
+  const item = {key, id: String(id), orderId: String(id), category, title, detail, time: now.toLocaleString(), createdAt: now.toISOString(), seen: false};
+  sellerNotifications.unshift(item);
+  sellerNotifications = sellerNotifications.slice(0, 100);
+  
+  sellerRenderNotificationBadges();
+  sellerRenderNotificationList();
+  sellerShowDashboardPopup(item);
+  
+  if (playSound) {
+    playNotificationSound();
+  }
+  
+  if(currentUser && currentUser.uid){
+    sellerNotificationWriteKeys.add(key);
+    const recordKey = encodeURIComponent(key).replace(/[.#$\[\]\/]/g, '_');
+    db.ref('sellerNotifications/' + currentUser.uid + '/' + recordKey).set(item).catch(err => {
+      sellerNotificationWriteKeys.delete(key);
+      console.warn('Notification save failed', err && err.message);
+    });
+  }
 }
+
 function sellerRenderNotificationBadges(){
- const total=sellerNotifications.filter(n=>!n.seen).length;const bell=document.getElementById('sellerBellBadge');if(bell){bell.textContent=total>99?'99+':String(total);bell.classList.toggle('show',total>0);}
- const map={received:'sellerBadgeReceived',rto:'sellerBadgeRto',delivered:'sellerBadgeDelivered',return:'sellerBadgeReturn'};
- Object.entries(map).forEach(([cat,id])=>{const el=document.getElementById(id);if(!el)return;const count=sellerNotifications.filter(n=>n.category===cat&&!n.seen).length;el.textContent=count>99?'99+':String(count);el.classList.toggle('show',count>0);});
+  const total = sellerNotifications.filter(n => !n.seen).length;
+  const bell = document.getElementById('sellerBellBadge');
+  if(bell){
+    bell.textContent = total > 99 ? '99+' : String(total);
+    bell.classList.toggle('show', total > 0);
+  }
+  const map = {received: 'sellerBadgeReceived', rto: 'sellerBadgeRto', delivered: 'sellerBadgeDelivered', return: 'sellerBadgeReturn'};
+  Object.entries(map).forEach(([cat, id]) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const count = sellerNotifications.filter(n => n.category === cat && !n.seen).length;
+    el.textContent = count > 99 ? '99+' : String(count);
+    el.classList.toggle('show', count > 0);
+  });
 }
-function sellerRenderNotificationList(){const host=document.getElementById('sellerNotificationList');if(!host)return;host.innerHTML=sellerNotifications.length?sellerNotifications.map(n=>`<div class="seller-notification-row"><b>${esc(n.title)}</b><div>${esc(n.detail)}</div><div class="hint">${esc(n.time)}</div></div>`).join(''):'<p class="muted">Abhi koi notification nahi hai.</p>';}
-function sellerShowDashboardPopup(){
- if(!document.getElementById('sellerApp')||document.getElementById('sellerApp').classList.contains('hidden'))return;
- const unread=sellerNotifications.filter(n=>!n.seen);
- const old=document.getElementById('sellerNewOrderPopup');
- if(!unread.length){if(old)old.remove();return;}
- const pop=old||document.createElement('div');pop.id='sellerNewOrderPopup';pop.className='seller-notification-popup';
- const rows=unread.slice(0,12).map(n=>`<div class="seller-notification-row"><b>${esc(n.title)}</b><div>${esc(n.detail)}</div><div class="hint">${esc(n.time||'')}</div></div>`).join('');
- pop.innerHTML=`<h3 style="margin:0 0 8px;color:#075fc4;font-size:18px">🔔 नई Notifications (${unread.length})</h3><div style="max-height:45vh;overflow:auto">${rows}${unread.length>12?`<div class="hint">और ${unread.length-12} notifications</div>`:''}</div><button type="button" id="sellerPopupOk" style="display:block;width:100%;margin-top:12px">OK</button>`;
- if(!old)document.body.appendChild(pop);
- document.getElementById('sellerPopupOk').onclick=sellerAcknowledgeAllNotifications;
+
+function sellerRenderNotificationList(){
+  const host = document.getElementById('sellerNotificationList');
+  if(!host) return;
+  host.innerHTML = sellerNotifications.length ? sellerNotifications.map(n => `
+    <div class="seller-notification-row" style="padding:10px;border-bottom:1px solid #e5edf6;font-size:13px">
+      <b>${esc(n.title)}</b>
+      <div>${esc(n.detail)}</div>
+      <div class="hint" style="font-size:11px;color:#687386">${esc(n.time)}</div>
+    </div>
+  `).join('') : '<p class="muted">Abhi koi notification nahi hai.</p>';
 }
+
+function sellerShowDashboardPopup(newItem){
+  const unread = sellerNotifications.filter(n => !n.seen);
+  if(!unread.length) return;
+  
+  let pop = document.getElementById('sellerNewOrderPopup');
+  if(!pop){
+    pop = document.createElement('div');
+    pop.id = 'sellerNewOrderPopup';
+    pop.className = 'seller-notification-popup';
+    pop.style.cssText = 'position:fixed;right:16px;top:80px;z-index:99999;width:min(380px,calc(100vw - 24px));background:#fff;border:2px solid #075fc4;border-radius:16px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,0.25);';
+    document.body.appendChild(pop);
+  }
+  
+  const rows = unread.slice(0, 5).map(n => `
+    <div style="background:#eff6ff;border:1px solid #dbe5f1;padding:9px;border-radius:10px;margin-bottom:8px">
+      <b style="color:#075fc4">${esc(n.title)}</b>
+      <div style="font-size:13px;color:#111827;margin-top:2px">${esc(n.detail)}</div>
+    </div>
+  `).join('');
+  
+  pop.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0;color:#075fc4;font-size:18px">📦 New Order Alert!</h3>
+      <button type="button" onclick="document.getElementById('sellerNewOrderPopup')?.remove()" style="background:none;border:none;font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="max-height:45vh;overflow:auto">${rows}</div>
+    <button type="button" onclick="sellerAcknowledgeAllNotifications(); document.getElementById('sellerOrdersTab')?.click();" style="display:block;width:100%;margin-top:10px;background:#075fc4;color:#fff;border:none;padding:10px;border-radius:10px;font-weight:700;cursor:pointer">View Orders &amp; Acknowledge</button>
+  `;
+}
+
 async function sellerAcknowledgeAllNotifications(){
- const unread=sellerNotifications.filter(n=>!n.seen);
- if(!unread.length){document.getElementById('sellerNewOrderPopup')?.remove();return;}
- const stamp=new Date().toISOString();
- unread.forEach(n=>{n.seen=true;n.seenAt=stamp;});
- sellerRenderNotificationBadges();sellerRenderNotificationList();
- document.getElementById('sellerNewOrderPopup')?.remove();
- if(currentUser&&currentUser.uid){
-  const writes=unread.map(n=>{const recordKey=encodeURIComponent(n.key).replace(/[.#$\[\]\/]/g,'_');return db.ref('sellerNotifications/'+currentUser.uid+'/'+recordKey).update({seen:true,seenAt:stamp});});
-  const results=await Promise.allSettled(writes);
-  const failed=results.some(r=>r.status==='rejected');
-  if(failed)console.warn('Some notification acknowledgements could not be saved.');
- }
+  const unread = sellerNotifications.filter(n => !n.seen);
+  if(!unread.length){
+    document.getElementById('sellerNewOrderPopup')?.remove();
+    return;
+  }
+  const stamp = new Date().toISOString();
+  unread.forEach(n => { n.seen = true; n.seenAt = stamp; });
+  sellerRenderNotificationBadges();
+  sellerRenderNotificationList();
+  document.getElementById('sellerNewOrderPopup')?.remove();
+  
+  if(currentUser && currentUser.uid){
+    const writes = unread.map(n => {
+      const recordKey = encodeURIComponent(n.key).replace(/[.#$\[\]\/]/g, '_');
+      return db.ref('sellerNotifications/' + currentUser.uid + '/' + recordKey).update({seen: true, seenAt: stamp});
+    });
+    await Promise.allSettled(writes);
+  }
+}
+
+function startSellerOrders(){
+  if(!currentUser) return;
+  sellerNotificationWriteKeys.clear();
+  
+  if(sellerNotificationListener){
+    db.ref('sellerNotifications/' + currentUser.uid).off('value', sellerNotificationListener);
+  }
+  sellerNotificationListener = snap => {
+    const raw = snap.val() || {};
+    sellerNotifications = Object.entries(raw).map(([recordKey, n]) => ({
+      ...n, key: n.key || decodeURIComponent(recordKey)
+    })).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, 200);
+    sellerRenderNotificationBadges();
+    sellerRenderNotificationList();
+    if(sellerNotifications.some(n => !n.seen)) sellerShowDashboardPopup();
+  };
+  db.ref('sellerNotifications/' + currentUser.uid).on('value', sellerNotificationListener, err => console.warn('Seller notifications load failed', err && err.message));
+  
+  db.ref('courierPartners').on('value', s => {
+    activeCourierPartners = Object.fromEntries(Object.entries(s.val()||{}).filter(([id, p]) => p && p.active));
+    const statusEl = document.getElementById("sellerCourierPartnersStatus");
+    if(statusEl) statusEl.textContent = Object.keys(activeCourierPartners).length ? "Active courier API partners: " + Object.values(activeCourierPartners).map(p => p.name).join(", ") : "Admin ne active courier API partner configure nahi kiya.";
+    renderSellerOrders();
+  });
+  
+  const ownRef = db.ref("sellerOrders/" + currentUser.uid);
+  ownRef.on("value", s => {
+    const incoming = s.val() || {};
+    const incomingIds = Object.keys(incoming);
+    
+    if(sellerOrderInitialSnapshot){
+      sellerKnownOrderIds = new Set(incomingIds);
+      sellerOrderInitialSnapshot = false;
+    } else {
+      incomingIds.forEach(id => {
+        if(!sellerKnownOrderIds.has(id)){
+          sellerKnownOrderIds.add(id);
+          const orderObj = incoming[id] || {};
+          sellerAddNotification(id, 'received', 'New order received', 'Order #' + id + ' · ' + (orderObj.customerName || 'Customer'), true);
+        }
+      });
+    }
+    
+    sellerOrderRows = incoming;
+    renderSellerOrders();
+  }, e => {
+    const listEl = document.getElementById("sellerOrdersList");
+    if(listEl) listEl.textContent = "Seller orders load nahi hue: " + e.message;
+  });
 }
 function sellerMarkCategorySeen(category){
  const matches=sellerNotifications.filter(n=>n.category===category&&!n.seen);
