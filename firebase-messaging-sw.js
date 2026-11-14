@@ -14,7 +14,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// जब ऐप बंद या लॉक हो, तब यह बैकग्राउंड मैसेज को पकड़कर सिस्टम नोटिफिकेशन दिखाएगा
+// Handles background push notifications when the app is closed or locked
 messaging.onBackgroundMessage((payload) => {
   const notif = payload.notification || {};
   const title = notif.title || "📦 ModeLuxe Mart: New Order!";
@@ -25,16 +25,17 @@ messaging.onBackgroundMessage((payload) => {
     tag: 'modeluxe-order-alert',
     vibrate: [300, 100, 300, 100, 300],
     requireInteraction: true,
-    data: payload.data || { url: '/' }
+    data: payload.data || { url: './Seller-Panel.html' }
   };
 
   self.registration.showNotification(title, options);
 });
 
-// नोटिफिकेशन पर क्लिक करने पर सीधे सेलर पैनल खुल जाएगा
+// Opens the appropriate panel when the notification is clicked
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/Seller-Panel.html';
+  const targetUrl = (event.notification.data && event.notification.data.url) || './Seller-Panel.html';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (let client of windowClients) {
@@ -43,7 +44,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+        return clients.openWindow(new URL(targetUrl, self.location.origin).href);
       }
     })
   );
