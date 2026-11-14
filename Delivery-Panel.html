@@ -5,7 +5,7 @@
 *{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#111827;font-family:system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.head-actions{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:stretch;justify-items:stretch;gap:8px;min-width:0}.head-actions .notification-box{grid-column:1;grid-row:1;align-self:stretch}.head-actions #logout{grid-column:2;grid-row:1;width:100%}.head-actions #myAccountBtn{grid-column:2;grid-row:2;width:100%}.summary-card{cursor:pointer;transition:transform .15s,box-shadow .15s;min-height:94px;display:flex;flex-direction:column;justify-content:center;padding:12px}.summary-card:active{transform:scale(.99)}.summary-card.selected{border:2px solid #075fc4;background:#eff6ff}.dashboard-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.dashboard-quick-grid .summary-card{width:100%;min-width:0;min-height:112px;border-radius:16px}.dashboard-quick-grid .summary-card .big{font-size:30px}.dashboard-expand-panel{padding:14px}.dashboard-expand-panel .topline{align-items:center}.dashboard-quick-grid .summary-card[aria-expanded="true"]{border:2px solid #075fc4;background:#eff6ff;box-shadow:0 5px 16px #075fc41a}.summary-card .big{font-size:34px;font-weight:900;color:#075fc4}.detail-actions{display:flex;gap:8px;flex-wrap:wrap}.detail-actions a{display:inline-block;text-decoration:none}.notification-box{position:relative}.notification-menu{position:fixed;right:12px;top:92px;z-index:100;background:#fff;border:1px solid #dbe5f1;border-radius:14px;box-shadow:0 12px 35px #0f172a22;width:min(340px,calc(100vw - 24px));padding:12px;max-height:65vh;overflow:auto}.notification-item{padding:9px;border-bottom:1px solid #e2e8f0;font-size:13px}.back-btn{margin-bottom:12px}.map-frame{width:100%;height:280px;border:0;border-radius:12px;background:#e2e8f0}.wallet-value{font-size:28px;font-weight:900;color:#075fc4}.brand{color:#075fc4;font-size:12px;letter-spacing:.2em;font-weight:800}.panel,.order{background:#fff;border:1px solid #dbe5f1;border-radius:16px;padding:16px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#075fc4;color:#fff}.muted{background:#e7f2ff;color:#164e84}.danger{background:#b91c1c;color:white}input,select{width:100%;padding:11px;border:1px solid #dbe5f1;border-radius:10px;background:#f8fafc;color:#111827}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.small{font-size:12px;color:#64748b}.blue{color:#075fc4}.hidden{display:none!important}.order{margin-top:12px}.topline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.status{font-weight:800;color:#075fc4}.modal{position:fixed;inset:0;background:#000d;z-index:10;display:flex;align-items:center;justify-content:center;padding:16px}.modalbox{background:white;border-radius:16px;padding:16px;width:min(520px,100%)}#reader{overflow:hidden;border-radius:12px;background:#111;min-height:180px;margin-top:12px}.graph-title{margin:0 0 12px;font-size:18px;line-height:1.3;white-space:nowrap;overflow-x:auto}#deliveryDailyGraph{width:100%;overflow-x:auto}#deliveryDailyGraph .daily-chart{min-width:420px}@media(max-width:540px){main{padding:12px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.panel,.order{padding:12px}.summary-card{min-height:90px;padding:10px}.summary-card .big{font-size:28px}header{align-items:flex-start}header h1{font-size:22px}.head-actions{gap:6px;grid-template-columns:auto auto}.notification-menu{right:12px;left:auto;top:86px}}
 </style></head><body><main>
 <header><div><div class="brand">MODELUXE MART</div><h1 style="margin:4px 0">Delivery Panel</h1><p class="small" style="margin:0">Deliveries · Wallet · Notifications</p></div><div class="head-actions"><div class="notification-box"><button id="bellBtn" class="btn muted" aria-label="Notifications">🔔 <span id="bellBadge">0</span></button><div id="notificationMenu" class="notification-menu hidden"><div class="topline"><b>Notifications</b><button id="clearNotifications" class="btn muted" style="padding:5px 8px">Clear</button></div><div id="notificationList"><p class="small">अभी कोई notification नहीं है।</p></div></div></div><button id="logout" class="btn muted hidden">Logout</button><button id="myAccountBtn" class="btn muted hidden" type="button">👤 My Account</button></div></header>
-<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p><div id="forgotPasswordWrap" style="margin-top:8px"><button id="forgotPasswordOpen" type="button" class="btn muted" style="width:100%">Forgot Password?</button></div><div id="forgotPasswordPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fafc"><h3 style="margin:0 0 8px;color:#075fc4">Reset Delivery Password</h3><p class="small">Registered email aur mobile number bharein. OTP registered mobile par aayega.</p><label class="small">Registered Email *</label><input id="resetEmail" type="email" autocomplete="email" placeholder="delivery@example.com"><label class="small" style="display:block;margin-top:9px">Registered Mobile Number *</label><input id="resetPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="resetSendOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Send OTP</button><div id="resetOtpStep" class="hidden"><label class="small" style="display:block;margin-top:10px">6 Digit OTP *</label><input id="resetOtp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><button id="resetVerifyOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Verify OTP</button></div><div id="resetPasswordStep" class="hidden"><label class="small" style="display:block;margin-top:10px">New Password *</label><input id="resetNewPassword" type="password" minlength="6" autocomplete="new-password" placeholder="New password (min 6 characters)"><label class="small" style="display:block;margin-top:9px">Confirm New Password *</label><input id="resetConfirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Confirm new password"><button id="resetSavePassword" type="button" class="btn primary" style="width:100%;margin-top:10px">Update Password</button></div><p id="resetMsg" class="small" aria-live="polite"></p><button id="forgotPasswordClose" type="button" class="btn muted" style="width:100%;margin-top:6px">Back to Login</button></div></div></section>
+<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password से login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p><div id="forgotPasswordWrap" style="margin-top:8px"><button id="forgotPasswordOpen" type="button" class="btn muted" style="width:100%">Forgot Password?</button></div><div id="forgotPasswordPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fafc"><h3 style="margin:0 0 8px;color:#075fc4">Reset Delivery Password</h3><p class="small">Registered email aur mobile number bharein. OTP registered mobile par aayega.</p><label class="small">Registered Email *</label><input id="resetEmail" type="email" autocomplete="email" placeholder="delivery@example.com"><label class="small" style="display:block;margin-top:9px">Registered Mobile Number *</label><input id="resetPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="resetSendOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Send OTP</button><div id="resetOtpStep" class="hidden"><label class="small" style="display:block;margin-top:10px">6 Digit OTP *</label><input id="resetOtp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><button id="resetVerifyOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Verify OTP</button></div><div id="resetPasswordStep" class="hidden"><label class="small" style="display:block;margin-top:10px">New Password *</label><input id="resetNewPassword" type="password" minlength="6" autocomplete="new-password" placeholder="New password (min 6 characters)"><label class="small" style="display:block;margin-top:9px">Confirm New Password *</label><input id="resetConfirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Confirm new password"><button id="resetSavePassword" type="button" class="btn primary" style="width:100%;margin-top:10px">Update Password</button></div><p id="resetMsg" class="small" aria-live="polite"></p><button id="forgotPasswordClose" type="button" class="btn muted" style="width:100%;margin-top:6px">Back to Login</button></div></div></section>
 <section id="pendingApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Application Status</h2><p id="applicationStatus" class="small">आपका आवेदन Admin की मंजूरी के लिए Pending है।</p><p id="applicationIdentity" class="small"></p><button id="pendingRefresh" class="btn primary" type="button">Refresh Status</button><button id="syncDeliveryApplication" class="btn muted" type="button" style="margin-left:6px">Sync Application</button><button id="pendingLogout" class="btn muted" type="button">Logout</button><p id="applicationSyncMsg" class="small" aria-live="polite"></p></section>
 <section id="recoverApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Complete Delivery Application</h2><p class="small">इस Login UID पर पुराना Application/Profile record नहीं मिला। इसी पुराने Login को रखते हुए अपना नाम और मोबाइल भरकर आवेदन दोबारा Firebase में सुरक्षित करें।</p><label class="small">Full Name *</label><input id="recoverDeliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="recoverDeliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="recoverDeliverySubmit" class="btn primary" type="button" style="width:100%;margin-top:12px">Save / Recover Application</button><button id="recoverDeliveryLogout" class="btn muted" type="button" style="margin-top:8px">Logout</button><p id="recoverDeliveryMsg" class="small" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
@@ -23,7 +23,7 @@
 <section id="detailView" class="hidden"><button id="backList" class="btn muted back-btn">← Orders list</button><div id="orderDetail" class="panel"></div></section>
 </section></main>
 <div id="myAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="myAccountTitle"><div class="modalbox"><div class="topline"><h2 id="myAccountTitle" class="blue" style="margin:0">My Account</h2><button id="myAccountClose" class="btn muted" type="button">Close</button></div><div style="margin-top:14px"><label class="small">Account ID (Firebase UID)</label><input id="accountUid" readonly><label class="small" style="display:block;margin-top:10px">Gmail / Email</label><input id="accountEmail" type="email" autocomplete="email"><label class="small" style="display:block;margin-top:10px">Mobile Number</label><input id="accountPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><label class="small" style="display:block;margin-top:10px">Current Password (account changes verify karne ke liye)</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password"><button id="accountSave" class="btn primary" type="button" style="width:100%;margin-top:14px">Update Account Details</button><p id="accountMsg" class="small" aria-live="polite"></p></div></div></div>
-<div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR ko camera ke andar rakhein.</p><div id="reader"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
+<div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR को camera के अंदर rakhein.</p><div id="reader"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
 <script>
 if (!window.firebase || !firebase.auth || !firebase.database) {
   document.getElementById('loginMsg').textContent = 'Firebase SDK load nahi hua. Internet connection ya Firebase CDN check karein, phir page reload karein.';
@@ -42,8 +42,6 @@ const firebaseConfig = {
         };
 const panelFirebaseApp=firebase.apps.find(app=>app.name==="modeluxe-delivery-panel")||firebase.initializeApp(firebaseConfig,"modeluxe-delivery-panel");
 const db=panelFirebaseApp.database(),auth=panelFirebaseApp.auth();
-// Configure Firebase persistence once. If browser storage is unavailable,
-// continue with Firebase's default in-memory session instead of blocking login.
 const persistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
   .catch(error => { console.warn('Firebase persistence unavailable; continuing:', error); });
 function withTimeout(promise, ms, label) {
@@ -54,7 +52,6 @@ function withTimeout(promise, ms, label) {
   ]).finally(() => clearTimeout(timer));
 }
 let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login',ordersData={},listener=null,scanner=null,scanBusy=false,deliverySettingsListener=null,deliveryWalletListener=null;
-// ModeLuxe Mart Firebase Cloud Messaging registration (web push).
 const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
 const MLM_PUSH_REGISTER_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
 let mlmPushRegistrationPromise = null;
@@ -126,15 +123,12 @@ async function loadDeliveryAccount(user){
    ]),12000,'Delivery profile read');
    let app=appSnap.val()||null, profile=profileSnap.val()||null;
    if(!app&&!profile){
-     // Do not silently claim Pending when Firebase has no record. Keep the authenticated UID
-     // and let the user complete/recover the application without creating another account.
      $('login').classList.add('hidden');$('recoverApplication').classList.remove('hidden');
      $('recoverDeliveryMsg').textContent='Login successful: '+(user.email||'')+'. Is UID par application record nahi mila. Neeche details save karein.';
      return;
    }
    const base={...(profile||{}),...(app||{}),uid:user.uid,email:(app&&app.email)||(profile&&profile.email)||user.email,accountType:'delivery'};
    deliveryProfile=base;
-   // Keep both records aligned. If one path is missing, restore it from the existing record.
    const restored={...base,applicationStatus:base.applicationStatus||base.status||'pending',status:base.status||base.applicationStatus||'pending',submittedAt:base.submittedAt||base.createdAt||new Date().toISOString()};
    if(!app){try{await db.ref('deliveryApplications/'+user.uid).set(restored);}catch(syncErr){console.warn('Delivery application auto-sync:',syncErr);}}
    if(!profile){try{await db.ref('deliveryProfiles/'+user.uid).set(restored);}catch(syncErr){console.warn('Delivery profile auto-sync:',syncErr);}}
@@ -147,20 +141,19 @@ async function loadDeliveryAccount(user){
    startOrders();startDeliveryWithdrawals();
  }catch(e){
    $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');
-   $('loginMsg').textContent='Firebase read error: '+(e.message||e)+' — deliveryApplications aur deliveryProfiles ke apne UID read permissions check karein.';
+   $('loginMsg').textContent='Firebase read error: '+(e.message||e)+' — deliveryApplications aur deliveryProfiles के apne UID read permissions check karein.';
  }
 }
 $('authSubmit').onclick=async()=>{
  const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;
  try{
-   if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');
+   if(!email||password.length<6)throw Error('Sahi email aur kam-से-कम 6 character password bharein.');
    if(authMode==='register'){
      const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();
      if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
      registrationInProgress=true;
      const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString(),uid=cred.user.uid;
      const record={uid,email,name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};
-     // Write each own-UID record separately so Firebase reports the exact denied path.
      try{await db.ref('deliveryApplications/'+uid).set(record);}
      catch(e){throw Error('deliveryApplications/'+uid+' save failed: '+(e.message||e));}
      try{await db.ref('deliveryProfiles/'+uid).set(record);}
@@ -171,24 +164,20 @@ $('authSubmit').onclick=async()=>{
      await loadDeliveryAccount(cred.user);
    }else{
      $('loginMsg').textContent='Firebase se login ho raha hai…';
-     // Wait briefly for persistence setup, but never let it hold authentication forever.
      await Promise.race([persistenceReady,new Promise(resolve=>setTimeout(resolve,5000))]);
      await withTimeout(
        auth.signInWithEmailAndPassword(email,password),
        18000,
        'Firebase login'
      );
-     // onAuthStateChanged is the single owner of post-login profile loading.
      $('loginMsg').textContent='Login successful. Delivery account load ho raha hai…';
    }
  }catch(e){
    const c=e.code||'';
-   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-se-kam 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('wrong-password')||c.includes('invalid-credential')||c.includes('invalid-login-credentials')?'Incorrect password. Please try again.':c.includes('user-not-found')?'Email account nahi mila.':(e.message||'Login nahi ho paya.');
+   $('loginMsg').textContent=c.includes('email-already-in-use')?'Is email se account pehle se bana hai. Login karein.':c.includes('weak-password')?'Password kam-से-कम 6 characters ka rakhein.':c.includes('operation-not-allowed')?'Firebase Console mein Email/Password sign-in enable karein.':c.includes('wrong-password')||c.includes('invalid-credential')||c.includes('invalid-login-credentials')?'Incorrect password. Please try again.':c.includes('user-not-found')?'Email account nahi mila.':(e.message||'Login nahi ho paya.');
  }finally{registrationInProgress=false;btn.disabled=false;}
 };
 
-// Delivery account password recovery: OTP is checked by the Cloudflare Worker,
-// which verifies the email/mobile pair against the existing delivery UID before changing its password.
 const DELIVERY_OTP_WORKER='https://modeluxe-otp.vaishumodeluxe.workers.dev/';
 let deliveryResetRequestId='',deliveryResetToken='';
 $('forgotPasswordOpen').onclick=()=>{$('forgotPasswordPanel').classList.remove('hidden');$('resetMsg').textContent='';};
@@ -224,7 +213,7 @@ $('resetSavePassword').onclick=async()=>{
  btn.disabled=true;$('resetMsg').textContent='Password update ho raha hai…';
  try{
   if(!deliveryResetToken)throw Error('Pehle OTP verify karein.');
-  if(password.length<6)throw Error('Password kam-se-kam 6 characters ka hona chahiye.');
+  if(password.length<6)throw Error('Password kam-से-कम 6 characters ka hona chahiye.');
   if(password!==confirm)throw Error('Dono password match nahi karte.');
   const data=await deliveryResetApi({action:'reset-password',resetToken:deliveryResetToken,newPassword:password});
   $('resetMsg').textContent=data.message||'Password update ho gaya.';
@@ -269,6 +258,7 @@ async function recoverDeliveryApplication(){
 }
 $('recoverDeliverySubmit').onclick=()=>recoverDeliveryApplication().catch(()=>{});
 $('recoverDeliveryLogout').onclick=()=>auth.signOut();
+
 auth.onAuthStateChanged(async user=>{
   if (user) {
     initDeliveryNotificationsAndPopup(user.uid);
@@ -282,13 +272,20 @@ auth.onAuthStateChanged(async user=>{
     $('loginMsg').textContent='Account load error: '+(error.message||error);
   }
 });
-function closeDashboardExpansions(){['walletDetails','payoutDetails'].forEach(id=>$(id).classList.add('hidden'));['walletBox','payoutBox'].forEach(id=>{$(id).classList.remove('selected');$(id).setAttribute('aria-expanded','false')});}
+  function closeDashboardExpansions(){['walletDetails','payoutDetails'].forEach(id=>$(id).classList.add('hidden'));['walletBox','payoutBox'].forEach(id=>{$(id).classList.remove('selected');$(id).setAttribute('aria-expanded','false')});}
 function toggleDashboardPanel(panelId,buttonId){const panel=$(panelId),opening=panel.classList.contains('hidden');closeDashboardExpansions();setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false');if(opening){panel.classList.remove('hidden');$(buttonId).classList.add('selected');$(buttonId).setAttribute('aria-expanded','true')}else{panel.classList.add('hidden');$(buttonId).setAttribute('aria-expanded','false')}}
-$('walletBox').onclick=()=>toggleDashboardPanel('walletDetails','walletBox');$('payoutBox').onclick=()=>toggleDashboardPanel('payoutDetails','payoutBox');
+$('walletBox').onclick=()=>toggleDashboardPanel('walletDetails','walletBox');
+$('payoutBox').onclick=()=>toggleDashboardPanel('payoutDetails','payoutBox');
 $('activeBox').onclick=()=>{if(!$('listView').classList.contains('hidden')&&selectedBucket==='active'){setView('home');$('activeBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false')}else{closeDashboardExpansions();$('deliveredBox').classList.remove('selected');$('deliveredBox').setAttribute('aria-expanded','false');$('activeBox').setAttribute('aria-expanded','true');showBucket('active')}};
 $('deliveredBox').onclick=()=>{if(!$('listView').classList.contains('hidden')&&selectedBucket==='delivered'){setView('home');$('deliveredBox').classList.remove('selected');$('deliveredBox').setAttribute('aria-expanded','false')}else{closeDashboardExpansions();$('activeBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','true');showBucket('delivered')}};
 document.querySelectorAll('[data-close-panel]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.getAttribute('data-close-panel');$(id).classList.add('hidden');if(id==='walletDetails'){$('walletBox').classList.remove('selected');$('walletBox').setAttribute('aria-expanded','false')}if(id==='payoutDetails'){$('payoutBox').classList.remove('selected');$('payoutBox').setAttribute('aria-expanded','false')}}));
-$('backHome').onclick=()=>{setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false')};$('backList').onclick=()=>showBucket(selectedBucket);$('search').oninput=renderOrders;$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};$('clearNotifications').onclick=()=>saveNotifications([]);renderNotifications();
+$('backHome').onclick=()=>{setView('home');$('activeBox').classList.remove('selected');$('deliveredBox').classList.remove('selected');$('activeBox').setAttribute('aria-expanded','false');$('deliveredBox').setAttribute('aria-expanded','false')};
+$('backList').onclick=()=>showBucket(selectedBucket);
+$('search').oninput=renderOrders;
+$('bellBtn').onclick=()=>{$('notificationMenu').classList.toggle('hidden');const a=getNotifications().map(n=>({...n,read:true}));saveNotifications(a)};
+$('clearNotifications').onclick=()=>saveNotifications([]);
+renderNotifications();
+
 $('myAccountBtn').onclick=()=>{
  if(!currentDeliveryUser)return;
  $('accountUid').value=currentDeliveryUser.uid||'';
@@ -330,6 +327,7 @@ $('accountSave').onclick=async()=>{
   $('accountMsg').textContent=code.includes('wrong-password')||code.includes('invalid-credential')?'Current password incorrect hai.':code.includes('email-already-in-use')?'Ye email kisi doosre account par registered hai.':code.includes('requires-recent-login')?'Security ke liye logout karke dobara login karein, phir update karein.':(e.message||'Update nahi ho paya.');
  }finally{btn.disabled=false;}
 };
+
 let deliveryWithdrawalListener=null;
 function startDeliveryWithdrawals(){
  const ref=db.ref('withdrawalRequests/delivery/'+signedInPhone);
@@ -343,6 +341,7 @@ $('deliveryWithdrawBtn').onclick=async()=>{
  const btn=$('deliveryWithdrawBtn'),id=db.ref('withdrawalRequests/delivery/'+signedInPhone).push().key,now=new Date().toISOString(),walletRef=db.ref('deliveryWallets/'+signedInPhone);btn.disabled=true;let reserved=false;
  try{const tx=await walletRef.transaction(current=>{current=current||{balance:0,totalEarned:0};const balance=Math.round(Number(current.balance||0)*100)/100;if(balance<amount)return;current.balance=Math.round((balance-amount)*100)/100;current.withdrawals=current.withdrawals||{};current.withdrawals[id]={amount,status:'pending',createdAt:now};return current;});if(!tx.committed)throw Error('Wallet balance kam hai ya reserve nahi ho saka.');reserved=true;await db.ref('withdrawalRequests/delivery/'+signedInPhone+'/'+id).set({id,uid:signedInPhone,name:deliveryProfile.name||'Delivery Account',amount,status:'pending',walletReserved:true,createdAt:now});$('deliveryWithdrawAmount').value='';$('deliveryWithdrawMsg').textContent='Request submit ho gayi. ₹'+amount.toLocaleString('en-IN')+' reserve kiye gaye hain.';}catch(e){if(reserved){try{await walletRef.transaction(current=>{if(!current)return current;const hold=current.withdrawals&&current.withdrawals[id];if(hold&&hold.status==='pending'){current.balance=Math.round((Number(current.balance||0)+amount)*100)/100;delete current.withdrawals[id];}return current;});}catch(rollback){console.error('Delivery withdrawal rollback failed',rollback);}}$('deliveryWithdrawMsg').textContent='Request submit nahi hui: '+e.message;}finally{btn.disabled=false;}
 };
+
 function renderDeliveryDailyGraph(){
  const host=$("deliveryDailyGraph");if(!host)return;
  const counts={};const today=new Date();today.setHours(0,0,0,0);
@@ -352,7 +351,9 @@ function renderDeliveryDailyGraph(){
  host.innerHTML='<div class="daily-chart" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:190px;padding:12px 6px 5px;border-bottom:1px solid #dbe5f1">'+Object.entries(counts).map(([day,n])=>{const h=Math.max(n?8:2,Math.round(n/max*132));return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:end;height:100%;gap:6px;min-width:0"><b style="font-size:12px">${n}</b><div title="${day}: ${n} orders" style="width:22px;max-width:75%;height:${h}px;background:linear-gradient(180deg,#3b82f6,#075fc4);border-radius:7px 7px 2px 2px"></div><span style="font-size:11px;line-height:1.2;white-space:nowrap;color:#64748b">${day.slice(8,10)}/${day.slice(5,7)}</span></div>`}).join('')+'</div><p class="small" style="margin:9px 0 0">Total: '+Object.values(counts).reduce((a,b)=>a+b,0)+' orders</p>';
 }
 $("deliveryGraphToggle")?.addEventListener("click",()=>{const p=$("deliveryGraphPanel");p.classList.toggle("hidden");if(!p.classList.contains("hidden"))renderDeliveryDailyGraph();});
-function startOrders(){if(listener)db.ref('orders').off('value',listener);listener=s=>{const next=s.val()||{};for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New order received','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));renderDeliveryDailyGraph();$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};db.ref('orders').on('value',listener,e=>$('sync').textContent='Firebase error: '+e.message);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');if($('payoutDetailValue'))$('payoutDetailValue').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');};db.ref('deliverySettings').on('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWalletListener=snap=>{$('walletBalance').textContent='₹'+Number(snap.val()||0).toLocaleString('en-IN')};db.ref('deliveryWallets/'+signedInPhone+'/balance').on('value',deliveryWalletListener)};
+
+function startOrders(){if(listener)db.ref('orders').off('value',listener);listener=s=>{const next=s.val()||{};ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));renderDeliveryDailyGraph();$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};db.ref('orders').on('value',listener,e=>$('sync').textContent='Firebase error: '+e.message);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');if($('payoutDetailValue'))$('payoutDetailValue').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');};db.ref('deliverySettings').on('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWalletListener=snap=>{$('walletBalance').textContent='₹'+Number(snap.val()||0).toLocaleString('en-IN')};db.ref('deliveryWallets/'+signedInPhone+'/balance').on('value',deliveryWalletListener)}
+
 let selectedBucket='active',selectedOrderId='',previousOrders={};
 let deliverySettings={deliveryBoyPayout:0};
 const NOTIFY_KEY='modeluxeDeliveryNotificationsV1';
@@ -363,9 +364,13 @@ function renderNotifications(){const a=getNotifications();$('bellBadge').textCon
 function setView(view){$('listView').classList.toggle('hidden',view!=='list');$('detailView').classList.toggle('hidden',view!=='detail');if(view==='home'){$('listView').classList.add('hidden');$('detailView').classList.add('hidden')} }
 function showBucket(bucket){selectedBucket=bucket;selectedOrderId='';$('activeBox').classList.toggle('selected',bucket==='active');$('deliveredBox').classList.toggle('selected',bucket==='delivered');$('listTitle').textContent=bucket==='active'?'Active deliveries':'Delivered orders';setView('list');renderOrders();window.scrollTo({top:0,behavior:'smooth'})}
 function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>['shipped','picked up by delivery partner','out for delivery'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';return `<button class="order" style="width:100%;text-align:left;cursor:pointer;color:inherit" onclick="openOrderDetail('${esc(id)}')"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="small">ऑर्डर की पूरी जानकारी और मैप खोलने के लिए टैप करें →</div></button>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
+
 window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selectedOrderId=id;const address=o.shippingAddress||o.address||'';const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';const locked=!!o.adminStatusLocked;const mapUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address);$('orderDetail').innerHTML=`<div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h2 style="margin:5px 0">${esc(o.customerName||'Customer')}</h2><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(address||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><p><b>Payment:</b> ${esc(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||'Not available')} · ${esc(o.paymentStatus||'Pending')}</p><p><b>Product Cost:</b> ₹${Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)).toLocaleString('en-IN')}</p><p><b>Delivery Charges:</b> ₹${Math.max(0,Math.round((Number(o.grandTotal??o.totalAmount??o.total??o.price??0)-Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)))*100)/100).toLocaleString('en-IN')}</p><p><b>Grand Total:</b> ₹${Number(o.grandTotal??o.totalAmount??o.total??o.price??0).toLocaleString('en-IN')}</p><p><b>Delivery boy earning per delivery:</b> ₹${Number(deliverySettings.deliveryBoyPayout||0).toLocaleString('en-IN')}</p><div class="detail-actions"><a class="btn primary" target="_blank" rel="noopener" href="${mapUrl}">📍 Google Maps में रास्ता खोलें</a><a class="btn muted" href="tel:${esc(String(o.customerPhone||'').replace(/[^+\d]/g,''))}">📞 ग्राहक को कॉल करें</a></div><div class="grid" style="margin-top:12px"><select id="detailStatus" ${locked?'disabled':''}><option ${o.status==='Picked Up by Delivery Partner'?'selected':''}>Picked Up by Delivery Partner</option><option ${o.status==='Out for Delivery'?'selected':''}>Out for Delivery</option><option ${o.status==='Delivered'?'selected':''}>Delivered</option></select><button class="btn primary" onclick="saveStatus('${esc(id)}')" ${locked?'disabled':''}>Update Status</button></div>${locked?'<p class="small">Final status locked.</p>':''}`;setView('detail');window.scrollTo({top:0,behavior:'smooth'})};
+
 window.saveStatus=async id=>{if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
+
 async function openScanner(){if(!signedInPhone)return alert('पहले login करें');if(typeof Html5Qrcode==='undefined')return alert('QR library load नहीं हुई; internet check करें।');$('scanner').classList.remove('hidden');$('scanMsg').textContent='Camera permission का इंतजार है…';scanBusy=false;try{scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async value=>{if(scanBusy)return;scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';try{await scanner.stop()}catch{}await confirmQr(value)},()=>{});$('scanMsg').textContent='QR को frame के अंदर रखें।'}catch(e){$('scanMsg').textContent='Camera start नहीं हुआ: '+(e.message||e);scanBusy=false}}
+
 async function creditSellerWalletsForOrder(orderId,order){
   const items=Array.isArray(order.items)?order.items:Object.values(order.items||{});
   const grouped={};
@@ -405,64 +410,42 @@ async function creditSellerWalletsForOrder(orderId,order){
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
 
-  let currentActiveOrderId = null;
-const DELIVERY_CLEARED_KEY = 'modeluxeDeliveryClearedOrdersFinal';
-
-function getClearedOrders() {
-  try {
-    return JSON.parse(localStorage.getItem(DELIVERY_CLEARED_KEY) || '[]');
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveClearedOrder(orderId) {
-  try {
-    let cleared = getClearedOrders();
-    if (!cleared.includes(String(orderId))) {
-      cleared.push(String(orderId));
-      localStorage.setItem(DELIVERY_CLEARED_KEY, JSON.stringify(cleared));
-    }
-  } catch (e) {}
-}
+// ==================== NEW REAL-TIME NOTIFICATION & POP-UP SYSTEM ====================
+let currentActiveOrderId = null;
+let panelLoadTime = Date.now();
 
 function initDeliveryNotificationsAndPopup(deliveryUid) {
   if (!deliveryUid) return;
-  
-  // orders और deliveryAssignments दोनों को ट्रैक करें ताकि सेलर द्वारा शिप्पेड करते ही तुरंत पॉप-अप आए
-  db.ref('orders').on('value', snap => {
-    const orders = snap.val() || {};
-    const clearedOrders = getClearedOrders();
-    let deliveryNotifications = [];
-    let hasUnreadPopup = false;
 
-    for (const [orderId, order] of Object.entries(orders)) {
-      if (!order) continue;
+  db.ref('orders').on('child_added', snapshot => {
+    const orderId = snapshot.key;
+    const order = snapshot.val();
+    if (!order) return;
 
-      const orderStatus = String(order.status || '').toLowerCase();
-      // जब आर्डर Shipped या Out for Delivery हो जाए
-      if (['shipped', 'out for delivery', 'picked up by delivery partner'].includes(orderStatus)) {
-        
-        if (!clearedOrders.includes(String(orderId))) {
-          // अगर पॉप-अप नहीं खुला है तो दिखाएं
-          if (!hasUnreadPopup && (!order.deliveryUid || String(order.deliveryUid) === String(deliveryUid))) {
-            showIncomingOrderPopup(orderId, order);
-            playNotificationSound();
-            hasUnreadPopup = true;
-          }
-          
-          deliveryNotifications.push({
-            id: orderId,
-            title: 'New delivery order',
-            detail: `Order #${orderId} · ${order.customerName || 'Customer'}`,
-            time: order.createdAt ? new Date(order.createdAt).toLocaleString() : new Date().toLocaleString(),
-            read: false
-          });
-        }
+    const orderTime = order.createdAt ? new Date(order.createdAt).getTime() : Date.now();
+
+    // सिर्फ वही ऑर्डर पॉप-अप दिखाएगा जो पैनल खुलने के समय या उसके बाद आया है (पुराने ऑर्डर्स इग्नोर हो जाएंगे)
+    if (orderTime >= (panelLoadTime - 15000)) {
+      const status = String(order.status || '').toLowerCase();
+      if (['shipped', 'out for delivery', 'picked up by delivery partner', 'packing', 'order passed', 'order placed'].includes(status)) {
+        showIncomingOrderPopup(orderId, order);
+        playNotificationSound();
+        addNotice('New order received', `Order #${orderId} · ${order.customerName || 'Customer'}`);
       }
     }
-    
-    updateDeliveryBellUI(deliveryNotifications);
+  });
+
+  db.ref('orders').on('child_changed', snapshot => {
+    const orderId = snapshot.key;
+    const order = snapshot.val();
+    if (!order) return;
+
+    const status = String(order.status || '').toLowerCase();
+    if (['shipped', 'out for delivery', 'picked up by delivery partner'].includes(status)) {
+      showIncomingOrderPopup(orderId, order);
+      playNotificationSound();
+      addNotice('Order status updated', `Order #${orderId} · ${order.status}`);
+    }
   });
 }
 
@@ -475,14 +458,14 @@ function showIncomingOrderPopup(orderId, orderDetails) {
     modal.id = 'incomingOrderModal';
     modal.className = 'modal';
     modal.innerHTML = `
-      <div class="modalbox text-center">
-        <div style="font-size: 42px; margin-bottom: 8px;">🚀</div>
-        <h2 class="blue" style="margin:0 0 8px">New Delivery Assigned!</h2>
-        <p id="popupOrderId" class="small font-bold" style="margin-bottom: 12px;"></p>
+      <div class="modalbox text-center" style="background:#fff; border-radius:18px; padding:24px; text-align:center;">
+        <div style="font-size: 48px; margin-bottom: 8px;">🚀</div>
+        <h2 class="blue" style="margin:0 0 8px; color:#075fc4; font-size:22px;">New Delivery Assigned!</h2>
+        <p id="popupOrderId" class="small font-bold" style="margin-bottom: 12px; font-size:14px; font-weight:bold;"></p>
         <div id="popupOrderDetails" style="text-align: left; background: #f8fafc; padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; line-height: 1.5;"></div>
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
-          <button type="button" onclick="rejectIncomingOrder()" class="btn danger" style="padding: 12px;">Cancel / Reject</button>
-          <button type="button" onclick="acceptIncomingOrder()" class="btn primary" style="padding: 12px;">Accept Order</button>
+        <div class="grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button type="button" onclick="rejectIncomingOrder()" class="btn danger" style="padding: 12px; background:#dc3545; color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Cancel / Reject</button>
+          <button type="button" onclick="acceptIncomingOrder()" class="btn primary" style="padding: 12px; background:#075fc4; color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">Accept Order</button>
         </div>
       </div>
     `;
@@ -506,48 +489,12 @@ function playNotificationSound() {
   } catch (err) {}
 }
 
-function updateDeliveryBellUI(notifications) {
-  const badge = document.getElementById('bellBadge');
-  const list = document.getElementById('notificationList');
-  
-  if (!badge || !list) return;
-  
-  badge.textContent = notifications.length;
-  
-  list.innerHTML = notifications.length ? notifications.map(n => `
-    <div class="notification-item" style="position:relative; padding-right:24px;">
-      <b>${esc(n.title)}</b>
-      <div>${esc(n.detail)}</div>
-      <div class="small">${esc(n.time)}</div>
-      <button onclick="clearSingleNotification('${n.id}')" style="position:absolute; top:8px; right:8px; border:none; background:none; color:red; font-weight:bold; cursor:pointer;">✕</button>
-    </div>
-  `).join('') : '<p class="small">अभी कोई notification नहीं है।</p>';
-}
-
-function clearNotifications() {
-  db.ref('orders').once('value').then(snap => {
-    const orders = snap.val() || {};
-    for (const orderId of Object.keys(orders)) {
-      saveClearedOrder(orderId);
-    }
-    updateDeliveryBellUI([]);
-  });
-}
-window.clearAllDeliveryNotifications = clearNotifications;
-
-function clearSingleNotification(orderId) {
-  saveClearedOrder(orderId);
-  const user = auth.currentUser;
-  if (user) initDeliveryNotificationsAndPopup(user.uid);
-}
-
 async function acceptIncomingOrder() {
   if (!currentActiveOrderId) return;
   const user = auth.currentUser;
   if (!user) return alert('Login required');
   
   try {
-    saveClearedOrder(currentActiveOrderId);
     await db.ref('orders/' + currentActiveOrderId).update({
       status: 'Out for Delivery',
       deliveryUid: user.uid,
@@ -566,11 +513,12 @@ async function acceptIncomingOrder() {
 
 async function rejectIncomingOrder() {
   if (!currentActiveOrderId) return;
-  saveClearedOrder(currentActiveOrderId);
   const modal = document.getElementById('incomingOrderModal');
   if (modal) modal.classList.add('hidden');
   currentActiveOrderId = null;
 }
+// ====================================================================================
+
 async function creditDeliveryWalletForOrder(orderId,order){
  const settingsSnap=await db.ref('deliverySettings/deliveryBoyPayout').once('value');
  const fallbackSnap=await db.ref('commissionSettings/deliveryBoyPayout').once('value');
@@ -588,32 +536,11 @@ async function creditDeliveryWalletForOrder(orderId,order){
  });
  return {credited:result.committed,amount:payout};
 }
-async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');if(st==='delivered'){try{const credit=await creditSellerWalletsForOrder(id,o),deliveryCredit=await creditDeliveryWalletForOrder(id,o);alert('यह order पहले ही Delivered है। Wallet check पूरा: Seller '+credit.creditedCount+' · Delivery '+(deliveryCredit.credited?'₹'+deliveryCredit.amount:'पहले credit / ₹0 payout')+'.');}catch(walletErr){alert('Order Delivered है, लेकिन wallet reconciliation पूरा नहीं हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। Delivery confirm नहीं हो सकती।');if(!['shipped','picked up by delivery partner','out for delivery'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए। इसके बाद Picked Up / Out for Delivery status पर भी QR confirm किया जा सकता है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा और Seller Wallet में net earning credit होगी।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});try{const credit=await creditSellerWalletsForOrder(id,{...o,status:'Delivered'});let deliveryCredit={credited:false,amount:0};try{deliveryCredit=await creditDeliveryWalletForOrder(id,o);}catch(deliveryErr){console.error('Delivery wallet credit failed',deliveryErr);alert('Seller Wallet credit हो गया, लेकिन Delivery Wallet credit fail हुआ: '+deliveryErr.message+'. QR दोबारा scan करके retry करें।')}if(deliveryCredit.credited)alert('Delivery confirmed! Order #'+id+' Delivered है। Seller Wallet: '+credit.creditedCount+' · Delivery Wallet: ₹'+deliveryCredit.amount+' · Commission '+credit.commissionPercent+'%.');else if(deliveryCredit.amount===0)alert('Delivery confirmed! Seller Wallet credit: '+credit.creditedCount+' · Delivery payout अभी ₹0 set है.');else alert('Delivery confirmed! Wallet credits पहले से मौजूद हैं।');}catch(walletErr){alert('Delivery Delivered mark हो गई, लेकिन Seller Wallet credit fail हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
-async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
-</script>
-  <!-- Delivery Incoming Order Popup Modal -->
-<div id="deliveryPopupModal" class="modal hidden" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
-  <div class="modalbox" style="background:#fff;border-radius:18px;padding:24px;width:min(440px,100%);text-align:center;box-shadow:0 15px 40px rgba(0,0,0,0.35);">
-    <div style="font-size: 48px; margin-bottom: 8px;">🚀</div>
-    <h2 style="margin: 0 0 8px; color: #075fc4; font-size: 22px;">New Delivery Assigned!</h2>
-    <p id="popupOrderDetails" style="margin-bottom: 20px; line-height: 1.5; color: #444; font-size: 15px; text-align: left; background: #f8f9fa; padding: 12px; border-radius: 10px;">
-      नया आर्डर उपलब्ध है। कृपया स्वीकार करें।
-    </p>
-    <div style="display: flex; gap: 12px;">
-      <button id="rejectOrderBtn" type="button" style="flex: 1; padding: 12px; font-size: 16px; background: #dc3545; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
-        Cancel / Reject
-      </button>
-      <button id="acceptOrderBtn" type="button" style="flex: 1; padding: 12px; font-size: 16px; background: #28a745; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
-        Accept Order
-      </button>
-    </div>
-  </div>
-</div>
 
-<!-- Audio for Alert Sound -->
-<audio id="deliveryAlertSound" preload="auto">
-  <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
-</audio>
-</body>
-</html>
+async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');if(st==='delivered'){try{const credit=await creditSellerWalletsForOrder(id,o),deliveryCredit=await creditDeliveryWalletForOrder(id,o);alert('यह order पहले ही Delivered है। Wallet check पूरा: Seller '+credit.creditedCount+' · Delivery '+(deliveryCredit.credited?'₹'+deliveryCredit.amount+'ก่อน credit / ₹0 payout')+'.');}catch(walletErr){alert('Order Delivered है, लेकिन wallet reconciliation पूरा नहीं हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!['shipped','picked up by delivery partner','out for delivery'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए। इसके बाद Picked Up / Out for Delivery status पर भी QR confirm किया जा सकता है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा और Seller Wallet में net earning credit होगी।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});try{const credit=await creditSellerWalletsForOrder(id,{...o,status:'Delivered'});let deliveryCredit={credited:false,amount:0};try{deliveryCredit=await creditDeliveryWalletForOrder(id,o);}catch(deliveryErr){console.error('Delivery wallet credit failed',deliveryErr);alert('Seller Wallet credit हो गया, लेकिन Delivery Wallet credit fail हुआ: '+deliveryErr.message+'. QR दोबारा scan करके retry करें।')}if(deliveryCredit.credited)alert('Delivery confirmed! Order #'+id+' Delivered है। Seller Wallet: '+credit.creditedCount+' · Delivery Wallet: ₹'+deliveryCredit.amount+' · Commission '+credit.commissionPercent+'%.');else if(deliveryCredit.amount===0)alert('Delivery confirmed! Seller Wallet credit: '+credit.creditedCount+' · Delivery payout अभी ₹0 set है.');else alert('Delivery confirmed! Wallet credits पहले से मौजूद हैं।');}catch(walletErr){alert('Delivery Delivered mark हो गई, लेकिन Seller Wallet credit fail हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
+
+async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;
+
+$('logout').onclick=async()=>{if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('password').value='';};
+</script></body></html>
