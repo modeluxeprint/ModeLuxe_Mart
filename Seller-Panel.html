@@ -513,6 +513,7 @@ auth.onAuthStateChanged(async user=>{
   }
 
   $("sellerApp").classList.remove("hidden");
+  checkAndShowPermissionPopup(user);
   registerModeLuxePush('seller',user);
   $("sellerBellBtn").classList.remove("hidden");
   $("walletHeaderBtn").classList.remove("hidden");
@@ -1192,6 +1193,52 @@ $("supportTicketForm").addEventListener("submit",async e=>{
 });
 
 $("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const shop=$("profileShop").value.trim(),phone=$("profilePhone").value.trim();if(!shop||!/^\d{10}$/.test(phone)){showMsg("profileMsg","Shop name aur sahi 10-digit mobile number bharein.","error");return;}try{sellerProfile={...sellerProfile,uid:currentUser.uid,email:currentUser.email||"",shopName:shop,phone,updatedAt:new Date().toISOString(),accountType:"seller"};await db.ref("sellerProfiles/"+currentUser.uid).update(sellerProfile);$("sellerHeading").textContent=shop;showMsg("profileMsg","Account details save ho gayi.","success");}catch(e2){showMsg("profileMsg","Save nahi hua: "+e2.message,"error");}});
+// जैसे ही सेलर लॉगिन हो जाए, परमिशन चेक करें
+function checkAndShowPermissionPopup(user) {
+  if (!user) return;
+  if (!('Notification' in window)) return;
+  
+  if (Notification.permission === 'default') {
+    setTimeout(() => {
+      const modal = document.getElementById('permissionModal');
+      if (modal) modal.classList.remove('hidden');
+    }, 1000); // लॉगिन होने के 1 सेकंड बाद पॉप-अप दिखेगा
+  }
+}
+
+// जब सेलर 'Allow Notifications Now' पर क्लिक करे
+document.getElementById('grantPermissionBtn')?.addEventListener('click', async () => {
+  const modal = document.getElementById('permissionModal');
+  if (modal) modal.classList.add('hidden');
+  
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const user = auth.currentUser;
+      if (user) {
+        await registerModeLuxePush('seller', user);
+        showSellerNotice("नयी नोटिफिकेशन और साउंड अलर्ट सफलतापूर्वक चालू हो गए हैं!", "success");
+      }
+    } else {
+      showSellerNotice("आपने नोटिफिकेशन की अनुमति नहीं दी। आप इसे ब्राउज़र सेटिंग से ऑन कर सकते हैं।", "error");
+    }
+  } catch (err) {
+    console.error("Permission request error:", err);
+  }
+});
 </script>
+ <!-- Notification Permission Custom Popup Modal -->
+<div id="permissionModal" class="modal hidden" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div class="modalbox" style="background:#fff;border-radius:16px;padding:24px;width:min(420px,100%);text-align:center;box-shadow:0 12px 35px rgba(0,0,0,0.3);">
+    <div style="font-size: 42px; margin-bottom: 10px;">🔔</div>
+    <h2 class="blue" style="margin: 0 0 10px;color:#075fc4;">Enable Push Notifications</h2>
+    <p class="small" style="margin-bottom: 20px; line-height: 1.5;color:#333;">
+      नये ऑर्डर्स की तुरंत जानकारी, आवाज़ (Sound) और लॉक-स्क्रीन अलर्ट पाने के लिए कृपया नोटिफिकेशन की अनुमति (Allow) दें।
+    </p>
+    <button id="grantPermissionBtn" class="btn primary" type="button" style="width: 100%; padding: 12px; font-size: 16px;background:#075fc4;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">
+      Allow Notifications Now
+    </button>
+  </div>
+</div>
 </body>
 </html>
