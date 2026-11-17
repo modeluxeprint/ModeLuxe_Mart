@@ -57,20 +57,6 @@ let signedInPhone='',currentDeliveryUser=null,deliveryProfile={},authMode='login
 // ModeLuxe Mart Firebase Cloud Messaging registration (web push).
 const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
 const MLM_PUSH_REGISTER_URL = "https://modeluxe-order-sync.vaishumodeluxe.workers.dev/";
-const MLM_DELIVERY_ACTION_URL = MLM_PUSH_REGISTER_URL;
-async function callDeliveryWorker(action, orderId) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Delivery login required');
-  const idToken = await user.getIdToken(true);
-  const response = await fetch(MLM_DELIVERY_ACTION_URL, {
-    method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit',
-    headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, orderId: String(orderId) })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.success === false || result.ok === false) throw new Error(result.error || ('Worker request failed: HTTP ' + response.status));
-  return result;
-}
 let mlmPushRegistrationPromise = null;
 async function registerModeLuxePush(role, user) {
   if (!user || !user.uid) return false;
@@ -468,19 +454,13 @@ function updateDeliveryBellUI(notifications) {
 
 // यह मुख्य फंक्शन है जो सभी नोटिफिकेशंस को हमेशा के लिए क्लियर कर देगा
 function clearNotifications() {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return updateDeliveryBellUI([]);
-  db.ref('deliveryQueue').once('value').then(async snap => {
-    const queue = snap.val() || {};
-    const writes = {};
-    for (const [orderId, data] of Object.entries(queue)) {
-      if (data && String(data.status || 'pending').toLowerCase() === 'pending') {
-        writes['deliveryQueueRejections/' + orderId + '/' + uid] = new Date().toISOString();
-      }
+  db.ref('deliveryAssignments').once('value').then(snap => {
+    const assignments = snap.val() || {};
+    for (const orderId of Object.keys(assignments)) {
+      saveClearedOrder(orderId);
     }
-    if (Object.keys(writes).length) await db.ref().update(writes);
     updateDeliveryBellUI([]);
-  }).catch(err => console.error('Clear delivery notifications:', err));
+  });
 }
 
 // दोनों नामों को आपस में जोड़ दिया ताकि कोई कंफ्यूजन न हो
@@ -509,7 +489,10 @@ async function creditDeliveryWalletForOrder(orderId,order){
  return {credited:result.committed,amount:payout};
 }
 let currentActiveOrderId = null;
+let deliveryQueueCallback = null;
 let deliveryAssignmentsCallback = null;
+let currentQueueOrders = {};
+const DELIVERY_QUEUE_REJECTIONS_KEY = 'modeluxeDeliveryQueueDismissed';
 let deliveryAudioContext = null;
 let lastPopupSoundOrderId = '';
 
@@ -534,42 +517,63 @@ function unlockDeliveryNotificationAudio() {
 
 // Listen only after the delivery account is approved. Each partner sees a shared
 // pending request, but their own rejectedBy flag hides it only on their account.
+function getQueueDismissedIds(uid) {
+  try { return JSON.parse(localStorage.getItem(DELIVERY_QUEUE_REJECTIONS_KEY + '_' + uid) || '[]'); }
+  catch { return []; }
+}
+function saveQueueDismissedId(uid, orderId) {
+  const ids = new Set(getQueueDismissedIds(uid));
+  ids.add(String(orderId));
+  try { localStorage.setItem(DELIVERY_QUEUE_REJECTIONS_KEY + '_' + uid, JSON.stringify([...ids])); } catch {}
+}
+
+// Read only the minimal public queue. Private customer details are fetched
+// from deliveryAssignments only after the Worker securely assigns the order.
 function initDeliveryAssignmentsListener(deliveryUid) {
   if (!deliveryUid) return;
   const ref = db.ref('deliveryQueue');
-  if (deliveryAssignmentsCallback) ref.off('value', deliveryAssignmentsCallback);
-  deliveryAssignmentsCallback = async snap => {
-    try {
-      const queue = snap.val() || {};
-      const entries = Object.entries(queue).filter(([id, data]) => data && String(data.status || 'pending').toLowerCase() === 'pending');
-      let candidate = null;
-      for (const [orderId, data] of entries) {
-        const rejectedSnap = await db.ref('deliveryQueueRejections/' + orderId + '/' + deliveryUid).once('value');
-        if (!rejectedSnap.exists()) { candidate = [orderId, data]; break; }
+  if (deliveryQueueCallback) ref.off('value', deliveryQueueCallback);
+  deliveryQueueCallback = async snap => {
+    currentQueueOrders = snap.val() || {};
+    const dismissed = new Set(getQueueDismissedIds(deliveryUid));
+    const candidates = Object.entries(currentQueueOrders).filter(([id, q]) =>
+      q && String(q.status || 'pending').toLowerCase() === 'pending' &&
+      !q.deliveryUid && !dismissed.has(String(id))
+    );
+    if (candidates.length) {
+      candidates.sort((a,b) => String(a[1].createdAt || '').localeCompare(String(b[1].createdAt || '')));
+      let selected = null;
+      for (const [orderId, queueData] of candidates) {
+        try {
+          const rejected = await db.ref('deliveryQueueRejections/' + orderId + '/' + deliveryUid).once('value');
+          if (rejected.exists()) { saveQueueDismissedId(deliveryUid, orderId); continue; }
+        } catch (e) { console.warn('Queue rejection check:', e.message); }
+        selected = [orderId, queueData];
+        break;
       }
-      if (candidate) {
-        const [orderId, details] = candidate;
-        showIncomingOrderPopup(orderId, details);
-        if (lastPopupSoundOrderId !== String(orderId) && playNotificationSound()) lastPopupSoundOrderId = String(orderId);
+      if (selected) {
+        const [orderId, queueData] = selected;
+        showIncomingOrderPopup(orderId, queueData);
+        if (lastPopupSoundOrderId !== String(orderId)) {
+          if (playNotificationSound()) lastPopupSoundOrderId = String(orderId);
+        }
       } else {
         const modal = document.getElementById('incomingOrderModal');
-        if (modal && currentActiveOrderId) {
-          const active = queue[currentActiveOrderId];
-          if (!active || String(active.status || 'pending').toLowerCase() !== 'pending') {
-            modal.remove(); currentActiveOrderId = null; lastPopupSoundOrderId = '';
-          }
-        }
+        if (modal) modal.remove();
+        currentActiveOrderId = null;
+        lastPopupSoundOrderId = '';
       }
-    } catch (error) {
-      console.error('Delivery queue listener:', error);
-      const sync = document.getElementById('sync');
-      if (sync) sync.textContent = 'Delivery queue read error: ' + (error.message || error);
+    } else {
+      const modal = document.getElementById('incomingOrderModal');
+      if (modal) modal.remove();
+      currentActiveOrderId = null;
+      lastPopupSoundOrderId = '';
     }
   };
-  ref.on('value', deliveryAssignmentsCallback, error => {
+  ref.on('value', deliveryQueueCallback, error => {
     console.error('Delivery queue listener:', error);
-    const sync = document.getElementById('sync');
-    if (sync) sync.textContent = 'Delivery queue read error: ' + (error.message || error);
+    const sync = $('sync');
+    if (sync) sync.textContent = 'Delivery queue error: ' + error.message;
   });
 }
 
@@ -597,10 +601,10 @@ function showIncomingOrderPopup(orderId, orderDetails) {
     document.body.appendChild(modal);
   }
   document.getElementById('popupOrderId').textContent = 'Order #' + orderId;
+  const summary = Array.isArray(orderDetails.itemsSummary) ? orderDetails.itemsSummary.map(x => `${esc(x.name || 'Item')} × ${esc(x.qty || 1)}`).join(', ') : '';
   document.getElementById('popupOrderDetails').innerHTML = `
-    <div><b>New order available for pickup.</b></div>
-    <div><b>Items:</b> ${esc(orderDetails.itemCount ?? 'Details after acceptance')}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:6px">Customer contact and address will be available only after you accept this order.</div>`;
+    <div><b>Items:</b> ${summary || (Number(orderDetails.itemCount || 0) + ' item(s)')}</div>
+    <div><b>Request:</b> New delivery available. Accept karne par customer details milengi.</div>`;
 }
 
 function playNotificationSound() {
@@ -630,47 +634,68 @@ function playNotificationSound() {
 
 // First partner to accept wins. RTDB transaction prevents two partners taking
 // the same delivery request at the same time.
+async function callDeliveryQueueWorker(payload) {
+  const user = auth.currentUser;
+  if (!user || user.uid !== signedInPhone) throw new Error('Approved delivery login required.');
+  const idToken = await user.getIdToken();
+  const response = await fetch(MLM_PUSH_REGISTER_URL, {
+    method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit',
+    headers: { 'Authorization': 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.success === false || data.ok === false) throw new Error(data.error || data.message || ('Worker error HTTP ' + response.status));
+  return data;
+}
+
 async function acceptIncomingOrder() {
   if (!currentActiveOrderId) return;
-  const user = auth.currentUser;
-  if (!user || user.uid !== signedInPhone) return alert('Approved delivery login required.');
   const orderId = String(currentActiveOrderId);
+  const btns = document.querySelectorAll('#incomingOrderModal button');
+  btns.forEach(b => b.disabled = true);
   try {
-    const claimRef = db.ref('deliveryClaims/' + orderId);
-    const existing = await claimRef.once('value');
-    if (existing.exists() && existing.val() !== user.uid) throw new Error('यह ऑर्डर किसी दूसरे Delivery Partner ने पहले ही Accept कर लिया है।');
-    if (!existing.exists()) {
-      const claimResult = await claimRef.transaction(current => current == null ? user.uid : undefined);
-      if (!claimResult.committed || claimResult.snapshot.val() !== user.uid) throw new Error('यह ऑर्डर किसी दूसरे Delivery Partner ने पहले ही Accept कर लिया है।');
-    }
-    await callDeliveryWorker('acceptDelivery', orderId);
+    await callDeliveryQueueWorker({ action: 'claimDelivery', orderId });
+    // Once claimed, the child rule permits this partner to read the private assignment.
+    const assignmentSnap = await db.ref('deliveryAssignments/' + orderId).once('value');
+    const assignment = assignmentSnap.val();
+    if (!assignment || String(assignment.deliveryUid || '') !== signedInPhone) throw new Error('Order claim ho gaya, lekin assigned details read nahi hui. Firebase child read rule check karein.');
+    await db.ref('orders/' + orderId).update({
+      status: 'Picked Up by Delivery Partner',
+      deliveryStatus: 'Picked Up by Delivery Partner',
+      deliveryPartnerUid: signedInPhone,
+      deliveryAcceptedAt: assignment.acceptedAt || new Date().toISOString()
+    });
     saveClearedOrder(orderId);
     document.getElementById('incomingOrderModal')?.remove();
-    currentActiveOrderId = null; lastPopupSoundOrderId = '';
-    alert('Order accepted successfully!');
+    currentActiveOrderId = null;
+    lastPopupSoundOrderId = '';
+    alert('Order accepted successfully! Customer details ab Active Deliveries mein milengi.');
   } catch (err) {
-    alert('Failed to accept order: ' + (err.message || err));
+    btns.forEach(b => b.disabled = false);
+    alert('Order accept nahi hua: ' + (err.message || err));
   }
 }
 
 async function rejectIncomingOrder() {
   if (!currentActiveOrderId) return;
+  const orderId = String(currentActiveOrderId);
   const user = auth.currentUser;
   if (!user || user.uid !== signedInPhone) return alert('Approved delivery login required.');
-  const orderId = String(currentActiveOrderId);
   try {
     await db.ref('deliveryQueueRejections/' + orderId + '/' + user.uid).set(new Date().toISOString());
+    saveQueueDismissedId(user.uid, orderId);
     saveClearedOrder(orderId);
     document.getElementById('incomingOrderModal')?.remove();
-    currentActiveOrderId = null; lastPopupSoundOrderId = '';
-    initDeliveryAssignmentsListener(user.uid);
+    currentActiveOrderId = null;
+    lastPopupSoundOrderId = '';
   } catch (err) {
-    alert('Error: ' + (err.message || err));
+    alert('Request cancel nahi hui: ' + (err.message || err));
   }
 }
+
 async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। QR delivery confirm नहीं हो सकती।');if(st==='delivered'){try{const credit=await creditSellerWalletsForOrder(id,o),deliveryCredit=await creditDeliveryWalletForOrder(id,o);alert('यह order पहले ही Delivered है। Wallet check पूरा: Seller '+credit.creditedCount+' · Delivery '+(deliveryCredit.credited?'₹'+deliveryCredit.amount:'पहले credit / ₹0 payout')+'.');}catch(walletErr){alert('Order Delivered है, लेकिन wallet reconciliation पूरा नहीं हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner();return}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(/^razorpay/i.test(String(o.paymentMethod||o.payment||''))&&String(o.paymentStatus||'').toLowerCase()!=='verified')throw Error('Online payment अभी server से Verified नहीं है। Delivery confirm नहीं हो सकती।');if(!['shipped','picked up by delivery partner','out for delivery'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए। इसके बाद Picked Up / Out for Delivery status पर भी QR confirm किया जा सकता है।');if(!confirm('Delivery Confirm करें?\nOrder #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nOK पर Delivered mark होगा और Seller Wallet में net earning credit होगी।')){scanBusy=false;$('scanMsg').textContent='Confirmation cancel की गई।';return}await db.ref('orders/'+id).update({status:'Delivered',adminStatusLocked:true,deliveryConfirmedAt:new Date().toISOString(),adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone,deliveryConfirmedByQr:true});try{const credit=await creditSellerWalletsForOrder(id,{...o,status:'Delivered'});let deliveryCredit={credited:false,amount:0};try{deliveryCredit=await creditDeliveryWalletForOrder(id,o);}catch(deliveryErr){console.error('Delivery wallet credit failed',deliveryErr);alert('Seller Wallet credit हो गया, लेकिन Delivery Wallet credit fail हुआ: '+deliveryErr.message+'. QR दोबारा scan करके retry करें।')}if(deliveryCredit.credited)alert('Delivery confirmed! Order #'+id+' Delivered है। Seller Wallet: '+credit.creditedCount+' · Delivery Wallet: ₹'+deliveryCredit.amount+' · Commission '+credit.commissionPercent+'%.');else if(deliveryCredit.amount===0)alert('Delivery confirmed! Seller Wallet credit: '+credit.creditedCount+' · Delivery payout अभी ₹0 set है.');else alert('Delivery confirmed! Wallet credits पहले से मौजूद हैं।');}catch(walletErr){alert('Delivery Delivered mark हो गई, लेकिन Seller Wallet credit fail हुआ: '+walletErr.message+'. QR दोबारा scan करके retry किया जा सकता है।')}closeScanner()}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryAssignmentsCallback)db.ref('deliveryQueue').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script>
 </body>
 </html>
