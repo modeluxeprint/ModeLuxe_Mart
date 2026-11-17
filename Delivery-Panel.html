@@ -520,14 +520,15 @@ function initDeliveryAssignmentsListener(deliveryUid) {
   if (deliveryAssignmentsCallback) ref.off('value', deliveryAssignmentsCallback);
   deliveryAssignmentsCallback = snap => {
     const assignments = snap.val() || {};
-    const clearedOrders = getClearedOrders();
     let candidate = null;
     for (const [orderId, data] of Object.entries(assignments)) {
       if (!data) continue;
       const status = String(data.status || 'pending').toLowerCase();
+      // Do not use localStorage's old cleared-notification list here: it can
+      // hide a real pending delivery forever after the bell's Clear action.
+      // Rejection is partner-specific and is stored in Firebase instead.
       const alreadyRejected = !!(data.rejectedBy && data.rejectedBy[deliveryUid]);
-      const alreadyClearedHere = clearedOrders.includes(String(orderId));
-      if (!alreadyRejected && !alreadyClearedHere && ['pending', 'assigned'].includes(status)) {
+      if (!alreadyRejected && ['pending', 'assigned'].includes(status)) {
         candidate = [orderId, data];
         break;
       }
@@ -549,7 +550,11 @@ function initDeliveryAssignmentsListener(deliveryUid) {
       }
     }
   };
-  ref.on('value', deliveryAssignmentsCallback, error => console.error('Delivery assignment listener:', error));
+  ref.on('value', deliveryAssignmentsCallback, error => {
+    console.error('Delivery assignment listener:', error);
+    const sync = document.getElementById('sync');
+    if (sync) sync.textContent = 'Delivery request read error: ' + (error.message || error);
+  });
 }
 
 // Popup uses the panel's own CSS, not Tailwind classes that may not be loaded.
