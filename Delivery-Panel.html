@@ -353,7 +353,7 @@ function startDeliveryWithdrawals(){
 $('deliveryWithdrawBtn').onclick=async()=>{
  if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Delivery login required');
  const amount=Math.round(Number($('deliveryWithdrawAmount').value)*100)/100;if(!Number.isFinite(amount)||amount<=0){$('deliveryWithdrawMsg').textContent='Enter a valid amount.';return;}
- const btn=$('deliveryWithdrawBtn'),requestId=db.ref('withdrawalRequests/delivery/'+signedInPhone).push().key;btn.disabled=true;$('deliveryWithdrawMsg').textContent='Submitting request…';
+ const btn=$('deliveryWithdrawBtn'),requestId='wd_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);btn.disabled=true;$('deliveryWithdrawMsg').textContent='Submitting request…';
  try{const result=await callDeliveryQueueWorker({action:'requestDeliveryWithdrawal',amount,requestId});$('deliveryWithdrawAmount').value='';$('deliveryWithdrawMsg').textContent='Request submitted successfully. ₹'+amount.toLocaleString('en-IN')+' reserved. New balance: ₹'+Number(result.balance||0).toLocaleString('en-IN');}catch(e){$('deliveryWithdrawMsg').textContent='Request not submitted: '+(e.message||'Please try again.');}finally{btn.disabled=false;}
 };
 function renderDeliveryDailyGraph(){
