@@ -1430,9 +1430,12 @@ function renderWithdrawals(){
    ['Amount','₹'+amount.toLocaleString('en-IN')],
    ['Status',String(r.status||'pending')],
    ['Requested at',String(r.createdAt||r.requestedAt||'Not provided')],
+   ['Withdrawal method',String(r.payoutMethod||'Not provided').toUpperCase()],
    ['UPI ID',String(r.upiId||r.upi||'Not provided')],
    ['Account holder',String(r.accountHolder||r.accountName||'Not provided')],
-   ['Bank / UPI details',String(r.bankName||r.accountNumber||r.bankAccount||'Not provided')]
+   ['Bank name',String(r.bankName||'Not provided')],
+   ['Account number',String(r.accountNumber||r.bankAccount||'Not provided')],
+   ['IFSC code',String(r.ifsc||'Not provided')]
   ];
   const actions=status==='pending'
    ?`<button class="btn success" type="button" onclick="reviewWithdrawal('${esc(r.type)}','${esc(r.uid)}','${esc(r.id)}','approved')">Approve Request</button>
