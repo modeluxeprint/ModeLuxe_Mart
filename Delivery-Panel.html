@@ -409,8 +409,6 @@ async function creditSellerWalletsForOrder(orderId,order){
   }
   return {sellerCount:Object.keys(grouped).length,creditedCount:credited.length,commissionPercent};
 }
-
-  let currentActiveOrderId = null;
 const DELIVERY_CLEARED_KEY = 'modeluxeDeliveryClearedOrdersFinal';
 
 function getClearedOrders() {
@@ -493,42 +491,30 @@ async function creditDeliveryWalletForOrder(orderId,order){
  });
  return {credited:result.committed,amount:payout};
 }
-
+let currentActiveOrderId = null;
 // 1. डेटाबेस पर लाइव सुनना कि क्या कोई नया ऑर्डर असाइन हुआ है
 function initDeliveryAssignmentsListener(deliveryUid) {
   if (!deliveryUid) return;
   
   db.ref('deliveryAssignments').on('value', snap => {
     const assignments = snap.val() || {};
-    const clearedOrders = getClearedOrders();
-    let deliveryNotifications = [];
+    const clearedOrders = getClearedOrders(); // आपके पैनल में यह फंक्शन पहले से है
     let hasUnreadPopup = false;
 
     for (const [orderId, data] of Object.entries(assignments)) {
       if (!data) continue;
 
-      // अगर आर्डर इसी डिलीवरी बॉय का है और क्लियर नहीं किया गया है
+      // अगर इस आर्डर को इस डिवाइस पर पहले क्लियर नहीं किया गया है और यह पेंडिंग/असाइन है
       if (
-        String(data.deliveryUid) === String(deliveryUid) && 
-        !clearedOrders.includes(String(orderId))
+        !clearedOrders.includes(String(orderId)) && 
+        (data.status === 'pending' || data.status === 'assigned' || !data.status) && 
+        !hasUnreadPopup
       ) {
-        if ((data.status === 'pending' || data.status === 'assigned' || !data.status) && !hasUnreadPopup) {
-          showIncomingOrderPopup(orderId, data);
-          playNotificationSound(); // तेज़ आवाज़ और बीप बजाने के लिए
-          hasUnreadPopup = true;
-        }
-        
-        deliveryNotifications.push({
-          id: orderId,
-          title: 'New order received',
-          detail: `Order #${orderId} · ${data.customerName || 'Customer'}`,
-          time: data.createdAt ? new Date(data.createdAt).toLocaleString() : new Date().toLocaleString(),
-          read: false
-        });
+        showIncomingOrderPopup(orderId, data);
+        playNotificationSound(); // तेज़ आवाज़ और बीप बजाने के लिए
+        hasUnreadPopup = true;
       }
     }
-    
-    updateDeliveryBellUI(deliveryNotifications);
   });
 }
 
@@ -597,13 +583,12 @@ async function acceptIncomingOrder() {
   
   try {
     saveClearedOrder(currentActiveOrderId);
-    // डेटाबेस में स्टेटस 'accepted' करें
+    // डेटाबेस में स्टेटस 'accepted' करें और आर्डर को 'Picked Up by Delivery Partner' सेट करें
     await db.ref('deliveryAssignments/' + currentActiveOrderId).update({
       status: 'accepted',
       acceptedAt: new Date().toISOString()
     });
     
-    // आर्डर को 'Picked Up by Delivery Partner' सेट करें
     await db.ref('orders/' + currentActiveOrderId).update({
       status: 'Picked Up by Delivery Partner'
     });
@@ -622,6 +607,7 @@ async function rejectIncomingOrder() {
   if (!currentActiveOrderId) return;
   saveClearedOrder(currentActiveOrderId);
   try {
+    // असाइनमेंट हटा दें ताकि यह पेंडिंग से हटे
     await db.ref('deliveryAssignments/' + currentActiveOrderId).remove();
     document.getElementById('incomingOrderModal').remove();
     currentActiveOrderId = null;
