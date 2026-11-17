@@ -26,7 +26,22 @@
 <button id="activeBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="listView" style="text-align:left"><div class="small">Active deliveries</div><div id="activeCount" class="big">0</div><div class="small">ऑर्डर की सूची खोलें →</div></button>
 <button id="deliveredBox" class="panel summary-card" type="button" aria-expanded="false" aria-controls="listView" style="text-align:left"><div class="small">Delivered orders</div><div id="deliveredCount" class="big">0</div><div class="small">Delivered सूची खोलें →</div></button>
 </div>
-<section id="walletDetails" class="panel hidden dashboard-expand-panel" style="margin-top:10px" aria-label="Wallet details"><div class="topline"><b>Wallet Withdrawal</b><button class="btn muted close-top-panel" type="button" data-close-panel="walletDetails">Close ✕</button></div><p class="small">Request submit karte hi amount available balance se reserve ho jayega. Admin cancel karega to refund milega.</p><input id="deliveryWithdrawAmount" type="number" min="1" step="0.01" placeholder="Withdrawal amount ₹"><button id="deliveryWithdrawBtn" class="btn primary" style="width:100%;margin-top:9px">Submit Withdrawal Request</button><p id="deliveryWithdrawMsg" class="small" aria-live="polite"></p><div class="withdraw-tracking"><div class="topline" style="margin:14px 0 8px"><b>Withdrawal Request Tracking</b><span class="small">Live status</span></div><div id="deliveryWithdrawHistory" class="withdraw-tracking-list"><p class="small">No withdrawal requests yet.</p></div></div></section>
+<section id="walletDetails" class="panel hidden dashboard-expand-panel" style="margin-top:10px" aria-label="Wallet details"><div class="topline"><b>Wallet Withdrawal</b><button class="btn muted close-top-panel" type="button" data-close-panel="walletDetails">Close ✕</button></div><p class="small">Request submit karte hi amount available balance se reserve ho jayega. Admin cancel karega to refund milega.</p><input id="deliveryWithdrawAmount" type="number" min="1" step="0.01" placeholder="Withdrawal amount ₹">
+<div class="withdraw-method-wrap" style="margin-top:12px;padding:12px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fbff">
+ <b>Withdrawal Method</b>
+ <div style="display:flex;gap:16px;flex-wrap:wrap;margin:10px 0">
+  <label style="display:flex;align-items:center;gap:7px"><input type="radio" name="deliveryPayoutMethod" value="upi" checked style="width:auto"> UPI ID</label>
+  <label style="display:flex;align-items:center;gap:7px"><input type="radio" name="deliveryPayoutMethod" value="bank" style="width:auto"> Bank Account</label>
+ </div>
+ <div id="deliveryUpiFields"><input id="deliveryWithdrawUpi" type="text" maxlength="100" placeholder="UPI ID (example@upi)" autocomplete="off"></div>
+ <div id="deliveryBankFields" class="hidden">
+  <input id="deliveryWithdrawAccountHolder" type="text" maxlength="100" placeholder="Account holder name" autocomplete="name" style="margin-bottom:8px">
+  <input id="deliveryWithdrawBankName" type="text" maxlength="100" placeholder="Bank name" style="margin-bottom:8px">
+  <input id="deliveryWithdrawAccountNumber" type="text" inputmode="numeric" maxlength="30" placeholder="Account number" style="margin-bottom:8px">
+  <input id="deliveryWithdrawIfsc" type="text" maxlength="11" placeholder="IFSC code" autocapitalize="characters">
+ </div>
+</div>
+<button id="deliveryWithdrawBtn" class="btn primary" style="width:100%;margin-top:9px">Submit Withdrawal Request</button><p id="deliveryWithdrawMsg" class="small" aria-live="polite"></p><div class="withdraw-tracking"><div class="topline" style="margin:14px 0 8px"><b>Withdrawal Request Tracking</b><span class="small">Live status</span></div><div id="deliveryWithdrawHistory" class="withdraw-tracking-list"><p class="small">No withdrawal requests yet.</p></div></div></section>
 <section id="payoutDetails" class="panel hidden dashboard-expand-panel" style="margin-top:10px" aria-label="Earning details"><div class="topline"><b>Delivery Earning Details</b><button class="btn muted close-top-panel" type="button" data-close-panel="payoutDetails">Close ✕</button></div><p class="small">हर सफल Delivery पर आपको Admin Panel में तय की गई राशि मिलेगी।</p><p class="small">आपकी मौजूदा प्रति Delivery कमाई: <strong id="payoutDetailValue" class="blue">₹0</strong></p><p class="small">कमाई Delivered order confirm होने के बाद Wallet में जोड़ी जाएगी।</p></section>
 <div class="panel" style="margin-top:10px;padding:12px"><div class="graph-toggle-row"><button id="deliveryGraphToggle" class="btn primary" type="button" aria-expanded="false">📊 Order Graph</button><button id="earningGraphToggle" class="btn primary" type="button" aria-expanded="false">💰 Daily Earning</button></div><section id="deliveryGraphPanel" class="hidden" style="margin-top:12px"><h3 class="graph-title">Daily Orders (Last 7 Days)</h3><div id="deliveryDailyGraph" aria-live="polite"></div></section><section id="earningGraphPanel" class="hidden" style="margin-top:12px"><h3 class="graph-title">Daily Earnings (Last 7 Days)</h3><div id="deliveryEarningGraph" aria-live="polite"></div></section></div>
 <div class="panel" style="margin-top:12px"><input id="search" placeholder="Order ID, customer, phone search karein"><p id="sync" class="small" style="margin-bottom:0">Firebase se connect ho raha hai…</p></div>
@@ -351,11 +366,24 @@ function startDeliveryWithdrawals(){
  deliveryWithdrawalListener=snap=>{const rows=Object.entries(snap.val()||{}).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));$('deliveryWithdrawHistory').innerHTML=rows.length?rows.map(([id,r])=>{const status=String(r.status||'pending');const label=status.charAt(0).toUpperCase()+status.slice(1);return '<div class="withdraw-track-item"><div class="withdraw-track-head"><span class="withdraw-track-amount">₹'+Number(r.amount||0).toLocaleString('en-IN')+'</span><span class="withdraw-track-status">'+esc(label)+'</span></div><div class="withdraw-track-meta">Request ID: '+esc(id)+'</div><div class="withdraw-track-meta">Submitted: '+esc(r.createdAt||'')+'</div>'+(r.note?'<div class="withdraw-track-meta">Note: '+esc(r.note)+'</div>':'')+'</div>';}).join(''):'<p class="small">No withdrawal requests yet.</p>';};
  ref.on('value',deliveryWithdrawalListener,e=>$('deliveryWithdrawHistory').textContent='History load error: '+e.message);
 }
+document.querySelectorAll('input[name="deliveryPayoutMethod"]').forEach(el=>el.addEventListener('change',()=>{
+ const method=document.querySelector('input[name="deliveryPayoutMethod"]:checked')?.value||'upi';
+ $('deliveryUpiFields').classList.toggle('hidden',method!=='upi');$('deliveryBankFields').classList.toggle('hidden',method!=='bank');
+}));
 $('deliveryWithdrawBtn').onclick=async()=>{
  if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Delivery login required');
  const amount=Math.round(Number($('deliveryWithdrawAmount').value)*100)/100;if(!Number.isFinite(amount)||amount<=0){$('deliveryWithdrawMsg').textContent='Enter a valid amount.';return;}
+ const payoutMethod=document.querySelector('input[name="deliveryPayoutMethod"]:checked')?.value||'upi';
+ const payoutDetails={payoutMethod};
+ if(payoutMethod==='upi'){
+  payoutDetails.upiId=$('deliveryWithdrawUpi').value.trim();
+  if(!/^[^\s@]+@[^\s@]+$/.test(payoutDetails.upiId)){ $('deliveryWithdrawMsg').textContent='Enter a valid UPI ID.';return; }
+ }else{
+  payoutDetails.accountHolder=$('deliveryWithdrawAccountHolder').value.trim();payoutDetails.bankName=$('deliveryWithdrawBankName').value.trim();payoutDetails.accountNumber=$('deliveryWithdrawAccountNumber').value.trim();payoutDetails.ifsc=$('deliveryWithdrawIfsc').value.trim().toUpperCase();
+  if(!payoutDetails.accountHolder||!payoutDetails.bankName||!/^\d{6,30}$/.test(payoutDetails.accountNumber)||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(payoutDetails.ifsc)){ $('deliveryWithdrawMsg').textContent='Enter valid bank account details and IFSC.';return; }
+ }
  const btn=$('deliveryWithdrawBtn'),requestId='wd_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);btn.disabled=true;$('deliveryWithdrawMsg').textContent='Submitting request…';
- try{const result=await callDeliveryQueueWorker({action:'requestDeliveryWithdrawal',amount,requestId});$('deliveryWithdrawAmount').value='';$('deliveryWithdrawMsg').textContent='';await showDeliveryDialog({title:'Request Submitted',message:'Your withdrawal request for ₹'+amount.toLocaleString('en-IN')+' has been submitted successfully.\nRequest ID: '+(result.requestId||requestId),confirmText:'OK'});}catch(e){$('deliveryWithdrawMsg').textContent='Request not submitted: '+(e.message||'Please try again.');}finally{btn.disabled=false;}
+ try{const result=await callDeliveryQueueWorker({action:'requestDeliveryWithdrawal',amount,requestId,...payoutDetails});$('deliveryWithdrawAmount').value='';$('deliveryWithdrawUpi').value='';$('deliveryWithdrawAccountHolder').value='';$('deliveryWithdrawBankName').value='';$('deliveryWithdrawAccountNumber').value='';$('deliveryWithdrawIfsc').value='';$('deliveryWithdrawMsg').textContent='';await showDeliveryDialog({title:'Request Submitted',message:'Your withdrawal request for ₹'+amount.toLocaleString('en-IN')+' has been submitted successfully.\nRequest ID: '+(result.requestId||requestId),confirmText:'OK'});}catch(e){$('deliveryWithdrawMsg').textContent='Request not submitted: '+(e.message||'Please try again.');}finally{btn.disabled=false;}
 };
 function renderDeliveryDailyGraph(){
  const host=$("deliveryDailyGraph");if(!host)return;
