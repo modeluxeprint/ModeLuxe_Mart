@@ -1050,17 +1050,6 @@ window.downloadSellerInvoice = async function(id){
    headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
    body:JSON.stringify({action:"updateStatus",orderId:String(id),status})
   });
-  // जैसे ही सेलर Shipped या कोई स्टेटस अपडेट करे, डिलीवरी असाइनमेंट भी भेजें
-if (status === "Shipped") {
-  await db.ref("deliveryAssignments/" + id).set({
-    orderId: String(id),
-    customerName: order.customerName || "Customer",
-    shippingAddress: order.shippingAddress || order.address || "",
-    totalAmount: order.totalAmount || order.total || 0,
-    status: "pending", // डिलीवरी पैनल पर पॉप-अप ट्रिगर करने के लिए
-    createdAt: new Date().toISOString()
-  });
-}
   const result=await response.json().catch(()=>({}));
   if(!response.ok||!result.ok)throw Error(result.error||("Worker HTTP "+response.status));
   showSellerNotice(status==="Processing"?"Order Seller Processing mark ho gaya.":"Order Shipped mark ho gaya.");
