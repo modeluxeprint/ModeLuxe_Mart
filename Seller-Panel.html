@@ -371,7 +371,7 @@ async function registerModeLuxePush(role, user) {
 
 let sellerRealtimeSubscriptions=[];
 function sellerListen(path,event,callback,errorCallback){const ref=db.ref(path);ref.on(event,callback,errorCallback);sellerRealtimeSubscriptions.push({ref,event,callback});return ref;}
-function stopSellerRealtimeListeners(){sellerRealtimeSubscriptions.forEach(x=>{try{x.ref.off(x.event,x.callback);}catch(e){}});sellerRealtimeSubscriptions=[];sellerOrderRootListeners={};sellerOrderRootRows={};sellerOrderRows={};activeCourierPartners={};sellerSupportListener=null;}
+function stopSellerRealtimeListeners(){if(typeof sellerDeliveredSyncTimer!=="undefined"&&sellerDeliveredSyncTimer){clearInterval(sellerDeliveredSyncTimer);sellerDeliveredSyncTimer=null;}sellerRealtimeSubscriptions.forEach(x=>{try{x.ref.off(x.event,x.callback);}catch(e){}});sellerRealtimeSubscriptions=[];sellerOrderRootListeners={};sellerOrderRootRows={};sellerOrderRows={};activeCourierPartners={};sellerSupportListener=null;}
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function showSellerNotice(message,type="success"){
@@ -885,6 +885,16 @@ function renderSellerDailyGraph(){
 }
 document.getElementById("sellerGraphToggle")?.addEventListener("click",()=>{const p=document.getElementById("sellerGraphPanel"),btn=document.getElementById("sellerGraphToggle");const opening=p.classList.contains("hidden");p.classList.toggle("hidden",!opening);btn.classList.toggle("active",opening);btn.setAttribute("aria-expanded",String(opening));if(opening)renderSellerDailyGraph();});
 let activeSellerOrderFilter="";
+function sellerResolvedOrderStatus(root,base){
+ const records=[root||{},base||{}];
+ // A Delivered value in either status field is authoritative, even if an older
+ // status field still says Shipped or Seller Processing.
+ for(const record of records){
+  const values=[record.status,record.deliveryStatus].map(v=>String(v||"").trim().toLowerCase());
+  if(values.includes("delivered"))return "Delivered";
+ }
+ return String((root&&root.status)||(root&&root.deliveryStatus)||(base&&base.status)||(base&&base.deliveryStatus)||"Order Placed");
+}
 function sellerOrderCategory(status){
  const s=String(status||"").trim().toLowerCase();
  if(/rto|return to origin|returned to origin/.test(s))return "rto";
@@ -903,7 +913,7 @@ document.querySelectorAll("#sellerOrderFilterTabs [data-order-filter]").forEach(
 }));
 function sellerRenderOrderTotals(){
  const counts={received:0,rto:0,delivered:0,return:0};
- Object.entries(sellerOrderRows||{}).forEach(([id,base])=>{const root=sellerOrderRootRows[id]||{};const cat=sellerOrderCategory(root.status||base.status);if(Object.prototype.hasOwnProperty.call(counts,cat))counts[cat]++;});
+ Object.entries(sellerOrderRows||{}).forEach(([id,base])=>{const root=sellerOrderRootRows[id]||{};const cat=sellerOrderCategory(sellerResolvedOrderStatus(root,base));if(Object.prototype.hasOwnProperty.call(counts,cat))counts[cat]++;});
  const ids={received:'sellerOrderTotalReceived',rto:'sellerOrderTotalRto',delivered:'sellerOrderTotalDelivered',return:'sellerOrderTotalReturn'};
  Object.entries(ids).forEach(([cat,id])=>{const el=document.getElementById(id);if(el)el.textContent=String(counts[cat]);});
 }
@@ -911,19 +921,19 @@ function renderSellerOrders(){
  renderSellerDailyGraph();sellerRenderOrderTotals();
  const rows=Object.entries(sellerOrderRows||{});
  if(!activeSellerOrderFilter){$("sellerOrdersList").textContent="Upar se Received, RTO, Delivered ya Return Order select karein.";return;}
- const filteredRows=rows.filter(([id,base])=>{const root=sellerOrderRootRows[id]||{};return sellerOrderCategory(root.status||base.status)===activeSellerOrderFilter;});
+ const filteredRows=rows.filter(([id,base])=>{const root=sellerOrderRootRows[id]||{};return sellerOrderCategory(sellerResolvedOrderStatus(root,base))===activeSellerOrderFilter;});
  const orderTime=([id,base])=>{const root=sellerOrderRootRows[id]||{};const raw=root.createdAt||base.createdAt||root.timestamp||base.timestamp||root.dateTime||base.dateTime;const parsed=raw?Date.parse(raw):NaN;if(Number.isFinite(parsed))return parsed;const numeric=Number(id);return Number.isFinite(numeric)?numeric:0;};
  filteredRows.sort((a,b)=>orderTime(b)-orderTime(a));
  const notifiedReceivedOrderIds=new Set((sellerNotifications||[]).filter(n=>n&&n.category==='received').map(n=>String(n.orderId||n.id||'')));
  $("sellerOrdersList").innerHTML=filteredRows.map(([id,base])=>{
-  const root=sellerOrderRootRows[id]||{},o={...base,...root,status:root.status||base.status,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
+  const root=sellerOrderRootRows[id]||{},resolvedStatus=sellerResolvedOrderStatus(root,base),o={...base,...root,status:resolvedStatus,adminStatusLocked:root.adminStatusLocked===true||base.adminStatusLocked===true};
   const items=Array.isArray(o.items)?o.items:Object.values(o.items||{});
   const firstItem=items[0]||{};
   const isNewOrder=activeSellerOrderFilter==='received'&&notifiedReceivedOrderIds.has(String(id))&&String(root.status||base.status||'Order Placed')==='Order Placed';
   const firstProductId=String(firstItem.id||firstItem.productId||firstItem.productID||firstItem.sku||"");
   const matchingSellerProduct=firstProductId?(myProducts[firstProductId]||{}):{};
   const productImage=firstItem.imageUrl||firstItem.imageURL||firstItem.image||firstItem.img||firstItem.photo||firstItem.productImage||firstItem.photoUrl||firstItem.imageData||matchingSellerProduct.imageUrl||matchingSellerProduct.image||matchingSellerProduct.img||"";
-  const status=String(root.status||base.status||o.status||"Order Placed");
+  const status=sellerResolvedOrderStatus(root,base);
   const displayedStatus=status.toLowerCase()==="delivered"?"✓ Delivered":status;
   const canUpdate=!o.adminStatusLocked&&!['Delivered','Cancelled','Refunded'].includes(status);
   const processingDone=['Processing','Shipped'].includes(status);
@@ -940,10 +950,30 @@ function renderSellerOrders(){
   return `<article class="product order-card${isNewOrder?' is-new-order':''}">${productImage?`<img class="order-thumb" src="${esc(productImage)}" alt="Product">`:`<div class="order-thumb" style="display:grid;place-items:center">📦</div>`}<div>${isNewOrder?'<span class="new-order-label">NEW ORDER</span><br>':''}<b>Order #${esc(id)}</b><div class="meta">${esc(o.customerName||"")} · ${esc(displayedStatus)}</div><div class="meta">${itemSummary||'Item details unavailable'}</div><div class="meta">${esc(o.shippingAddress||"")} · PIN ${esc(o.pin||"")}</div>${o.courierTracking?`<div class="meta">Courier: ${esc(o.courierName||"")} · AWB: ${esc(o.courierTracking)}</div>`:""}${canUpdate?`<div class="actions order-status-actions"><button class="${isProcessing?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Processing')" ${processingDone?'disabled':''}>${isProcessing?'✓ Seller Processing':'Mark Seller Processing'}</button><button class="${isShipped?'primary':'secondary'}" onclick="sellerSetOrderStatus('${esc(id)}','Shipped')" ${!processingDone||isShipped?'disabled':''}>${isShipped?'✓ Shipped':'Mark Shipped'}</button><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div>`:`<div class="actions order-status-actions"><button class="secondary invoice-compact" onclick="downloadSellerInvoice(&quot;${esc(id)}&quot;)">Print Invoice</button></div><div class="hint">Order status locked / completed.</div>`}</div></article>`;
  }).join("")||"Is category mein abhi koi order nahi hai.";
 }
+let sellerDeliveredSyncTimer=null;
+let sellerDeliveredSyncRunning=false;
+async function sellerSyncDeliveredOrders(){
+ if(!currentUser||sellerDeliveredSyncRunning)return;
+ sellerDeliveredSyncRunning=true;
+ try{
+  const user=currentUser;
+  const token=await user.getIdToken(true);
+  const response=await fetch(MLM_PUSH_REGISTER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({action:"syncSellerDeliveredOrders"})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||result.success===false)throw new Error(result.error||("HTTP "+response.status));
+  if(currentUser&&currentUser.uid===user.uid&&Number(result.synced||0)>0){
+   console.info("Delivered seller orders synced:",result.synced);
+  }
+ }catch(e){console.warn("Delivered order sync failed; it will retry automatically",e&&e.message);}
+ finally{sellerDeliveredSyncRunning=false;}
+}
 function startSellerOrders(){
  if(!currentUser)return;
- // One-time server-side backfill keeps already-delivered orders out of Received.
- (async()=>{try{const token=await currentUser.getIdToken(true);await fetch(MLM_PUSH_REGISTER_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({action:"syncSellerDeliveredOrders"})});}catch(e){console.warn("Delivered order sync will retry on next login",e&&e.message);}})();
+ // Backfill immediately and keep checking so Delivery Panel completions also
+ // appear in the Seller Panel Delivered section without requiring a new login.
+ if(sellerDeliveredSyncTimer)clearInterval(sellerDeliveredSyncTimer);
+ sellerSyncDeliveredOrders();
+ sellerDeliveredSyncTimer=setInterval(sellerSyncDeliveredOrders,30000);
  sellerNotificationWriteKeys.clear();
  if(sellerNotificationListener){db.ref('sellerNotifications/'+currentUser.uid).off('value',sellerNotificationListener);}
  sellerNotificationListener=snap=>{const raw=snap.val()||{};sellerNotifications=Object.entries(raw).map(([recordKey,n])=>({...n,key:n.key||decodeURIComponent(recordKey)})).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,200);sellerRenderNotificationBadges();sellerRenderNotificationList();if(sellerNotifications.some(n=>!n.seen))sellerShowDashboardPopup();};
@@ -956,7 +986,7 @@ function startSellerOrders(){
   else{incomingIds.forEach(id=>{if(!sellerKnownOrderIds.has(id)){sellerKnownOrderIds.add(id);sellerAddNotification(id,'received','New order received','Order #'+id+' · '+(incoming[id]?.customerName||'Customer'));}});}
   sellerOrderRows=incoming;
   Object.keys(sellerOrderRootListeners).forEach(id=>{if(!sellerOrderRows[id]){db.ref("orders/"+id).off("value",sellerOrderRootListeners[id]);sellerRealtimeSubscriptions=sellerRealtimeSubscriptions.filter(x=>!(x.event==="value"&&x.callback===sellerOrderRootListeners[id]));delete sellerOrderRootListeners[id];delete sellerOrderRootRows[id];}});
-  Object.keys(sellerOrderRows).forEach(id=>{if(!sellerOrderRootListeners[id]){const fn=snap=>{const root=snap.val()||{};const base=sellerOrderRows[id]||{};const oldState=sellerKnownOrderStates[id];const newState=String(root.status||base.status||"Order Placed");sellerOrderRootRows[id]=root;if(oldState!==undefined&&oldState!==newState)sellerAddNotification(id,sellerCategoryForNotification(newState),"Order status updated","Order #"+id+" · "+newState);sellerKnownOrderStates[id]=newState;renderSellerOrders();};sellerOrderRootListeners[id]=fn;sellerListen("orders/"+id,"value",fn,err=>console.warn("Seller order status sync failed",id,err&&err.message));}});
+  Object.keys(sellerOrderRows).forEach(id=>{if(!sellerOrderRootListeners[id]){const fn=snap=>{const root=snap.val()||{};const base=sellerOrderRows[id]||{};const oldState=sellerKnownOrderStates[id];const newState=sellerResolvedOrderStatus(root,base);sellerOrderRootRows[id]=root;if(oldState!==undefined&&oldState!==newState)sellerAddNotification(id,sellerCategoryForNotification(newState),"Order status updated","Order #"+id+" · "+newState);sellerKnownOrderStates[id]=newState;renderSellerOrders();};sellerOrderRootListeners[id]=fn;sellerListen("orders/"+id,"value",fn,err=>console.warn("Seller order status sync failed",id,err&&err.message));}});
   renderSellerOrders();
  },e=>$("sellerOrdersList").textContent="Seller orders load nahi hue: "+e.message);
 }
