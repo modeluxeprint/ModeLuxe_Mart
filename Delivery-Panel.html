@@ -405,7 +405,42 @@ function renderDeliveryEarningGraph(){
 }
 $("deliveryGraphToggle")?.addEventListener("click",()=>{const p=$("deliveryGraphPanel"),opening=p.classList.contains("hidden");resetDashboardSections();if(opening){$("walletBox").hidden=$("payoutBox").hidden=$("activeBox").hidden=$("deliveredBox").hidden=true;$("search").parentElement.classList.add("hidden");$("dashboardGraphs").classList.remove("hidden");p.classList.remove("hidden");$("deliveryGraphToggle").setAttribute("aria-expanded","true");renderDeliveryDailyGraph();}});
 $("earningGraphToggle")?.addEventListener("click",()=>{const p=$("earningGraphPanel"),opening=p.classList.contains("hidden");resetDashboardSections();if(opening){$("walletBox").hidden=$("payoutBox").hidden=$("activeBox").hidden=$("deliveredBox").hidden=true;$("search").parentElement.classList.add("hidden");$("dashboardGraphs").classList.remove("hidden");p.classList.remove("hidden");$("earningGraphToggle").setAttribute("aria-expanded","true");renderDeliveryEarningGraph();}});
-function startOrders(){if(listener)db.ref('orders').off('value',listener);let firstOrdersSnapshot=true;listener=s=>{const next=s.val()||{};if(firstOrdersSnapshot){previousOrders=JSON.parse(JSON.stringify(next));firstOrdersSnapshot=false;}else{for(const [id,o] of Object.entries(next)){const old=previousOrders[id];if(!old)addNotice('New order received','Order #'+id+' · '+(o.customerName||'Customer'));else if(String(old.status||'')!==String(o.status||''))addNotice('Order status updated','Order #'+id+' · '+(o.status||'Order Placed'));}for(const id of Object.keys(previousOrders)){if(!Object.prototype.hasOwnProperty.call(next,id))addNotice('Order removed','Order #'+id);}}ordersData=next;previousOrders=JSON.parse(JSON.stringify(next));renderDeliveryDailyGraph();$('sync').textContent='Live sync active · '+new Date().toLocaleTimeString();renderOrders();if(selectedOrderId&&$('detailView')&&!$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId)};db.ref('orders').on('value',listener,e=>$('sync').textContent='Firebase error: '+e.message);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');if($('payoutDetailValue'))$('payoutDetailValue').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');};db.ref('deliverySettings').on('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);deliveryWalletListener=snap=>{$('walletBalance').textContent='₹'+Number(snap.val()||0).toLocaleString('en-IN')};db.ref('deliveryWallets/'+signedInPhone+'/balance').on('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsListener=snap=>{deliveryCreditsData=snap.val()||{};if(!$('earningGraphPanel').classList.contains('hidden'))renderDeliveryEarningGraph()};db.ref('deliveryWallets/'+signedInPhone+'/credits').on('value',deliveryCreditsListener)};
+let assignedOrdersQuery = null;
+function startOrders(){
+ if(listener && assignedOrdersQuery) assignedOrdersQuery.off('value', listener);
+ let firstOrdersSnapshot = true;
+ assignedOrdersQuery = db.ref('deliveryAssignments').orderByChild('deliveryUid').equalTo(signedInPhone);
+ listener = snap => {
+  const assignments = snap.val() || {};
+  const next = {};
+  for (const [id, a0] of Object.entries(assignments)) {
+   const a = a0 || {};
+   next[id] = {...a, status:a.status || 'Picked Up by Delivery Partner', shippingAddress:a.shippingAddress || a.address || '', customerPhone:a.customerPhone || a.phone || '', createdAt:a.createdAt || a.acceptedAt || '', items:Array.isArray(a.items)?a.items:(a.items&&typeof a.items==='object'?Object.values(a.items):[])};
+  }
+  if(firstOrdersSnapshot){previousOrders=JSON.parse(JSON.stringify(next));firstOrdersSnapshot=false;}
+  else {
+   for(const [id,o] of Object.entries(next)){
+    const old=previousOrders[id];
+    if(!old)addNotice('New delivery assigned','Order #'+id+' · '+(o.customerName||'Customer'));
+    else if(String(old.status||'')!==String(o.status||''))addNotice('Delivery status updated','Order #'+id+' · '+(o.status||''));
+   }
+   for(const id of Object.keys(previousOrders))if(!Object.prototype.hasOwnProperty.call(next,id))addNotice('Delivery assignment changed','Order #'+id);
+  }
+  ordersData=next; previousOrders=JSON.parse(JSON.stringify(next)); renderDeliveryDailyGraph();
+  $('sync').textContent='Assigned deliveries synced · '+new Date().toLocaleTimeString(); renderOrders();
+  if(selectedOrderId && $('detailView') && !$('detailView').classList.contains('hidden'))openOrderDetail(selectedOrderId);
+ };
+ assignedOrdersQuery.on('value',listener,e=>$('sync').textContent='Assigned delivery sync error: '+e.message);
+ if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);
+ deliverySettingsListener=snap=>{const v=snap.val()||{};deliverySettings={deliveryBoyPayout:Number(v.deliveryBoyPayout??v.perDeliveryPayout??v.payoutPerDelivery??0)};$('deliveryPayout').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');if($('payoutDetailValue'))$('payoutDetailValue').textContent='₹'+deliverySettings.deliveryBoyPayout.toLocaleString('en-IN');};
+ db.ref('deliverySettings').on('value',deliverySettingsListener);
+ if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);
+ deliveryWalletListener=snap=>$('walletBalance').textContent='₹'+Number(snap.val()||0).toLocaleString('en-IN');
+ db.ref('deliveryWallets/'+signedInPhone+'/balance').on('value',deliveryWalletListener);
+ if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);
+ deliveryCreditsListener=snap=>{deliveryCreditsData=snap.val()||{};if(!$('earningGraphPanel').classList.contains('hidden'))renderDeliveryEarningGraph();};
+ db.ref('deliveryWallets/'+signedInPhone+'/credits').on('value',deliveryCreditsListener);
+}
 let selectedBucket='active',selectedOrderId='',previousOrders={};
 let deliverySettings={deliveryBoyPayout:0};
 const NOTIFY_KEY='modeluxeDeliveryNotificationsV1';
@@ -417,7 +452,15 @@ function setView(view){$('listView').classList.toggle('hidden',view!=='list');$(
 function showBucket(bucket){selectedBucket=bucket;selectedOrderId='';$('activeBox').classList.toggle('selected',bucket==='active');$('deliveredBox').classList.toggle('selected',bucket==='delivered');$('listTitle').textContent=bucket==='active'?'Active deliveries':'Delivered orders';setView('list');renderOrders();window.scrollTo({top:0,behavior:'smooth'})}
 function renderOrders(){const entries=Object.entries(ordersData).sort((a,b)=>String((b[1]||{}).createdAt||'').localeCompare(String((a[1]||{}).createdAt||'')));const active=entries.filter(([id,o])=>['shipped','picked up by delivery partner','out for delivery'].includes(String((o||{}).status||'').toLowerCase()));const delivered=entries.filter(([id,o])=>String((o||{}).status||'').toLowerCase()==='delivered');$('activeCount').textContent=active.length;$('deliveredCount').textContent=delivered.length;const q=$('search').value.trim().toLowerCase();const bucket=selectedBucket==='delivered'?delivered:active;const shown=bucket.filter(([id,o0])=>{const o=o0||{};return !q||[id,o.customerName,o.customerPhone,o.shippingAddress,o.product,o.status].join(' ').toLowerCase().includes(q)});$('orders').innerHTML=shown.length?shown.map(([id,o0])=>{const o=o0||{},items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';return `<button class="order" style="width:100%;text-align:left;cursor:pointer;color:inherit" onclick="openOrderDetail('${esc(id)}')"><div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h3 style="margin:4px 0">${esc(o.customerName||'Customer')}</h3><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(o.shippingAddress||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><div class="small">ऑर्डर की पूरी जानकारी और मैप खोलने के लिए टैप करें →</div></button>`}).join(''):'<div class="panel" style="margin-top:12px;text-align:center">इस सूची में कोई ऑर्डर नहीं मिला।</div>'}
 window.openOrderDetail=function(id){const o=ordersData[id];if(!o)return;selectedOrderId=id;const address=o.shippingAddress||o.address||'';const items=Array.isArray(o.items)?o.items.map(i=>(i.name||i.productName||'Item')+' × '+(i.quantity||i.qty||1)).join(', '):o.product||'—';const locked=!!o.adminStatusLocked;const mapUrl='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(address);$('orderDetail').innerHTML=`<div class="topline"><div><div class="small blue">ORDER #${esc(id)}</div><h2 style="margin:5px 0">${esc(o.customerName||'Customer')}</h2><div class="small">${esc(o.customerPhone||'')}</div></div><div class="status">${esc(o.status||'Order Placed')}</div></div><p><b>Address:</b> ${esc(address||'Not provided')}</p><p><b>Items:</b> ${esc(items)}</p><p><b>Payment:</b> ${esc(o.paymentMethod||o.payment||o.paymentMode||o.paymentType||'Not available')} · ${esc(o.paymentStatus||'Pending')}</p><p><b>Product Cost:</b> ₹${Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)).toLocaleString('en-IN')}</p><p><b>Delivery Charges:</b> ₹${Math.max(0,Math.round((Number(o.grandTotal??o.totalAmount??o.total??o.price??0)-Number(o.productSubtotal??o.subtotal??(Array.isArray(o.items)?o.items.reduce((n,it)=>n+Number(it.price??it.sellerPrice??0)*Number(it.qty??it.quantity??1),0):0)))*100)/100).toLocaleString('en-IN')}</p><p><b>Grand Total:</b> ₹${Number(o.grandTotal??o.totalAmount??o.total??o.price??0).toLocaleString('en-IN')}</p><p><b>Delivery boy earning per delivery:</b> ₹${Number(deliverySettings.deliveryBoyPayout||0).toLocaleString('en-IN')}</p><div class="detail-actions"><a class="btn primary" target="_blank" rel="noopener" href="${mapUrl}">📍 Google Maps में रास्ता खोलें</a><a class="btn muted" href="tel:${esc(String(o.customerPhone||'').replace(/[^+\d]/g,''))}">📞 ग्राहक को कॉल करें</a></div><div class="grid" style="margin-top:12px"><select id="detailStatus" ${locked?'disabled':''}><option ${o.status==='Picked Up by Delivery Partner'?'selected':''}>Picked Up by Delivery Partner</option><option ${o.status==='Out for Delivery'?'selected':''}>Out for Delivery</option><option ${o.status==='Delivered'?'selected':''}>Delivered</option></select><button class="btn primary" onclick="saveStatus('${esc(id)}')" ${locked?'disabled':''}>Update Status</button></div>${locked?'<p class="small">Final status locked.</p>':''}`;setView('detail');window.scrollTo({top:0,behavior:'smooth'})};
-window.saveStatus=async id=>{if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Login required');const o=ordersData[id];if(!o)return alert('Order नहीं मिला');if(o.adminStatusLocked)return alert('इस ऑर्डर का final status lock है।');const status=$('detailStatus')?.value||$('status-'+id)?.value;if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');try{await db.ref('orders/'+id).update({status,adminUpdatedAt:new Date().toISOString(),deliveryUpdatedBy:signedInPhone});}catch(e){alert('Status update नहीं हुआ: '+e.message)}};
+window.saveStatus=async id=>{
+ if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Login required');
+ const a=ordersData[id];if(!a)return alert('Assigned order नहीं मिला');
+ if(a.status==='Delivered'||a.walletSettlementStatus==='complete')return alert('यह order पहले ही Delivered है।');
+ const status=$('detailStatus')?.value||$('status-'+id)?.value;
+ if(status==='Delivered')return alert('Delivered करने के लिए invoice का QR scan करें।');
+ try{await callDeliveryQueueWorker({action:'updateDeliveryStatus',orderId:id,status});$('sync').textContent='Status updated successfully.';}
+ catch(e){alert('Status update नहीं हुआ: '+(e.message||e));}
+};
 async function openScanner(){if(!signedInPhone)return alert('पहले login करें');if(typeof Html5Qrcode==='undefined')return alert('QR library load नहीं हुई; internet check करें।');$('scanner').classList.remove('hidden');$('scanMsg').textContent='Camera permission का इंतजार है…';scanBusy=false;try{scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},async value=>{if(scanBusy)return;scanBusy=true;$('scanMsg').textContent='QR मिल गया, order verify हो रहा है…';try{await scanner.stop()}catch{}await confirmQr(value)},()=>{});$('scanMsg').textContent='QR को frame के अंदर रखें।'}catch(e){$('scanMsg').textContent='Camera start नहीं हुआ: '+(e.message||e);scanBusy=false}}
 const DELIVERY_CLEARED_KEY = 'modeluxeDeliveryClearedOrdersFinal';
 
@@ -466,24 +509,12 @@ function updateDeliveryBellUI(notifications) {
 }
 
 // यह मुख्य फंक्शन है जो सभी नोटिफिकेशंस को हमेशा के लिए क्लियर कर देगा
-function clearNotifications() {
-  db.ref('deliveryAssignments').once('value').then(snap => {
-    const assignments = snap.val() || {};
-    for (const orderId of Object.keys(assignments)) {
-      saveClearedOrder(orderId);
-    }
-    updateDeliveryBellUI([]);
-  });
-}
+function clearNotifications() { saveNotifications([]); }
 
 // दोनों नामों को आपस में जोड़ दिया ताकि कोई कंफ्यूजन न हो
 window.clearAllDeliveryNotifications = clearNotifications;
 
-function clearSingleNotification(orderId) {
-  saveClearedOrder(orderId);
-  const user = auth.currentUser;
-  if (user) initDeliveryNotificationsAndPopup(user.uid);
-}
+function clearSingleNotification(orderId) { saveClearedOrder(orderId); renderNotifications(); }
 let currentActiveOrderId = null;
 let deliveryQueueCallback = null;
 let deliveryAssignmentsCallback = null;
@@ -645,31 +676,15 @@ async function callDeliveryQueueWorker(payload) {
 }
 
 async function acceptIncomingOrder() {
-  if (!currentActiveOrderId) return;
-  const orderId = String(currentActiveOrderId);
-  const btns = document.querySelectorAll('#incomingOrderModal button');
-  btns.forEach(b => b.disabled = true);
-  try {
-    await callDeliveryQueueWorker({ action: 'claimDelivery', orderId });
-    // Once claimed, the child rule permits this partner to read the private assignment.
-    const assignmentSnap = await db.ref('deliveryAssignments/' + orderId).once('value');
-    const assignment = assignmentSnap.val();
-    if (!assignment || String(assignment.deliveryUid || '') !== signedInPhone) throw new Error('Order claim ho gaya, lekin assigned details read nahi hui. Firebase child read rule check karein.');
-    await db.ref('orders/' + orderId).update({
-      status: 'Picked Up by Delivery Partner',
-      deliveryStatus: 'Picked Up by Delivery Partner',
-      deliveryPartnerUid: signedInPhone,
-      deliveryAcceptedAt: assignment.acceptedAt || new Date().toISOString()
-    });
-    saveClearedOrder(orderId);
-    document.getElementById('incomingOrderModal')?.remove();
-    currentActiveOrderId = null;
-    lastPopupSoundOrderId = '';
-    alert('Order accepted successfully! Customer details ab Active Deliveries mein milengi.');
-  } catch (err) {
-    btns.forEach(b => b.disabled = false);
-    alert('Order accept nahi hua: ' + (err.message || err));
-  }
+ if(!currentActiveOrderId)return;
+ const orderId=String(currentActiveOrderId);const btns=document.querySelectorAll('#incomingOrderModal button');btns.forEach(b=>b.disabled=true);
+ try{
+  await callDeliveryQueueWorker({action:'claimDelivery',orderId});
+  const snap=await db.ref('deliveryAssignments/'+orderId).once('value');const assignment=snap.val();
+  if(!assignment||String(assignment.deliveryUid||'')!==signedInPhone)throw new Error('Worker ने claim पूरा नहीं किया। कुछ देर बाद फिर कोशिश करें।');
+  saveClearedOrder(orderId);document.getElementById('incomingOrderModal')?.remove();currentActiveOrderId=null;lastPopupSoundOrderId='';
+  alert('Order successfully accepted! Customer details Active Deliveries में दिखेंगी।');
+ }catch(err){btns.forEach(b=>b.disabled=false);alert('Order accept नहीं हुआ: '+(err.message||err));}
 }
 
 async function rejectIncomingOrder() {
@@ -701,9 +716,9 @@ function showDeliveryDialog({title,message,confirmText='OK',cancelText=null}){
     if(cancelText){const cancel=host.querySelector('#deliveryDialogCancel');cancel.textContent=cancelText;cancel.onclick=()=>{host.className='hidden';host.innerHTML='';resolve(false)};}
   });
 }
-async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(st==='delivered'){throw Error('यह order पहले ही Delivered है। Wallet settlement status Admin/Worker से जाँचें; दोबारा credit नहीं किया जाएगा।')}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!['shipped','picked up by delivery partner','out for delivery','delivered'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए।');if(!await showDeliveryDialog({title:'Confirm Delivery?',message:'Order #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nPress OK to confirm delivery.',confirmText:'OK',cancelText:'Cancel'})){scanBusy=false;$('scanMsg').textContent='Confirmation cancelled.';return}const result=await callDeliveryQueueWorker({action:'markDelivered',orderId:id});await showDeliveryDialog({title:'Delivery Confirmed',message:'Order #'+id+' has been marked Delivered.\nDelivery payout: ₹'+Number(result.deliveryPayout||0).toLocaleString('en-IN')+'.',confirmText:'OK'});closeScanner();}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
+async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(st==='delivered'){throw Error('यह order पहले ही Delivered है। Wallet settlement status Admin/Worker से जाँचें; दोबारा credit नहीं किया जाएगा।')}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!['shipped','picked up by delivery partner','out for delivery','delivered'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए।');if(!await showDeliveryDialog({title:'Confirm Delivery?',message:'Order #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nPress OK to confirm delivery.',confirmText:'OK',cancelText:'Cancel'})){scanBusy=false;$('scanMsg').textContent='Confirmation cancelled.';return}const result=await callDeliveryQueueWorker({action:'markDelivered',orderId:id});const already=!!result.alreadySettled;await showDeliveryDialog({title:already?'Already Delivered':'Delivery Confirmed',message:already?('Order #'+id+' is already delivered and wallet settlement is complete. No duplicate payout was added.'):('Order #'+id+' has been marked Delivered.\nDelivery payout: ₹'+Number(result.deliveryPayout||0).toLocaleString('en-IN')+'.'),confirmText:'OK'});closeScanner();}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener)db.ref('orders').off('value',listener);if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script>
 </body>
 </html>
