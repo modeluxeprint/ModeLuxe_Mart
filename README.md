@@ -1,29 +1,20 @@
-ModeLuxe Seller + Delivery Assignment Fix V2
+ModeLuxe Mart — Delivered Order Sync Fix
 
-Files:
-1. Seller-Panel-FIXED.html
-2. ModeLuxe-Order-Sync-Worker-FIXED-V2.js
+What this fixes:
+1. When Delivery Panel confirms an order as Delivered, the Worker updates both orders/{orderId} and sellerOrders/{sellerUid}/{orderId}.
+2. Seller Panel reads the canonical order status first, so a Delivered status overrides an older Shipped value.
+3. Seller Panel shows “✓ Delivered” and moves the order from Received Order to Delivered Order.
+4. On seller login, a secure Worker action backfills previously delivered orders (including orders whose delivery wallet was already settled).
 
-What changed:
-- Removed the Seller Panel browser-side write to deliveryAssignments/{orderId}.
-- Seller Panel now relies on the authenticated updateStatus Worker response.
-- Worker creates or repairs deliveryAssignments/{orderId} and creates deliveryQueue/{orderId} when missing.
-- Existing assignment fields such as deliveryUid, accepted status, and acceptedAt are preserved while missing canonical order fields are repaired.
+Deploy in this order:
+1. Deploy ModeLuxe-Order-Sync-Worker-FIXED-V2.js to the existing Cloudflare Worker.
+2. Replace the website Seller-Panel.html with Seller-Panel-FIXED.html and commit/publish it.
+3. Refresh the Seller Panel and log in again. The one-time sync runs automatically.
+4. Check Delivered Order count. Existing delivered orders should move there; new deliveries will sync automatically.
 
-Deploy:
-1. Replace Seller-Panel.html in your GitHub/site with Seller-Panel-FIXED.html.
-2. Deploy ModeLuxe-Order-Sync-Worker-FIXED-V2.js to the existing Cloudflare Worker.
-3. No Firebase Rules change is included or required for this specific fix; keep the previously deployed restricted rules.
+No Firebase Rules change is required for this specific fix. Keep the existing restricted rules.
 
-Test:
-1. Login as seller.
-2. Open an order and mark it Processing.
-3. Then mark it Shipped.
-4. Confirm no Permission Denied popup appears.
-5. Confirm one delivery assignment and one pending delivery queue record exist.
-6. Confirm the Delivery Panel shows the new order.
-
-Checks:
-- Worker JavaScript passed node --check.
-- Seller Panel inline JavaScript syntax checks passed.
-- Live Firebase/Cloudflare deployment was not tested here.
+Validation:
+- Worker passed node --check.
+- Seller Panel inline JavaScript passed syntax checks.
+- Live Firebase/Cloudflare deployment was not tested in this environment.
