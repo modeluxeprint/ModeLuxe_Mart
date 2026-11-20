@@ -716,7 +716,42 @@ function showDeliveryDialog({title,message,confirmText='OK',cancelText=null}){
     if(cancelText){const cancel=host.querySelector('#deliveryDialogCancel');cancel.textContent=cancelText;cancel.onclick=()=>{host.className='hidden';host.innerHTML='';resolve(false)};}
   });
 }
-async function confirmQr(value){let id='';try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}if(!id){const m=String(value).match(/deliveryConfirm=([^&]+)/);if(m)id=decodeURIComponent(m[1]);else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim()}if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}try{const snap=await db.ref('orders/'+id).once('value'),o=snap.val();if(!o)throw Error('Order Firebase में नहीं मिला');const st=String(o.status||'').toLowerCase();if(st==='delivered'){throw Error('यह order पहले ही Delivered है। Wallet settlement status Admin/Worker से जाँचें; दोबारा credit नहीं किया जाएगा।')}if(['cancelled','refunded'].includes(st))throw Error('यह order '+o.status+' है।');if(!['shipped','picked up by delivery partner','out for delivery','delivered'].includes(st))throw Error('पहले Seller के सभी products Shipped होने चाहिए।');if(!await showDeliveryDialog({title:'Confirm Delivery?',message:'Order #'+id+'\nCustomer: '+(o.customerName||'Customer')+'\nPress OK to confirm delivery.',confirmText:'OK',cancelText:'Cancel'})){scanBusy=false;$('scanMsg').textContent='Confirmation cancelled.';return}const result=await callDeliveryQueueWorker({action:'markDelivered',orderId:id});const already=!!result.alreadySettled;await showDeliveryDialog({title:already?'Already Delivered':'Delivery Confirmed',message:already?('Order #'+id+' is already delivered and wallet settlement is complete. No duplicate payout was added.'):('Order #'+id+' has been marked Delivered.\nDelivery payout: ₹'+Number(result.deliveryPayout||0).toLocaleString('en-IN')+'.'),confirmText:'OK'});closeScanner();}catch(e){alert('Delivery confirm नहीं हुई: '+e.message);$('scanMsg').textContent=e.message;scanBusy=false}}
+async function confirmQr(value){
+ let id='';
+ try{id=new URL(value).searchParams.get('deliveryConfirm')||''}catch{}
+ if(!id){
+  const m=String(value).match(/deliveryConfirm=([^&]+)/);
+  if(m)id=decodeURIComponent(m[1]);
+  else if(/^\d{8,}$/.test(String(value).trim()))id=String(value).trim();
+ }
+ if(!id){$('scanMsg').textContent='यह ModeLuxe delivery QR नहीं है।';scanBusy=false;return}
+ try{
+  if(!await showDeliveryDialog({
+   title:'Confirm Delivery?',
+   message:'Order #'+id+'\\nक्या ग्राहक को ऑर्डर दे दिया गया है? OK दबाने पर Worker order और payment verify करके delivery confirm करेगा.',
+   confirmText:'OK',
+   cancelText:'Cancel'
+  })){
+   scanBusy=false;
+   $('scanMsg').textContent='Confirmation cancelled.';
+   return;
+  }
+  const result=await callDeliveryQueueWorker({action:'markDelivered',orderId:id});
+  const already=!!result.alreadySettled;
+  await showDeliveryDialog({
+   title:already?'Already Delivered':'Delivery Confirmed',
+   message:already
+    ?('Order #'+id+' पहले ही Delivered है और wallet settlement पूरा है। दोबारा payout नहीं जोड़ा गया।')
+    :('Order #'+id+' Delivered हो गया है।\\nDelivery payout: ₹'+Number(result.deliveryPayout||0).toLocaleString('en-IN')+'.'),
+   confirmText:'OK'
+  });
+  closeScanner();
+ }catch(e){
+  alert('Delivery confirm नहीं हुई: '+(e.message||e));
+  $('scanMsg').textContent=e.message||'Delivery confirmation failed';
+  scanBusy=false;
+ }
+}
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
 $('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script>
