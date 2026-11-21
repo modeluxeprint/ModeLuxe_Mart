@@ -885,18 +885,44 @@ function renderSellerDailyGraph(){
 }
 document.getElementById("sellerGraphToggle")?.addEventListener("click",()=>{const p=document.getElementById("sellerGraphPanel"),btn=document.getElementById("sellerGraphToggle");const opening=p.classList.contains("hidden");p.classList.toggle("hidden",!opening);btn.classList.toggle("active",opening);btn.setAttribute("aria-expanded",String(opening));if(opening)renderSellerDailyGraph();});
 let activeSellerOrderFilter="";
+
 function sellerResolvedOrderStatus(root,base,assignment){
- const assignmentStatus=String((assignment&&assignment.status)||'').trim().toLowerCase();
- if(assignmentStatus==='delivered'||String((assignment&&assignment.deliveryStatus)||'').trim().toLowerCase()==='delivered')return 'Delivered';
- const records=[root||{},base||{}];
- // A Delivered value in either status field is authoritative, even if an older
- // status field still says Shipped or Seller Processing.
- for(const record of records){
-  const values=[record.status,record.deliveryStatus].map(v=>String(v||"").trim().toLowerCase());
-  if(values.includes("delivered"))return "Delivered";
+
+ const records=[
+  assignment||{},
+  root||{},
+  base||{}
+ ];
+
+ const values=records.flatMap(record=>[
+  record.status,
+  record.deliveryStatus
+ ].map(v=>String(v||"").trim().toLowerCase()));
+
+ // Delivered
+ if(values.includes("delivered"))return "Delivered";
+
+ // RTO
+ if(values.some(v=>/\brto\b|return to origin|returned to origin/.test(v))){
+  return "RTO";
  }
- return String((root&&root.status)||(root&&root.deliveryStatus)||(base&&base.status)||(base&&base.deliveryStatus)||"Order Placed");
+
+ // Return / Refund
+ if(values.some(v=>/\breturn\b|\breturned\b|\brefund\b|\brefunded\b/.test(v))){
+  return "Return";
+ }
+
+ return String(
+  (root&&root.status)||
+  (root&&root.deliveryStatus)||
+  (base&&base.status)||
+  (base&&base.deliveryStatus)||
+  (assignment&&assignment.status)||
+  (assignment&&assignment.deliveryStatus)||
+  "Order Placed"
+ );
 }
+
 function sellerOrderCategory(status){
  const s=String(status||"").trim().toLowerCase();
  if(/rto|return to origin|returned to origin/.test(s))return "rto";
