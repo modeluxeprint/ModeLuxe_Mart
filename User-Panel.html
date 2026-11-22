@@ -2110,7 +2110,76 @@ function getReturnWindow(order){
   const expiresAt=deliveredAt+(3*24*60*60*1000);
   return {allowed:Date.now()<=expiresAt,expiresAt,deliveredAt};
 }
-async function requestUserOrderReturn(orderId){
+
+function ensureUserReturnModal(){
+  if(document.getElementById("userReturnModal"))return;
+  const style=document.createElement("style");
+  style.id="userReturnModalStyle";
+  style.textContent=`
+  #userReturnModal{position:fixed;inset:0;z-index:100000;background:#06152dcc;display:flex;align-items:center;justify-content:center;padding:14px}
+  #userReturnModal.hidden{display:none}
+  #userReturnModal .return-card{width:min(100%,520px);max-height:92vh;overflow:auto;background:#fff;color:#172b45;border-radius:18px;padding:18px;box-shadow:0 20px 60px #0005}
+  #userReturnModal h2{margin:0 0 8px;color:#123b78;font-size:22px}
+  #userReturnModal label{display:block;font-weight:700;font-size:14px;margin:12px 0 6px}
+  #userReturnModal textarea,#userReturnModal select,#userReturnModal input[type=file]{width:100%;padding:12px;border:1px solid #cbd8e8;border-radius:10px;background:#f8fbff;color:#172b45}
+  #userReturnModal textarea{min-height:105px;resize:vertical}
+  #userReturnPreview{display:none;max-width:100%;max-height:180px;object-fit:contain;margin-top:8px;border-radius:10px;border:1px solid #dbe5f1}
+  #userReturnModal .return-actions{display:flex;gap:10px;margin-top:16px}
+  #userReturnModal .return-actions button{flex:1;padding:12px;border-radius:10px;font-weight:800}
+  #userReturnSubmit{background:#b42318;color:#fff}#userReturnCancel{background:#e7f2ff;color:#164e84}
+  #userReturnMsg{font-size:13px;margin-top:10px;line-height:1.5;color:#b42318}
+  `;
+  document.head.appendChild(style);
+  const modal=document.createElement("div");
+  modal.id="userReturnModal";modal.className="hidden";
+  modal.innerHTML=`
+   <div class="return-card" role="dialog" aria-modal="true" aria-labelledby="userReturnTitle">
+    <h2 id="userReturnTitle">↩ Return Request</h2>
+    <div id="userReturnOrderLabel" style="color:#64748b;font-size:13px"></div>
+    <form id="userReturnForm">
+     <label for="userReturnReasonType">Return का कारण *</label>
+     <select id="userReturnReasonType" required>
+      <option value="">कारण चुनें</option>
+      <option value="Damaged Product">Product Damaged</option>
+      <option value="Defective Product">Defective Product</option>
+      <option value="Wrong Item">Wrong Item Received</option>
+      <option value="Missing Item">Item Missing</option>
+      <option value="Quality Issue">Quality / Other Issue</option>
+     </select>
+     <label for="userReturnDescription">समस्या की पूरी जानकारी *</label>
+     <textarea id="userReturnDescription" minlength="5" maxlength="1000" required placeholder="प्रोडक्ट में क्या समस्या है, यहाँ लिखें…"></textarea>
+     <label for="userReturnPhoto">प्रोडक्ट की फोटो अपलोड करें *</label>
+     <input id="userReturnPhoto" type="file" accept="image/*" capture="environment" required>
+     <img id="userReturnPreview" alt="Return product photo preview">
+     <div style="font-size:12px;color:#64748b;margin-top:5px">एक साफ फोटो चुनें। अधिकतम 8 MB।</div>
+     <div id="userReturnMsg" role="status" aria-live="polite"></div>
+     <div class="return-actions">
+      <button id="userReturnCancel" type="button">Cancel</button>
+      <button id="userReturnSubmit" type="submit">Submit Return Request</button>
+     </div>
+    </form>
+   </div>`;
+  document.body.appendChild(modal);
+  document.getElementById("userReturnCancel").onclick=closeUserReturnModal;
+  modal.addEventListener("click",e=>{if(e.target===modal)closeUserReturnModal();});
+  document.getElementById("userReturnPhoto").addEventListener("change",e=>{
+    const file=e.target.files&&e.target.files[0],img=document.getElementById("userReturnPreview");
+    if(!file){img.style.display="none";img.removeAttribute("src");return;}
+    if(!file.type.startsWith("image/")||file.size>8*1024*1024){
+      e.target.value="";img.style.display="none";
+      document.getElementById("userReturnMsg").textContent="कृपया 8 MB से छोटी सही image चुनें।";return;
+    }
+    img.src=URL.createObjectURL(file);img.style.display="block";
+    document.getElementById("userReturnMsg").textContent="";
+  });
+  document.getElementById("userReturnForm").addEventListener("submit",submitUserOrderReturn);
+}
+let activeReturnOrderId="";
+function closeUserReturnModal(){
+  const modal=document.getElementById("userReturnModal");
+  if(modal)modal.classList.add("hidden");
+}
+function requestUserOrderReturn(orderId){
   if(!activeUserPhone){showToast("Return request के लिए पहले लॉगिन करें।");return;}
   if(!db){showToast("Firebase कनेक्शन उपलब्ध नहीं है।");return;}
   const order=orders.find(o=>String(o.id)===String(orderId));
@@ -2120,39 +2189,89 @@ async function requestUserOrderReturn(orderId){
   if(order.returnRequest&&String(order.returnRequest.status||"").toLowerCase()!=="rejected"){
     showToast("इस ऑर्डर की Return Request पहले से दर्ज है।");return;
   }
-  const reason=prompt("Return का कारण लिखें (जैसे product damaged, defective या wrong item):");
-  if(reason===null)return;
-  const cleanReason=String(reason).trim();
-  if(cleanReason.length<5){showToast("कृपया Return का सही कारण लिखें।");return;}
+  ensureUserReturnModal();
+  activeReturnOrderId=String(orderId);
+  document.getElementById("userReturnOrderLabel").textContent="Order #"+orderId+" · Return की अंतिम तारीख "+new Date(win.expiresAt).toLocaleString("en-IN");
+  document.getElementById("userReturnForm").reset();
+  document.getElementById("userReturnPreview").style.display="none";
+  document.getElementById("userReturnMsg").textContent="";
+  document.getElementById("userReturnModal").classList.remove("hidden");
+}
+async function uploadCustomerReturnPhoto(file){
+  const signedUser=auth&&auth.currentUser;
+  if(!signedUser)throw new Error("आपका Firebase login session नहीं मिला। दोबारा login करें।");
+  if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Product की सही फोटो चुनें।");
+  if(file.size>8*1024*1024)throw new Error("फोटो 8 MB से छोटी होनी चाहिए।");
+  const token=await signedUser.getIdToken(true);
+  const form=new FormData();form.append("file",file,file.name||"return-product-photo.jpg");
+  const response=await fetch("https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload",{
+    method:"POST",mode:"cors",cache:"no-store",credentials:"omit",
+    headers:{"Authorization":"Bearer "+token},body:form
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok||!result.success||!result.url)throw new Error(result.error||("Photo upload failed (HTTP "+response.status+")."));
+  return result.url;
+}
+async function submitUserOrderReturn(event){
+  event.preventDefault();
+  const submit=document.getElementById("userReturnSubmit"),msg=document.getElementById("userReturnMsg");
+  const type=document.getElementById("userReturnReasonType").value;
+  const description=document.getElementById("userReturnDescription").value.trim();
+  const photoFile=document.getElementById("userReturnPhoto").files[0];
+  const order=orders.find(o=>String(o.id)===String(activeReturnOrderId));
+  if(!order){msg.textContent="Order नहीं मिला।";return;}
+  if(!type||description.length<5||!photoFile){msg.textContent="कारण, पूरी जानकारी और product photo तीनों जरूरी हैं।";return;}
+  const signedUser=auth&&auth.currentUser;
+  if(!signedUser){msg.textContent="Firebase login session नहीं मिला। दोबारा login करें।";return;}
+  const win=getReturnWindow(order);
+  if(!win.allowed){msg.textContent="Return की 3 दिन की समय-सीमा समाप्त हो गई है।";return;}
+  submit.disabled=true;submit.textContent="Submitting…";msg.style.color="#075fc4";msg.textContent="फोटो अपलोड हो रही है…";
   try{
-    const snap=await db.ref("orders/"+orderId).once("value");
-    const remote=snap.val();
+    const orderSnap=await db.ref("orders/"+activeReturnOrderId).once("value");
+    const remote=orderSnap.val();
     if(!remote)throw new Error("Firebase में ऑर्डर नहीं मिला।");
+    const uid=String(signedUser.uid||"");
+    if(!uid||String(remote.customerUid||"")!==uid)throw new Error("इस ऑर्डर के लिए Return Request की अनुमति नहीं है।");
     const phone=String(remote.customerPhone||remote.phone||"").replace(/\D/g,"");
-    if(phone!==String(activeUserPhone).replace(/\D/g,""))throw new Error("इस ऑर्डर के लिए Return Request की अनुमति नहीं है।");
+    if(phone!==String(activeUserPhone).replace(/\D/g,""))throw new Error("Customer mobile और order details match नहीं हुए।");
     if(!String(remote.status||"").toLowerCase().includes("delivered"))throw new Error("यह ऑर्डर अभी Delivered नहीं है।");
     const remoteWindow=getReturnWindow(remote);
-    if(!remoteWindow.allowed)throw new Error("Return की 3 दिन की समय-सीमा समाप्त हो गई है या delivery date उपलब्ध नहीं है।");
-    if(remote.returnRequest&&String(remote.returnRequest.status||"").toLowerCase()!=="rejected")throw new Error("इस ऑर्डर की Return Request पहले से दर्ज है।");
-    const requestAt=new Date().toISOString();
+    if(!remoteWindow.allowed)throw new Error("Return की समय-सीमा समाप्त हो गई है या delivery date उपलब्ध नहीं है।");
+    const existing=remote.returnRequest;
+    if(existing&&String(existing.status||"").toLowerCase()!=="rejected")throw new Error("इस ऑर्डर की Return Request पहले से दर्ज है।");
+    msg.textContent="प्रोडक्ट फोटो सुरक्षित रूप से अपलोड हो रही है…";
+    const photoUrl=await uploadCustomerReturnPhoto(photoFile);
+    const items=Array.isArray(remote.items)?remote.items:Object.values(remote.items||{});
+    const sellerUids={};
+    items.forEach(item=>{const sid=String(item&&item.sellerUid||"");if(sid)sellerUids[sid]=true;});
     const request={
-      orderId:String(orderId),customerPhone:activeUserPhone,
+      orderId:String(activeReturnOrderId),customerUid:uid,customerPhone:activeUserPhone,
       customerName:remote.customerName||remote.name||"",
-      items:remote.items||order.items||[],total:Number(remote.total??remote.totalAmount??order.total??0),
-      reason:cleanReason,status:"Pending",requestedAt:requestAt,
+      items,total:Number(remote.totalAmount??remote.total??remote.totalAmount??0),
+      reasonType:type,reason:description,photoUrl,
+      sellerUids,status:"Pending",requestedAt:new Date().toISOString(),
       deliveredAt:new Date(remoteWindow.deliveredAt).toISOString(),
       returnWindowEndsAt:new Date(remoteWindow.expiresAt).toISOString()
     };
     const updates={};
-    updates["returnRequests/"+orderId]=request;
-    updates["orders/"+orderId+"/returnRequest"]=request;
+    updates["returnRequests/"+activeReturnOrderId]=request;
+    updates["orders/"+activeReturnOrderId+"/returnRequest"]=request;
+    Object.keys(sellerUids).forEach(sid=>{
+      updates["sellerReturnRequests/"+sid+"/"+activeReturnOrderId]=request;
+    });
+    msg.textContent="Return Request Admin और Seller को भेजी जा रही है…";
     await db.ref().update(updates);
     order.returnRequest=request;
-    renderMyOrders();
-    showToast("Return Request सफलतापूर्वक भेज दी गई।");
+    closeUserReturnModal();renderMyOrders();
+    showToast("Return Request Admin और Seller दोनों को भेज दी गई।");
   }catch(err){
-    showToast("Return Request नहीं भेजी गई: "+(err.message||"कृपया दोबारा प्रयास करें।"));
-  }
+    console.error("Return request submit failed:",err);
+    let message=err&&err.message||"कृपया दोबारा प्रयास करें।";
+    if(/permission_denied|permission denied/i.test(message)){
+      message="Firebase PERMISSION_DENIED: Realtime Database Rules में returnRequests, sellerReturnRequests और orders/{orderId}/returnRequest पर Customer write permission जोड़नी होगी। फोटो upload हो गई हो सकती है; Submit दोबारा करने से पहले Firebase Rules ठीक करें।";
+    }
+    msg.style.color="#b42318";msg.textContent="Request submit नहीं हुई: "+message;
+  }finally{submit.disabled=false;submit.textContent="Submit Return Request";}
 }
 
 function renderMyOrders(){
