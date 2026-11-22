@@ -159,7 +159,8 @@ header{color:#111827}
 </header>
 <section id="loginPanel" class="panel p-5 max-w-md mx-auto"><h2 class="text-xl font-bold gold mb-2">Admin Login</h2><p class="text-sm text-stone-300 mb-4">Admin Password + registered owner mobile par SMS OTP.</p><label class="small block mb-1">Admin mobile number</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="new-password" name="login-contact-unique" value="" readonly onfocus="if(this.readOnly){this.readOnly=false;this.value='';}"><label class="small block mt-3 mb-1">Admin Password</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="Admin password"><button id="sendBtn" class="btn primary w-full mt-3" onclick="sendOTP()">Verify Password & Send OTP</button><div id="otpArea" class="hidden mt-4"><label class="small block mb-1">SMS OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="OTP enter karein"><button id="verifyBtn" class="btn primary w-full mt-3" onclick="verifyOTP()">Verify OTP & Login</button></div><p id="loginMsg" class="small text-stone-300 mt-3" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
-<div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="deliveryAppsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliveryApplications')">Delivery Applications <span id="deliveryPendingDot" class="hidden" style="display:none;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2" aria-label="Pending delivery applications"></span></button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
+<div class="admin-nav-grid mb-4"><button id="ordersTabBtn" class="btn primary admin-nav-btn" type="button" onclick="showAdminTab('orders')">Orders</button><button id="returnRequestsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('returnRequests')">Return Requests <span id="adminReturnPendingCount" class="small"></span></button><button id="appsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('applications')">Seller Applications <span id="sellerPendingDot" class="hidden" style="display:none" aria-label="Pending applications" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2"></span></button><button id="deliveryAppsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliveryApplications')">Delivery Applications <span id="deliveryPendingDot" class="hidden" style="display:none;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-left:7px;vertical-align:middle;box-shadow:0 0 0 3px #fee2e2" aria-label="Pending delivery applications"></span></button><button id="withdrawTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('withdrawals')">Withdrawals</button><button id="commissionTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('commission')">Commission & Delivery Payout</button><button id="deliverySettingsTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('deliverySettings')">Customer Delivery Charges</button><button id="courierTabBtn" class="btn muted admin-nav-btn" type="button" onclick="showAdminTab('couriers')">Courier Partners API</button></div>
+<div id="returnRequestsTab" class="hidden panel p-4 mb-4"><h2 class="text-xl font-bold gold mb-3">Customer Return Requests</h2><p id="adminReturnSyncMsg" class="small text-stone-400 mb-3">Return requests load ho rahi hain…</p><div id="adminReturnRequestsList" class="space-y-3"></div></div>
 <div id="ordersTab">
 <div class="panel p-3 mb-4"><input id="search" class="w-full" placeholder="Search by order ID, product, customer, phone, address or amount…" oninput="renderOrders()"></div>
 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('placed')"><p class="small text-stone-400">Placed · Click to view</p><b id="placedCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('all')"><p class="small text-stone-400">Total Orders · Click to view all</p><b id="totalCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('active')"><p class="small text-stone-400">Active · Click to view</p><b id="activeCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Delivered')"><p class="small text-stone-400">Delivered · Click to view</p><b id="deliveredCount" class="text-2xl gold">0</b></button><button type="button" class="panel p-4 text-left cursor-pointer hover:ring-2 hover:ring-amber-300" onclick="filterOrdersBySummary('Cancelled')"><p class="small text-stone-400">Cancelled · Click to view</p><b id="cancelledCount" class="text-2xl gold">0</b></button></div>
@@ -861,13 +862,56 @@ const PRODUCT_UNITS = [
   'Half Plate','Full Plate','Plate','Combo','S','M','L','XL','XXL','XXXL',
   'cm','Inch','Month','Months','Year','Years','Day','Days','Dozen','Roll','Packet'
 ];
+
+let adminReturnRequests={};
+function renderAdminReturnRequests(){
+ const host=$('adminReturnRequestsList');if(!host)return;
+ const entries=Object.entries(adminReturnRequests||{}).sort((a,b)=>String((b[1]||{}).requestedAt||'').localeCompare(String((a[1]||{}).requestedAt||'')));
+ const pending=entries.filter(([id,r])=>String(r.status||'Pending').toLowerCase()==='pending').length;
+ if($('adminReturnPendingCount'))$('adminReturnPendingCount').textContent=pending?'('+pending+' pending)':'';
+ host.innerHTML=entries.length?entries.map(([id,r])=>{
+  const items=Array.isArray(r.items)?r.items.map(i=>(i.name||i.productName||i.title||'Item')+' × '+(i.qty||i.quantity||1)).join(', '):'—';
+  const status=String(r.status||'Pending');
+  return `<article class="order-card p-3">
+   <div class="flex flex-wrap justify-between gap-2"><b>Return · Order #${esc(id)}</b><b class="gold">${esc(status)}</b></div>
+   <p class="small mt-2">Customer: ${esc(r.customerName||'Customer')} · ${esc(r.customerPhone||'')}</p>
+   <p class="small">Items: ${esc(items)}</p>
+   <p class="small">Reason: <b>${esc(r.reasonType||'')}</b> · ${esc(r.reason||'')}</p>
+   <p class="small">Requested: ${esc(r.requestedAt||'')}</p>
+   ${r.photoUrl?`<a href="${esc(r.photoUrl)}" target="_blank" rel="noopener"><img src="${esc(r.photoUrl)}" alt="Return product photo" style="width:120px;height:120px;object-fit:cover;border-radius:10px;margin-top:8px;border:1px solid #dbe5f1"></a>`:'<p class="small">Photo not attached</p>'}
+   ${status.toLowerCase()==='pending'?`<div class="flex gap-2 mt-3"><button class="btn success" type="button" onclick="setAdminReturnStatus('${esc(id)}','Approved')">Approve Return</button><button class="btn danger" type="button" onclick="setAdminReturnStatus('${esc(id)}','Rejected')">Reject Return</button></div>`:''}
+  </article>`;
+ }).join(''):'<div class="small text-stone-400">Abhi koi Return Request nahi aayi hai.</div>';
+}
+function startAdminReturnRequests(){
+ const ref=db.ref('returnRequests');ref.off('value');
+ ref.on('value',snap=>{
+  adminReturnRequests=snap.val()||{};
+  $('adminReturnSyncMsg').textContent='Firebase live sync active · '+Object.keys(adminReturnRequests).length+' requests';
+  renderAdminReturnRequests();
+ },err=>{
+  $('adminReturnSyncMsg').textContent='Return Request read error: '+(err&&err.message||err)+' · Firebase Rules mein admin read permission check karein.';
+ });
+}
+window.setAdminReturnStatus=async function(orderId,status){
+ const request=adminReturnRequests[String(orderId)];if(!request)return;
+ try{
+  const updated={...request,status,adminUpdatedAt:new Date().toISOString()};
+  const updates={};updates['returnRequests/'+orderId]=updated;
+  updates['orders/'+orderId+'/returnRequest']=updated;
+  Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
+  await db.ref().update(updates);
+  addNotification('Return Request '+status,'Order #'+orderId+' · '+status,'success');
+ }catch(e){addNotification('Return status update failed',e&&e.message||String(e),'error');}
+};
+
 function showAdminTab(tab){
- const currentlyActive=$(''+({orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',deliveryApplications:'deliveryAppsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'}[tab]||''));
+ const currentlyActive=$(''+({orders:'ordersTabBtn',returnRequests:'returnRequestsTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',deliveryApplications:'deliveryAppsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'}[tab]||''));
  if(currentlyActive&&currentlyActive.classList.contains('primary')){tab='orders';}
- const ids={orders:'ordersTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',deliveryApplications:'deliveryApplicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
+ const ids={orders:'ordersTab',returnRequests:'returnRequestsTab',deliverySettings:'deliverySettingsTab',applications:'applicationsTab',deliveryApplications:'deliveryApplicationsTab',withdrawals:'withdrawalsTab',commission:'commissionTab',couriers:'couriersTab'};
  Object.values(ids).forEach(id=>$(id)?.classList.add('hidden'));
  const target=$(ids[tab]||ids.orders);if(target)target.classList.remove('hidden');
- const buttons={orders:'ordersTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',deliveryApplications:'deliveryAppsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
+ const buttons={orders:'ordersTabBtn',returnRequests:'returnRequestsTabBtn',deliverySettings:'deliverySettingsTabBtn',applications:'appsTabBtn',deliveryApplications:'deliveryAppsTabBtn',withdrawals:'withdrawTabBtn',commission:'commissionTabBtn',couriers:'courierTabBtn'};
  Object.values(buttons).forEach(id=>{if($(id)){$(id).classList.remove('primary');$(id).classList.add('muted');}});
  const active=$(buttons[tab]);if(active){active.classList.remove('muted');active.classList.add('primary');}
  if(tab==='deliverySettings')loadDeliverySettingsForm();
@@ -1054,6 +1098,7 @@ function refreshSellerApplicationsFromLiveSources(){
  if(diag && Object.keys(sellerAppsReadErrors).length){diag.textContent='FIREBASE LIVE READ ERROR · '+Object.entries(sellerAppsReadErrors).map(([k,v])=>k+': '+v).join(' | ')+' · Database: '+(firebaseConfig.databaseURL||'not set');}
 }
 function startOwnerManagement(){
+ startAdminReturnRequests();
  db.ref('sellerApplications').off('value');db.ref('sellerProfiles').off('value');
  sellerAppsReadErrors={};
  db.ref('sellerApplications').on('value',snap=>{sellerAppsRawApplications=snap.val()||{};delete sellerAppsReadErrors.applications;refreshSellerApplicationsFromLiveSources();},err=>{sellerAppsReadErrors.applications=err&&err.message||String(err);refreshSellerApplicationsFromLiveSources();});
