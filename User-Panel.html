@@ -2149,7 +2149,8 @@ function ensureUserReturnModal(){
      <label for="userReturnDescription">समस्या की पूरी जानकारी *</label>
      <textarea id="userReturnDescription" minlength="5" maxlength="1000" required placeholder="प्रोडक्ट में क्या समस्या है, यहाँ लिखें…"></textarea>
      <label for="userReturnPhoto">प्रोडक्ट की फोटो अपलोड करें *</label>
-     <input id="userReturnPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" required>
+     <button id="userReturnChoosePhoto" type="button" style="width:100%;background:#e7f2ff;color:#164e84;border:1px solid #cbd8e8;box-shadow:none;text-align:center">📷 Choose Product Photo</button>
+     <input id="userReturnPhoto" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif" aria-label="Choose product photo" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap" tabindex="-1">
      <div id="userReturnPhotoName" style="display:none;margin-top:8px;padding:9px 11px;border-radius:9px;background:#e8f5e9;color:#166534;font-size:13px;font-weight:700;overflow-wrap:anywhere"></div>
      <img id="userReturnPreview" alt="Return product photo preview">
      <div style="font-size:12px;color:#64748b;margin-top:5px">एक साफ फोटो चुनें। अधिकतम 8 MB।</div>
@@ -2164,8 +2165,16 @@ function ensureUserReturnModal(){
   document.getElementById("userReturnCancel").onclick=closeUserReturnModal;
   modal.addEventListener("click",e=>{if(e.target===modal)closeUserReturnModal();});
   const photoInput=document.getElementById("userReturnPhoto");
+  const choosePhotoButton=document.getElementById("userReturnChoosePhoto");
+  // Keep the previous selection if the user cancels choosing a replacement.
+  choosePhotoButton.addEventListener("click",()=>{
+    if(photoInput.files&&photoInput.files[0])selectedReturnPhotoFile=photoInput.files[0];
+    photoInput.value="";
+    photoInput.click();
+  });
   photoInput.addEventListener("change",e=>{
     const file=e.target.files&&e.target.files[0];
+    if(file)selectedReturnPhotoFile=file;
     const img=document.getElementById("userReturnPreview");
     const nameBox=document.getElementById("userReturnPhotoName");
     const msg=document.getElementById("userReturnMsg");
@@ -2196,6 +2205,7 @@ function ensureUserReturnModal(){
   document.getElementById("userReturnForm").addEventListener("submit",submitUserOrderReturn);
 }
 let activeReturnOrderId="";
+let selectedReturnPhotoFile=null;
 function closeUserReturnModal(){
   const modal=document.getElementById("userReturnModal");
   if(modal)modal.classList.add("hidden");
@@ -2214,6 +2224,7 @@ function requestUserOrderReturn(orderId){
   activeReturnOrderId=String(orderId);
   document.getElementById("userReturnOrderLabel").textContent="Order #"+orderId+" · Return की अंतिम तारीख "+new Date(win.expiresAt).toLocaleString("en-IN");
   document.getElementById("userReturnForm").reset();
+  selectedReturnPhotoFile=null;
   const returnPreview=document.getElementById("userReturnPreview");
   if(returnPreview.dataset.objectUrl)URL.revokeObjectURL(returnPreview.dataset.objectUrl);
   returnPreview.removeAttribute("src");returnPreview.style.display="none";
@@ -2245,7 +2256,8 @@ async function submitUserOrderReturn(event){
   const submit=document.getElementById("userReturnSubmit"),msg=document.getElementById("userReturnMsg");
   const type=document.getElementById("userReturnReasonType").value;
   const description=document.getElementById("userReturnDescription").value.trim();
-  const photoFile=document.getElementById("userReturnPhoto").files[0];
+  const photoInput=document.getElementById("userReturnPhoto");
+  const photoFile=selectedReturnPhotoFile||(photoInput.files&&photoInput.files[0]);
   const order=orders.find(o=>String(o.id)===String(activeReturnOrderId));
   if(!order){msg.textContent="Order नहीं मिला।";return;}
   if(!type||description.length<5||!photoFile){msg.textContent="कारण, पूरी जानकारी और product photo तीनों जरूरी हैं।";return;}
@@ -2290,6 +2302,7 @@ async function submitUserOrderReturn(event){
     msg.textContent="Return Request Admin और Seller को भेजी जा रही है…";
     await db.ref().update(updates);
     order.returnRequest=request;
+    selectedReturnPhotoFile=null;
     closeUserReturnModal();renderMyOrders();
     showToast("Return Request Admin और Seller दोनों को भेज दी गई।");
   }catch(err){
