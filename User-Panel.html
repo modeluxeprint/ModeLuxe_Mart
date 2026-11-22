@@ -2063,25 +2063,37 @@ function toggleOrderDetails(id){
     el.classList.add("hidden");
   }
 }
+function parseOrderDateTimestamp(value){
+  if(value===undefined||value===null||value==="")return null;
+  if(typeof value==="number"&&Number.isFinite(value))return value<1e12?value*1000:value;
+  // Parse Indian DD/MM/YYYY dates before Date(), which can interpret them inconsistently.
+  const match=String(value).trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i);
+  if(match){
+    let hour=Number(match[4]||0);const ampm=String(match[7]||"").toLowerCase();
+    if(ampm==="pm"&&hour<12)hour+=12;if(ampm==="am"&&hour===12)hour=0;
+    const d=new Date(Number(match[3]),Number(match[2])-1,Number(match[1]),hour,Number(match[5]||0),Number(match[6]||0));
+    if(Number.isFinite(d.getTime()))return d.getTime();
+  }
+  const parsed=new Date(value).getTime();
+  return Number.isFinite(parsed)?parsed:null;
+}
 function getOrderDeliveredTimestamp(order){
-  const candidates=[
+  // Prefer an actual delivery/status timestamp. Never treat the order date as
+  // a delivery date for an older order.
+  const deliveryCandidates=[
     order&&order.deliveredAt,order&&order.deliveryCompletedAt,order&&order.deliveredOn,
     order&&order.deliveryDate,order&&order.statusUpdatedAt,order&&order.adminUpdatedAt,
     order&&order.updatedAt
   ];
-  for(const value of candidates){
-    if(value===undefined||value===null||value==="")continue;
-    if(typeof value==="number"&&Number.isFinite(value))return value<1e12?value*1000:value;
-    const parsed=new Date(value).getTime();
-    if(Number.isFinite(parsed))return parsed;
-    const match=String(value).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i);
-    if(match){
-      let hour=Number(match[4]||0);const ampm=String(match[7]||"").toLowerCase();
-      if(ampm==="pm"&&hour<12)hour+=12;if(ampm==="am"&&hour===12)hour=0;
-      const d=new Date(Number(match[3]),Number(match[2])-1,Number(match[1]),hour,Number(match[5]||0),Number(match[6]||0));
-      if(Number.isFinite(d.getTime()))return d.getTime();
-    }
+  for(const value of deliveryCandidates){
+    const stamp=parseOrderDateTimestamp(value);
+    if(stamp!==null)return stamp;
   }
+  // Compatibility fallback for newly delivered orders whose record only has
+  // the order date (as in older customer-panel records). Use only if it is
+  // within the 3-day return period; do not mislabel an old order date as delivery.
+  const orderDate=parseOrderDateTimestamp(order&&(order.date||order.createdAt));
+  if(orderDate!==null&&orderDate<=Date.now()&&Date.now()-orderDate<=3*24*60*60*1000)return orderDate;
   return null;
 }
 function isOrderDelivered(order){
@@ -2194,7 +2206,7 @@ function renderMyOrders(){
     const returnAlreadyFiled=!!(returnRequest&&String(returnRequest.status||"").toLowerCase()!=="rejected");
     const returnAction=returnWindow.allowed
       ?(returnAlreadyFiled?`<div class="notice success" style="margin-top:10px">Return Request: ${esc(returnRequest.status||"Pending")} · ${esc(returnRequest.reason||"")}</div>`:`<button type="button" class="danger" style="width:100%;margin-top:10px;background:#b42318;color:#fff" onclick="requestUserOrderReturn('${esc(o.id)}')">↩ Return Order (3 Days)</button><div class="muted" style="margin-top:5px;font-size:12px">Return की अंतिम समय-सीमा: ${esc(new Date(returnWindow.expiresAt).toLocaleString("en-IN"))}</div>`)
-      :(delivered?`<div class="muted" style="margin-top:10px;font-size:13px">${returnAlreadyFiled?"Return Request: "+esc(returnRequest.status||"Pending"):"Return की 3 दिन की समय-सीमा समाप्त हो गई है।"}</div>`:"");
+      :(delivered?`<div class="muted" style="margin-top:10px;font-size:13px">${returnAlreadyFiled?"Return Request: "+esc(returnRequest.status||"Pending"):(returnWindow.deliveredAt?"Return की 3 दिन की समय-सीमा समाप्त हो गई है।":"Delivery date उपलब्ध नहीं है; Return की समय-सीमा की पुष्टि नहीं हो सकी।")}</div>`:"");
     return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="${expandedOrderDetailIds.has(safeId)?"":"hidden"}" data-order-details-id="${safeId}" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · <strong>${esc(paymentStatus)}</strong></div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${returnAction}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
 }
