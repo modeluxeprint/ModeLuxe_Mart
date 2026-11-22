@@ -2149,10 +2149,8 @@ function ensureUserReturnModal(){
      <label for="userReturnDescription">समस्या की पूरी जानकारी *</label>
      <textarea id="userReturnDescription" minlength="5" maxlength="1000" required placeholder="प्रोडक्ट में क्या समस्या है, यहाँ लिखें…"></textarea>
      <label for="userReturnPhoto">प्रोडक्ट की फोटो अपलोड करें *</label>
-     <label id="userReturnChoosePhoto" for="userReturnPhoto" style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-height:58px;padding:14px 12px;box-sizing:border-box;border-radius:12px;background:#e7f2ff;color:#164e84;border:1px solid #cbd8e8;font-size:17px;font-weight:800;text-align:center;cursor:pointer;overflow:hidden">
-      <span>📷 Choose Product Photo</span>
-      <input id="userReturnPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" aria-label="Choose product photo" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.01;cursor:pointer;margin:0;padding:0">
-     </label>
+     <button id="userReturnChoosePhoto" type="button" style="width:100%;background:#e7f2ff;color:#164e84;border:1px solid #cbd8e8;box-shadow:none;text-align:center">📷 Choose Product Photo</button>
+     <input id="userReturnPhoto" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif" aria-label="Choose product photo" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap" tabindex="-1">
      <div id="userReturnPhotoName" style="display:none;margin-top:8px;padding:9px 11px;border-radius:9px;background:#e8f5e9;color:#166534;font-size:13px;font-weight:700;overflow-wrap:anywhere"></div>
      <img id="userReturnPreview" alt="Return product photo preview">
      <div style="font-size:12px;color:#64748b;margin-top:5px">एक साफ फोटो चुनें। अधिकतम 8 MB।</div>
@@ -2167,10 +2165,12 @@ function ensureUserReturnModal(){
   document.getElementById("userReturnCancel").onclick=closeUserReturnModal;
   modal.addEventListener("click",e=>{if(e.target===modal)closeUserReturnModal();});
   const photoInput=document.getElementById("userReturnPhoto");
-  // The real input overlays the visible label, allowing a direct user tap in Android WebView.
-  // Clear before opening so the same image can be selected again; keep the old file if cancelled.
-  photoInput.addEventListener("click",()=>{
+  const choosePhotoButton=document.getElementById("userReturnChoosePhoto");
+  // Keep the previous selection if the user cancels choosing a replacement.
+  choosePhotoButton.addEventListener("click",()=>{
+    if(photoInput.files&&photoInput.files[0])selectedReturnPhotoFile=photoInput.files[0];
     photoInput.value="";
+    photoInput.click();
   });
   photoInput.addEventListener("change",e=>{
     const file=e.target.files&&e.target.files[0];
@@ -2188,11 +2188,9 @@ function ensureUserReturnModal(){
     const allowedExts=["jpg","jpeg","png","webp","gif"];
     const isImage=allowedTypes.includes((file.type||"").toLowerCase())||allowedExts.includes(ext);
     if(!isImage||file.size<=0||file.size>8*1024*1024){
-      selectedReturnPhotoFile=null;
       e.target.value="";img.style.display="none";img.removeAttribute("src");
       nameBox.style.display="none";nameBox.textContent="";
       msg.textContent="JPG, PNG, WEBP या GIF फोटो चुनें। फोटो 8 MB से छोटी होनी चाहिए।";
-      msg.style.color="#b42318";
       return;
     }
     if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);
@@ -2201,8 +2199,6 @@ function ensureUserReturnModal(){
     img.src=previewUrl;img.style.display="block";
     nameBox.textContent="✓ फोटो चुनी गई: "+file.name+" ("+(file.size/1024/1024).toFixed(2)+" MB)";
     nameBox.style.display="block";
-    const chooseLabel=document.getElementById("userReturnChoosePhoto");
-    if(chooseLabel)chooseLabel.querySelector("span").textContent="✓ फोटो बदलें / दूसरी फोटो चुनें";
     msg.textContent="फोटो फॉर्म के साथ attach हो गई है। अब Submit Return Request दबाएँ।";
     msg.style.color="#166534";
   });
@@ -2229,10 +2225,6 @@ function requestUserOrderReturn(orderId){
   document.getElementById("userReturnOrderLabel").textContent="Order #"+orderId+" · Return की अंतिम तारीख "+new Date(win.expiresAt).toLocaleString("en-IN");
   document.getElementById("userReturnForm").reset();
   selectedReturnPhotoFile=null;
-  const returnPhotoInput=document.getElementById("userReturnPhoto");
-  if(returnPhotoInput)returnPhotoInput.value="";
-  const chooseLabel=document.getElementById("userReturnChoosePhoto");
-  if(chooseLabel)chooseLabel.querySelector("span").textContent="📷 Choose Product Photo";
   const returnPreview=document.getElementById("userReturnPreview");
   if(returnPreview.dataset.objectUrl)URL.revokeObjectURL(returnPreview.dataset.objectUrl);
   returnPreview.removeAttribute("src");returnPreview.style.display="none";
@@ -2344,15 +2336,16 @@ function renderMyOrders(){
     let current=0;stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});if(raw.includes("cancel"))current=-1;
     const returnRequest=o.returnRequest||null;
     const returnStatus=String(returnRequest&&returnRequest.status||"").trim().toLowerCase();
-    const returnFlow=!!returnRequest && returnStatus!=="rejected";
+    const returnFlow=!!returnRequest;
     const returnStages=[
-      {key:"requested",label:"Return Requested",aliases:["pending","requested","return requested"],time:returnRequest&&returnRequest.requestedAt},
-      {key:"approved",label:"Return Approved",aliases:["approved","return approved","accepted"],time:returnRequest&&returnRequest.approvedAt},
+      {key:"requested",label:"Return Request Submitted",aliases:["pending","requested","return requested","return request submitted"],time:returnRequest&&returnRequest.requestedAt},
+      {key:"approved",label:"Return Approved",aliases:["approved","return approved","accepted"],time:returnRequest&&(returnRequest.approvedAt||returnRequest.adminUpdatedAt)},
       {key:"pickup",label:"Return Pickup Scheduled",aliases:["pickup scheduled","pickup_scheduled","scheduled"],time:returnRequest&&(returnRequest.pickupScheduledAt||returnRequest.pickupAt)},
       {key:"picked",label:"Product Picked Up",aliases:["picked up","picked_up","collected"],time:returnRequest&&(returnRequest.pickedUpAt||returnRequest.collectedAt)},
       {key:"received",label:"Product Received",aliases:["received","product received","warehouse received"],time:returnRequest&&(returnRequest.receivedAt||returnRequest.warehouseReceivedAt)},
       {key:"refund",label:"Refund Initiated",aliases:["refund initiated","refund_initiated","refund processing","processing refund"],time:returnRequest&&(returnRequest.refundInitiatedAt||returnRequest.refundAt)},
-      {key:"refunded",label:"Refund Completed",aliases:["refunded","refund completed","completed"],time:returnRequest&&(returnRequest.refundedAt||returnRequest.completedAt)}
+      {key:"refunded",label:"Refund Completed",aliases:["refunded","refund completed","completed"],time:returnRequest&&(returnRequest.refundedAt||returnRequest.completedAt)},
+      {key:"rejected",label:"Return Request Rejected",aliases:["rejected","return rejected"],time:returnRequest&&(returnRequest.rejectedAt||returnRequest.adminUpdatedAt)}
     ];
     let returnCurrent=-1;
     returnStages.forEach((st,i)=>{
@@ -2360,7 +2353,7 @@ function renderMyOrders(){
     });
     if(returnStatus==="approved")returnCurrent=Math.max(returnCurrent,1);
     if(returnStatus.includes("refund"))returnCurrent=Math.max(returnCurrent,returnStatus.includes("complete")||returnStatus.includes("refunded")?6:5);
-    if(returnStatus==="rejected")returnCurrent=-1;
+    if(returnStatus==="rejected")returnCurrent=returnStages.findIndex(st=>st.key==="rejected");
     const baseTimeline=raw.includes("cancel")
       ?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`
       :stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("");
@@ -2371,7 +2364,7 @@ function renderMyOrders(){
     const delivered=isOrderDelivered(o);
     const paymentStatus=isCashOnDelivery(o)&&delivered?"Paid":(o.paymentStatus||"Pending");
     const returnWindow=getReturnWindow(o);
-    const returnAlreadyFiled=!!(returnRequest&&String(returnRequest.status||"").toLowerCase()!=="rejected");
+    const returnAlreadyFiled=!!returnRequest;
     const returnAction=returnWindow.allowed
       ?(returnAlreadyFiled?`<div class="notice success" style="margin-top:10px">Return Request: ${esc(returnRequest.status||"Pending")} · ${esc(returnRequest.reason||"")}</div>`:`<button type="button" class="danger" style="width:100%;margin-top:10px;background:#b42318;color:#fff" onclick="requestUserOrderReturn('${esc(o.id)}')">↩ Return Order (3 Days)</button><div class="muted" style="margin-top:5px;font-size:12px">Return की अंतिम समय-सीमा: ${esc(new Date(returnWindow.expiresAt).toLocaleString("en-IN"))}</div>`)
       :(delivered?`<div class="muted" style="margin-top:10px;font-size:13px">${returnAlreadyFiled?"Return Request: "+esc(returnRequest.status||"Pending"):(returnWindow.deliveredAt?"Return की 3 दिन की समय-सीमा समाप्त हो गई है।":"Delivery date उपलब्ध नहीं है; Return की समय-सीमा की पुष्टि नहीं हो सकी।")}</div>`:"");
