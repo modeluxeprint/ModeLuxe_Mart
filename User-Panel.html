@@ -2149,7 +2149,8 @@ function ensureUserReturnModal(){
      <label for="userReturnDescription">समस्या की पूरी जानकारी *</label>
      <textarea id="userReturnDescription" minlength="5" maxlength="1000" required placeholder="प्रोडक्ट में क्या समस्या है, यहाँ लिखें…"></textarea>
      <label for="userReturnPhoto">प्रोडक्ट की फोटो अपलोड करें *</label>
-     <input id="userReturnPhoto" type="file" accept="image/*" capture="environment" required>
+     <input id="userReturnPhoto" type="file" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" required>
+     <div id="userReturnPhotoName" style="display:none;margin-top:8px;padding:9px 11px;border-radius:9px;background:#e8f5e9;color:#166534;font-size:13px;font-weight:700;overflow-wrap:anywhere"></div>
      <img id="userReturnPreview" alt="Return product photo preview">
      <div style="font-size:12px;color:#64748b;margin-top:5px">एक साफ फोटो चुनें। अधिकतम 8 MB।</div>
      <div id="userReturnMsg" role="status" aria-live="polite"></div>
@@ -2162,15 +2163,35 @@ function ensureUserReturnModal(){
   document.body.appendChild(modal);
   document.getElementById("userReturnCancel").onclick=closeUserReturnModal;
   modal.addEventListener("click",e=>{if(e.target===modal)closeUserReturnModal();});
-  document.getElementById("userReturnPhoto").addEventListener("change",e=>{
-    const file=e.target.files&&e.target.files[0],img=document.getElementById("userReturnPreview");
-    if(!file){img.style.display="none";img.removeAttribute("src");return;}
-    if(!file.type.startsWith("image/")||file.size>8*1024*1024){
-      e.target.value="";img.style.display="none";
-      document.getElementById("userReturnMsg").textContent="कृपया 8 MB से छोटी सही image चुनें।";return;
+  const photoInput=document.getElementById("userReturnPhoto");
+  photoInput.addEventListener("change",e=>{
+    const file=e.target.files&&e.target.files[0];
+    const img=document.getElementById("userReturnPreview");
+    const nameBox=document.getElementById("userReturnPhotoName");
+    const msg=document.getElementById("userReturnMsg");
+    if(!file){
+      img.style.display="none";img.removeAttribute("src");
+      nameBox.style.display="none";nameBox.textContent="";
+      return;
     }
-    img.src=URL.createObjectURL(file);img.style.display="block";
-    document.getElementById("userReturnMsg").textContent="";
+    const ext=(file.name||"").split(".").pop().toLowerCase();
+    const allowedTypes=["image/jpeg","image/png","image/webp","image/gif"];
+    const allowedExts=["jpg","jpeg","png","webp","gif"];
+    const isImage=allowedTypes.includes((file.type||"").toLowerCase())||allowedExts.includes(ext);
+    if(!isImage||file.size<=0||file.size>8*1024*1024){
+      e.target.value="";img.style.display="none";img.removeAttribute("src");
+      nameBox.style.display="none";nameBox.textContent="";
+      msg.textContent="JPG, PNG, WEBP या GIF फोटो चुनें। फोटो 8 MB से छोटी होनी चाहिए।";
+      return;
+    }
+    if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);
+    const previewUrl=URL.createObjectURL(file);
+    img.dataset.objectUrl=previewUrl;
+    img.src=previewUrl;img.style.display="block";
+    nameBox.textContent="✓ फोटो चुनी गई: "+file.name+" ("+(file.size/1024/1024).toFixed(2)+" MB)";
+    nameBox.style.display="block";
+    msg.textContent="फोटो फॉर्म के साथ attach हो गई है। अब Submit Return Request दबाएँ।";
+    msg.style.color="#166534";
   });
   document.getElementById("userReturnForm").addEventListener("submit",submitUserOrderReturn);
 }
@@ -2193,14 +2214,21 @@ function requestUserOrderReturn(orderId){
   activeReturnOrderId=String(orderId);
   document.getElementById("userReturnOrderLabel").textContent="Order #"+orderId+" · Return की अंतिम तारीख "+new Date(win.expiresAt).toLocaleString("en-IN");
   document.getElementById("userReturnForm").reset();
-  document.getElementById("userReturnPreview").style.display="none";
+  const returnPreview=document.getElementById("userReturnPreview");
+  if(returnPreview.dataset.objectUrl)URL.revokeObjectURL(returnPreview.dataset.objectUrl);
+  returnPreview.removeAttribute("src");returnPreview.style.display="none";
+  const returnPhotoName=document.getElementById("userReturnPhotoName");
+  if(returnPhotoName){returnPhotoName.textContent="";returnPhotoName.style.display="none";}
   document.getElementById("userReturnMsg").textContent="";
   document.getElementById("userReturnModal").classList.remove("hidden");
 }
 async function uploadCustomerReturnPhoto(file){
   const signedUser=auth&&auth.currentUser;
   if(!signedUser)throw new Error("आपका Firebase login session नहीं मिला। दोबारा login करें।");
-  if(!file||!file.type||!file.type.startsWith("image/"))throw new Error("Product की सही फोटो चुनें।");
+  const ext=String(file&&file.name||"").split(".").pop().toLowerCase();
+  const allowedTypes=["image/jpeg","image/png","image/webp","image/gif"];
+  const allowedExts=["jpg","jpeg","png","webp","gif"];
+  if(!file||(!allowedTypes.includes(String(file.type||"").toLowerCase())&&!allowedExts.includes(ext)))throw new Error("JPG, PNG, WEBP या GIF की सही product फोटो चुनें।");
   if(file.size>8*1024*1024)throw new Error("फोटो 8 MB से छोटी होनी चाहिए।");
   const token=await signedUser.getIdToken(true);
   const form=new FormData();form.append("file",file,file.name||"return-product-photo.jpg");
