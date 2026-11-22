@@ -318,7 +318,7 @@ window.mlmVolatileStore = (() => {
 </div>
 
 <div class="seller-nav-grid">
-<button id="sellerOrdersTab" type="button">Orders</button>
+<button id="sellerOrdersTab" type="button">Orders</button><button id="sellerReturnRequestsTab" type="button">↩ Return Requests</button>
 <button id="addTab" class="active" type="button">＋ Add Product</button>
 <button id="sellerGraphToggle" type="button" aria-expanded="false">📊 Order Graph</button>
 <button id="sellerEarningGraphToggle" type="button" aria-expanded="false">💰 Earning Graph</button>
@@ -326,6 +326,7 @@ window.mlmVolatileStore = (() => {
 <section id="sellerGraphPanel" class="card hidden" style="margin:0 0 14px"><h3 class="graph-title">Daily Orders (Last 7 Days)</h3><div id="sellerDailyGraph" aria-live="polite"></div></section>
 <section id="sellerEarningGraphPanel" class="card hidden" style="margin:0 0 14px"><h3 class="graph-title">Earnings (Last 7 Days)</h3><div id="sellerEarningDailyGraph" aria-live="polite"></div></section>
 
+<section id="sellerReturnRequestsSection" class="card hidden"><h2>Customer Return Requests</h2><p id="sellerReturnSyncMsg" class="hint">Return requests load ho rahi hain…</p><div id="sellerReturnRequestsList"></div></section>
 <section id="sellerOrdersSection" class="card hidden"><h2>My Orders</h2><div id="sellerOrderFilterTabs" class="tabs" style="margin:0 0 12px"><button type="button" data-order-filter="received" class="secondary">Received Order <span id="sellerOrderTotalReceived" class="seller-order-total">0</span><span id="sellerBadgeReceived" class="seller-count-badge">0</span></button><button type="button" data-order-filter="rto" class="secondary">RTO Order <span id="sellerOrderTotalRto" class="seller-order-total">0</span><span id="sellerBadgeRto" class="seller-count-badge">0</span></button><button type="button" data-order-filter="delivered" class="secondary">Delivered Order <span id="sellerOrderTotalDelivered" class="seller-order-total">0</span><span id="sellerBadgeDelivered" class="seller-count-badge">0</span></button><button type="button" data-order-filter="return" class="secondary">Return Order <span id="sellerOrderTotalReturn" class="seller-order-total">0</span><span id="sellerBadgeReturn" class="seller-count-badge">0</span></button></div><div id="sellerOrdersList" class="muted">Order category select karein.</div><p class="hint">Courier booking Admin ke active API partners se hogi. Credentials secure Worker mein rahenge.</p><div id="sellerCourierPartnersStatus" class="hint">Courier partners load ho rahe hain…</div></section>
 <section id="addSection" class="card">
 <h2 id="formTitle">Naya Product List Karein</h2>
@@ -478,7 +479,7 @@ async function registerModeLuxePush(role, user) {
 
 let sellerRealtimeSubscriptions=[];
 function sellerListen(path,event,callback,errorCallback){const ref=db.ref(path);ref.on(event,callback,errorCallback);sellerRealtimeSubscriptions.push({ref,event,callback});return ref;}
-function stopSellerRealtimeListeners(){if(typeof sellerDeliveredSyncTimer!=="undefined"&&sellerDeliveredSyncTimer){clearInterval(sellerDeliveredSyncTimer);sellerDeliveredSyncTimer=null;}sellerRealtimeSubscriptions.forEach(x=>{try{x.ref.off(x.event,x.callback);}catch(e){}});sellerRealtimeSubscriptions=[];sellerOrderRootListeners={};sellerOrderRootRows={};sellerOrderAssignmentRows={};sellerOrderAssignmentListeners={};sellerOrderRows={};activeCourierPartners={};sellerSupportListener=null;}
+function stopSellerRealtimeListeners(){if(typeof sellerDeliveredSyncTimer!=="undefined"&&sellerDeliveredSyncTimer){clearInterval(sellerDeliveredSyncTimer);sellerDeliveredSyncTimer=null;}if(currentUser&&sellerReturnRequestListener){db.ref("sellerReturnRequests/"+currentUser.uid).off("value",sellerReturnRequestListener);sellerReturnRequestListener=null;}sellerReturnRequestRows={};sellerRealtimeSubscriptions.forEach(x=>{try{x.ref.off(x.event,x.callback);}catch(e){}});sellerRealtimeSubscriptions=[];sellerOrderRootListeners={};sellerOrderRootRows={};sellerOrderAssignmentRows={};sellerOrderAssignmentListeners={};sellerOrderRows={};activeCourierPartners={};sellerSupportListener=null;}
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function showSellerNotice(message,type="success"){
@@ -918,6 +919,49 @@ async function sellerAcknowledgeAllNotifications(){
   }
 }
 
+
+let sellerReturnRequestRows={};
+let sellerReturnRequestListener=null;
+let sellerReturnRequestsFirstLoad=true;
+function renderSellerReturnRequests(){
+ const host=document.getElementById('sellerReturnRequestsList');if(!host)return;
+ const entries=Object.entries(sellerReturnRequestRows||{}).sort((a,b)=>String((b[1]||{}).requestedAt||'').localeCompare(String((a[1]||{}).requestedAt||'')));
+ host.innerHTML=entries.length?entries.map(([id,r])=>{
+  const items=Array.isArray(r.items)?r.items.map(i=>(i.name||i.productName||i.title||'Item')+' × '+(i.qty||i.quantity||1)).join(', '):'—';
+  return `<article class="card" style="margin:10px 0;border:1px solid var(--line)">
+   <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>Return · Order #${esc(id)}</b><b style="color:#075fc4">${esc(r.status||'Pending')}</b></div>
+   <p class="muted">Customer: ${esc(r.customerName||'Customer')} · ${esc(r.customerPhone||'')}</p>
+   <p class="muted">Items: ${esc(items)}</p>
+   <p class="muted">Reason: <b>${esc(r.reasonType||'')}</b> · ${esc(r.reason||'')}</p>
+   <p class="muted">Requested: ${esc(r.requestedAt||'')}</p>
+   ${r.photoUrl?`<a href="${esc(r.photoUrl)}" target="_blank" rel="noopener"><img src="${esc(r.photoUrl)}" alt="Return product photo" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`:'<p class="muted">Photo not attached</p>'}
+  </article>`;
+ }).join(''):'<div class="muted">Abhi aapke products ke liye koi Return Request nahi aayi hai.</div>';
+}
+function startSellerReturnRequests(){
+ if(!currentUser)return;
+ const ref=db.ref('sellerReturnRequests/'+currentUser.uid);
+ if(sellerReturnRequestListener)ref.off('value',sellerReturnRequestListener);
+ sellerReturnRequestListener=snap=>{
+  const incoming=snap.val()||{};
+  if(!sellerReturnRequestsFirstLoad){
+   Object.entries(incoming).forEach(([id,r])=>{
+    const old=sellerReturnRequestRows[id];
+    if(!old&&r)sellerAddNotification(id,'return','New customer return request','Order #'+id+' · '+(r.customerName||'Customer'),true);
+   });
+  }
+  sellerReturnRequestsFirstLoad=false;
+  sellerReturnRequestRows=incoming;
+  const msg=document.getElementById('sellerReturnSyncMsg');
+  if(msg)msg.textContent='Firebase live sync active · '+Object.keys(incoming).length+' return requests';
+  renderSellerReturnRequests();
+ };
+ ref.on('value',sellerReturnRequestListener,err=>{
+  const msg=document.getElementById('sellerReturnSyncMsg');
+  if(msg)msg.textContent='Return Request read error: '+(err&&err.message||err)+' · Firebase Rules mein seller read permission check karein.';
+ });
+}
+
 function startSellerOrders(){
   if(!currentUser) return;
   sellerNotificationWriteKeys.clear();
@@ -1241,9 +1285,9 @@ let activeSellerPanel="add";
 let sellerProductFilter="all";
 const sellerProductStatButtons={all:"statMyProducts",active:"statActiveProducts",out:"statLowStockProducts",unpublished:"statUnpublishedProducts"};
 const sellerProductFilterTitles={all:"My Products",active:"Active Listings",out:"Low / Out of Stock Products",unpublished:"Unpublished Products"};
-const sellerPanelSections={orders:"sellerOrdersSection",add:"addSection",mine:"mineSection",graph:"sellerGraphPanel",earningGraph:"sellerEarningGraphPanel",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
-const sellerPanelButtons={orders:"sellerOrdersTab",add:"addTab",graph:"sellerGraphToggle",earningGraph:"sellerEarningGraphToggle",profile:"profileTab",support:"supportTab",wallet:"walletHeaderBtn"};
-const sellerFocusButtonIds=["profileTab","supportTab","statMyProducts","statActiveProducts","statLowStockProducts","statUnpublishedProducts","sellerOrdersTab","addTab","sellerGraphToggle","sellerEarningGraphToggle"];
+const sellerPanelSections={orders:"sellerOrdersSection",returns:"sellerReturnRequestsSection",add:"addSection",mine:"mineSection",graph:"sellerGraphPanel",earningGraph:"sellerEarningGraphPanel",profile:"profileSection",support:"supportSection",wallet:"walletSection"};
+const sellerPanelButtons={orders:"sellerOrdersTab",returns:"sellerReturnRequestsTab",add:"addTab",graph:"sellerGraphToggle",earningGraph:"sellerEarningGraphToggle",profile:"profileTab",support:"supportTab",wallet:"walletHeaderBtn"};
+const sellerFocusButtonIds=["profileTab","supportTab","statMyProducts","statActiveProducts","statLowStockProducts","statUnpublishedProducts","sellerOrdersTab","sellerReturnRequestsTab","addTab","sellerGraphToggle","sellerEarningGraphToggle"];
 function clearSellerFocusClasses(){
  document.querySelectorAll("#sellerApp .focus-active").forEach(el=>el.classList.remove("focus-active"));
  document.querySelectorAll("#sellerApp .focus-group-visible").forEach(el=>el.classList.remove("focus-group-visible"));
@@ -1382,6 +1426,7 @@ $("statUnpublishedProducts").onclick=()=>showSellerFocus("mine","statUnpublished
 $("profileTab").onclick=()=>showSellerFocus("profile","profileTab");
 $("supportTab").onclick=()=>showSellerFocus("support","supportTab");
 $("sellerOrdersTab").onclick=()=>showSellerFocus("orders","sellerOrdersTab");
+$("sellerReturnRequestsTab").onclick=()=>showSellerFocus("returns","sellerReturnRequestsTab");
 $("addTab").onclick=()=>showSellerFocus("add","addTab");
 $("sellerGraphToggle").onclick=()=>showSellerFocus("graph","sellerGraphToggle");
 $("sellerEarningGraphToggle").onclick=()=>showSellerFocus("earningGraph","sellerEarningGraphToggle");
