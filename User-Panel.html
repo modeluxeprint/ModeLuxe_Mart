@@ -1252,6 +1252,10 @@ function startUserOrdersListener(phone){
         createdAt:raw.createdAt||"",
         status:String(raw.status||"Order Placed"),
         updatedAt:raw.adminUpdatedAt||raw.updatedAt||raw.statusUpdatedAt||"",
+        // Keep the return request attached to the live customer order record.
+        // Without this field, renderMyOrders() cannot hide the Return button
+        // or display the Return/Refund tracking timeline after Firebase refresh.
+        returnRequest:raw.returnRequest||null,
         payment:raw.paymentMethod||raw.payment||"",
         paymentStatus:raw.paymentStatus||"Pending",
         razorpayPaymentId:raw.razorpayPaymentId||""
