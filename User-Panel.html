@@ -2063,6 +2063,86 @@ function toggleOrderDetails(id){
     el.classList.add("hidden");
   }
 }
+function getOrderDeliveredTimestamp(order){
+  const candidates=[
+    order&&order.deliveredAt,order&&order.deliveryCompletedAt,order&&order.deliveredOn,
+    order&&order.deliveryDate,order&&order.statusUpdatedAt,order&&order.adminUpdatedAt,
+    order&&order.updatedAt
+  ];
+  for(const value of candidates){
+    if(value===undefined||value===null||value==="")continue;
+    if(typeof value==="number"&&Number.isFinite(value))return value<1e12?value*1000:value;
+    const parsed=new Date(value).getTime();
+    if(Number.isFinite(parsed))return parsed;
+    const match=String(value).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i);
+    if(match){
+      let hour=Number(match[4]||0);const ampm=String(match[7]||"").toLowerCase();
+      if(ampm==="pm"&&hour<12)hour+=12;if(ampm==="am"&&hour===12)hour=0;
+      const d=new Date(Number(match[3]),Number(match[2])-1,Number(match[1]),hour,Number(match[5]||0),Number(match[6]||0));
+      if(Number.isFinite(d.getTime()))return d.getTime();
+    }
+  }
+  return null;
+}
+function isOrderDelivered(order){
+  return String(order&&order.status||"").toLowerCase().includes("delivered");
+}
+function isCashOnDelivery(order){
+  const method=String(order&&(order.payment||order.paymentMethod||order.paymentMode||order.paymentType)||"").toLowerCase();
+  return method.includes("cash on delivery")||method==="cod"||method.includes("cod ");
+}
+function getReturnWindow(order){
+  if(!isOrderDelivered(order))return {allowed:false,expiresAt:null,deliveredAt:null};
+  const deliveredAt=getOrderDeliveredTimestamp(order);
+  if(!deliveredAt)return {allowed:false,expiresAt:null,deliveredAt:null};
+  const expiresAt=deliveredAt+(3*24*60*60*1000);
+  return {allowed:Date.now()<=expiresAt,expiresAt,deliveredAt};
+}
+async function requestUserOrderReturn(orderId){
+  if(!activeUserPhone){showToast("Return request के लिए पहले लॉगिन करें।");return;}
+  if(!db){showToast("Firebase कनेक्शन उपलब्ध नहीं है।");return;}
+  const order=orders.find(o=>String(o.id)===String(orderId));
+  if(!order){showToast("Order नहीं मिला।");return;}
+  const win=getReturnWindow(order);
+  if(!win.allowed){showToast("Return की 3 दिन की समय-सीमा समाप्त हो गई है या delivery date उपलब्ध नहीं है।");return;}
+  if(order.returnRequest&&String(order.returnRequest.status||"").toLowerCase()!=="rejected"){
+    showToast("इस ऑर्डर की Return Request पहले से दर्ज है।");return;
+  }
+  const reason=prompt("Return का कारण लिखें (जैसे product damaged, defective या wrong item):");
+  if(reason===null)return;
+  const cleanReason=String(reason).trim();
+  if(cleanReason.length<5){showToast("कृपया Return का सही कारण लिखें।");return;}
+  try{
+    const snap=await db.ref("orders/"+orderId).once("value");
+    const remote=snap.val();
+    if(!remote)throw new Error("Firebase में ऑर्डर नहीं मिला।");
+    const phone=String(remote.customerPhone||remote.phone||"").replace(/\D/g,"");
+    if(phone!==String(activeUserPhone).replace(/\D/g,""))throw new Error("इस ऑर्डर के लिए Return Request की अनुमति नहीं है।");
+    if(!String(remote.status||"").toLowerCase().includes("delivered"))throw new Error("यह ऑर्डर अभी Delivered नहीं है।");
+    const remoteWindow=getReturnWindow(remote);
+    if(!remoteWindow.allowed)throw new Error("Return की 3 दिन की समय-सीमा समाप्त हो गई है या delivery date उपलब्ध नहीं है।");
+    if(remote.returnRequest&&String(remote.returnRequest.status||"").toLowerCase()!=="rejected")throw new Error("इस ऑर्डर की Return Request पहले से दर्ज है।");
+    const requestAt=new Date().toISOString();
+    const request={
+      orderId:String(orderId),customerPhone:activeUserPhone,
+      customerName:remote.customerName||remote.name||"",
+      items:remote.items||order.items||[],total:Number(remote.total??remote.totalAmount??order.total??0),
+      reason:cleanReason,status:"Pending",requestedAt:requestAt,
+      deliveredAt:new Date(remoteWindow.deliveredAt).toISOString(),
+      returnWindowEndsAt:new Date(remoteWindow.expiresAt).toISOString()
+    };
+    const updates={};
+    updates["returnRequests/"+orderId]=request;
+    updates["orders/"+orderId+"/returnRequest"]=request;
+    await db.ref().update(updates);
+    order.returnRequest=request;
+    renderMyOrders();
+    showToast("Return Request सफलतापूर्वक भेज दी गई।");
+  }catch(err){
+    showToast("Return Request नहीं भेजी गई: "+(err.message||"कृपया दोबारा प्रयास करें।"));
+  }
+}
+
 function renderMyOrders(){
   const list=$("myOrdersList");
   // Before replacing the list during a Firebase live refresh, remember which order details are currently expanded.
@@ -2082,10 +2162,40 @@ function renderMyOrders(){
     const raw=String(o.status||"Order Placed").toLowerCase();
     const stages=[{key:"placed",label:"Order Placed",match:["order placed","order received","placed"]},{key:"processing",label:"Seller Processing",match:["processing","accepted","confirmed","packed"]},{key:"shipped",label:"Shipped",match:["shipped","in transit","dispatched"]},{key:"picked",label:"Picked by Courier Partner",match:["picked up by courier partner","picked by courier partner","picked up by delivery partner","picked up","pickup","picked","delivery partner picked","collected by delivery partner"]},{key:"out",label:"Out for Delivery",match:["out for delivery"]},{key:"delivered",label:"Delivered",match:["delivered"]}];
     let current=0;stages.forEach((st,i)=>{if(st.match.some(m=>raw.includes(m)))current=Math.max(current,i)});if(raw.includes("cancel"))current=-1;
-    const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${raw.includes("cancel")?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`:stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("")}</div>`;
+    const returnRequest=o.returnRequest||null;
+    const returnStatus=String(returnRequest&&returnRequest.status||"").trim().toLowerCase();
+    const returnFlow=!!returnRequest && returnStatus!=="rejected";
+    const returnStages=[
+      {key:"requested",label:"Return Requested",aliases:["pending","requested","return requested"],time:returnRequest&&returnRequest.requestedAt},
+      {key:"approved",label:"Return Approved",aliases:["approved","return approved","accepted"],time:returnRequest&&returnRequest.approvedAt},
+      {key:"pickup",label:"Return Pickup Scheduled",aliases:["pickup scheduled","pickup_scheduled","scheduled"],time:returnRequest&&(returnRequest.pickupScheduledAt||returnRequest.pickupAt)},
+      {key:"picked",label:"Product Picked Up",aliases:["picked up","picked_up","collected"],time:returnRequest&&(returnRequest.pickedUpAt||returnRequest.collectedAt)},
+      {key:"received",label:"Product Received",aliases:["received","product received","warehouse received"],time:returnRequest&&(returnRequest.receivedAt||returnRequest.warehouseReceivedAt)},
+      {key:"refund",label:"Refund Initiated",aliases:["refund initiated","refund_initiated","refund processing","processing refund"],time:returnRequest&&(returnRequest.refundInitiatedAt||returnRequest.refundAt)},
+      {key:"refunded",label:"Refund Completed",aliases:["refunded","refund completed","completed"],time:returnRequest&&(returnRequest.refundedAt||returnRequest.completedAt)}
+    ];
+    let returnCurrent=-1;
+    returnStages.forEach((st,i)=>{
+      if(st.aliases.some(alias=>returnStatus===alias)||String(returnStatus).includes(st.key))returnCurrent=Math.max(returnCurrent,i);
+    });
+    if(returnStatus==="approved")returnCurrent=Math.max(returnCurrent,1);
+    if(returnStatus.includes("refund"))returnCurrent=Math.max(returnCurrent,returnStatus.includes("complete")||returnStatus.includes("refunded")?6:5);
+    if(returnStatus==="rejected")returnCurrent=-1;
+    const baseTimeline=raw.includes("cancel")
+      ?`<div class="track-step current"><span class="track-dot"></span><div><strong>Order Cancelled</strong><div class="muted">${esc(o.updatedAt||o.date||"")}</div></div></div>`
+      :stages.map((st,i)=>`<div class="track-step ${i<current?"done":i===current?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${i===0?`<div class="muted">${esc(o.date||"")}</div>`:i===current?`<div class="muted">Current status</div>`:""}</div></div>`).join("");
+    const returnTimeline=returnFlow?`<div class="tracking" style="margin-top:12px"><h3>Return & Refund Tracking</h3><div class="track-step done"><span class="track-dot"></span><div><strong>Order Placed</strong><div class="muted">${esc(o.date||"")}</div></div></div><div class="track-step done"><span class="track-dot"></span><div><strong>Delivered</strong><div class="muted">${esc(returnRequest.deliveredAt||"")}</div></div></div>${returnStages.map((st,i)=>{const done=i<returnCurrent,active=i===returnCurrent;const stamp=st.time?new Date(st.time).toLocaleString("en-IN"):(active?"Current status":"");return `<div class="track-step ${done?"done":active?"current":"pending"}"><span class="track-dot"></span><div><strong>${st.label}</strong>${stamp?`<div class="muted">${esc(stamp)}</div>`:""}</div></div>`}).join("")}${returnStatus==="rejected"?`<div class="notice error" style="margin-top:8px">Return Request Rejected · ${esc(returnRequest.rejectionReason||returnRequest.adminNote||"")}</div>`:""}</div>`:"";
+    const timeline=`<div class="tracking"><h3>Order Tracking</h3><div class="tracking-address"><strong>Delivery Address</strong><div>${esc(o.address||"Address not provided")}</div><div>PIN Code: ${esc(o.pin||"—")}</div></div>${baseTimeline}</div>${returnTimeline}`;
     const canCancel=!(["cancelled","canceled","delivered","shipped","in transit","dispatched","out for delivery","picked up by delivery partner"].some(x=>raw.includes(x)));
-    const paymentMethod=o.payment||o.paymentMethod||"Not available";
-    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="${expandedOrderDetailIds.has(safeId)?"":"hidden"}" data-order-details-id="${safeId}" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · ${esc(o.paymentStatus||"Pending")}</div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
+    const paymentMethod=o.payment||o.paymentMethod||o.paymentMode||o.paymentType||"Not available";
+    const delivered=isOrderDelivered(o);
+    const paymentStatus=isCashOnDelivery(o)&&delivered?"Paid":(o.paymentStatus||"Pending");
+    const returnWindow=getReturnWindow(o);
+    const returnAlreadyFiled=!!(returnRequest&&String(returnRequest.status||"").toLowerCase()!=="rejected");
+    const returnAction=returnWindow.allowed
+      ?(returnAlreadyFiled?`<div class="notice success" style="margin-top:10px">Return Request: ${esc(returnRequest.status||"Pending")} · ${esc(returnRequest.reason||"")}</div>`:`<button type="button" class="danger" style="width:100%;margin-top:10px;background:#b42318;color:#fff" onclick="requestUserOrderReturn('${esc(o.id)}')">↩ Return Order (3 Days)</button><div class="muted" style="margin-top:5px;font-size:12px">Return की अंतिम समय-सीमा: ${esc(new Date(returnWindow.expiresAt).toLocaleString("en-IN"))}</div>`)
+      :(delivered?`<div class="muted" style="margin-top:10px;font-size:13px">${returnAlreadyFiled?"Return Request: "+esc(returnRequest.status||"Pending"):"Return की 3 दिन की समय-सीमा समाप्त हो गई है।"}</div>`:"");
+    return `<article class="ordercard"><button type="button" class="secondary" style="width:100%;text-align:left;box-shadow:none" onclick="toggleOrderDetails('${esc(o.id)}')"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>Order #${esc(o.id)}</strong><span class="orderstatus">${esc(o.status||"Order Placed")}</span></div><div class="muted" style="margin-top:6px">${esc(o.date||o.createdAt||"")} · Total ₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</div><div class="muted" style="margin-top:5px">Tap to view order details ▾</div></button><div id="orderDetails-${safeId}" class="${expandedOrderDetailIds.has(safeId)?"":"hidden"}" data-order-details-id="${safeId}" style="padding-top:10px">${items}<div class="rowline"><span>Total</span><strong>₹${Number(o.total??o.totalAmount??0).toLocaleString("en-IN")}</strong></div><div class="muted">Payment Method: <strong>${esc(paymentMethod)}</strong> · <strong>${esc(paymentStatus)}</strong></div>${timeline}<button type="button" style="width:100%;margin-top:10px" onclick="downloadUserInvoice('${esc(o.id)}')">⬇ Download Invoice / Bill</button>${canCancel?`<button class="danger" style="width:100%;margin-top:8px" type="button" onclick="cancelUserOrder('${esc(o.id)}')">Cancel Order</button>`:""}${returnAction}${raw.includes("delivered")?`<div class="ratebox"><strong>Rate this product</strong>${(o.items||[]).map(i=>`<div class="rowline"><span>${esc(i.name||i.productName||"Product")}</span><div class="stars">${[1,2,3,4,5].map(n=>`<button class="${getUserRating(i.id)===n?"selected":""}" onclick="rateProduct('${esc(i.id)}',${n},'${esc(o.id)}')" aria-label="${n} stars">${n}★</button>`).join("")}</div></div>`).join("")}</div>`:""}</div></article>`;
   }).join("");
 }
 
