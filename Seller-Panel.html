@@ -632,6 +632,7 @@ auth.onAuthStateChanged(async user=>{
   listenMyProducts();
   startSellerWallet();
   startSellerOrders();
+  startSellerReturnRequests(); // Load this seller's customer return requests in real time.
 
  }catch(err){
   // Keep the Firebase session intact. A profile-read failure is not a logout
