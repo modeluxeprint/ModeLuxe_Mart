@@ -275,11 +275,6 @@ const adminFirebaseApp=firebase.apps.find(app=>app.name==='modeluxe-admin-panel'
 const db=adminFirebaseApp.database();
 const auth=adminFirebaseApp.auth();
 
-// रीफ्रेश करने पर लॉग-आउट न हो, इसके लिए LOCAL persistence सेट करना
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => {
-  console.warn('Auth persistence error:', e);
-});
-
 const R2_UPLOAD_URL="https://modeluxe-r2-upload.vaishumodeluxe.workers.dev/upload";
 async function uploadImageToR2(file){
   if(!auth.currentUser)throw new Error("Admin Firebase login missing hai. Dobara login karein.");
@@ -377,22 +372,22 @@ renderNotifications();
 updateUnitChoices();
 setTimeout(processDeliveryQr,800);
 
-// Restore the admin dashboard after refresh instead of showing the login form again.
-let isAdminDeviceUnlocked = false; // डिवाइस अनलॉक स्टेटस को सीधे मेमोरी में रखने के लिए
+// Restore the Admin dashboard after refresh. Firebase LOCAL persistence keeps
+// the authenticated user; localStorage keeps this device's passkey-unlocked state.
+const ADMIN_UNLOCK_KEY='modeluxeAdminUnlocked';
+let isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
 
-// रीफ्रेश होने पर पासकी स्टेट को बनाए रखने के लिए sessionStorage का उपयोग
-if(sessionStorage.getItem('modeluxeAdminUnlocked') === 'true'){
-  isAdminDeviceUnlocked = true;
-}
-
-auth.onAuthStateChanged(user=>{
+auth.onAuthStateChanged(async user=>{
+  await adminPersistenceReady;
+  // Re-read the current user after Firebase has restored LOCAL persistence.
+  user = auth.currentUser;
   showActualAdminUid();
   
   // अगर Firebase यूज़र साइन-इन नहीं है या एडमिन UID मैच नहीं करती
   if(!user || user.uid !== 'admin_7818995955'){
     signedInPhone='';
-    isAdminDeviceUnlocked = false;
-    sessionStorage.removeItem('modeluxeAdminUnlocked');
+    // Preserve the device unlock flag if Firebase is still restoring the session.
+    if (auth.currentUser) isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
     if(orderListener)db.ref('orders').off('value',orderListener);
     if(productListener)db.ref('sellerProducts').off('value',productListener);
     orderListener=null;productListener=null;
@@ -408,9 +403,9 @@ auth.onAuthStateChanged(user=>{
   signedInPhone=ADMIN_PHONE;
   
   // अगर पासकी पहले से वेरीफाइड है या रीफ्रेश के बाद सेशन जीवित है
-  if(isAdminDeviceUnlocked || sessionStorage.getItem('modeluxeAdminUnlocked') === 'true'){
+  if(isAdminDeviceUnlocked || localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true'){
     isAdminDeviceUnlocked = true;
-    sessionStorage.setItem('modeluxeAdminUnlocked', 'true');
+    localStorage.setItem(ADMIN_UNLOCK_KEY, 'true');
     $('loginPanel').classList.add('hidden');
     $('logoutBtn').classList.remove('hidden');
     $('adminDeviceLockModal').classList.add('hidden');
@@ -476,22 +471,11 @@ async function verifyOTP(){
     stage='Firebase custom token login';
     setMsg('चरण 2/2: OTP सही है। Admin Session शुरू हो रहा है…');
 
-    // Firebase custom token sign-in with ultra-fast fallback
-    let loginSuccess = false;
-    try {
-      await Promise.race([
-        auth.signInWithCustomToken(j.customToken),
-        new Promise((_,reject)=>setTimeout(()=>reject(new Error('Timeout')), 8000))
-      ]);
-      loginSuccess = true;
-    } catch (tokErr) {
-      console.warn('Custom token login direct wait timed out, attempting force sign-in workaround:', tokErr);
-      // अगर नेटवर्क या SDK धीमा है, तो भी हम एडमिन सेशन को सीधे अनलॉक कर देंगे क्योंकि Worker ने OTP verify कर दिया है
-      loginSuccess = true; 
-    }
-
-    if (!loginSuccess) {
-      throw new Error('Firebase login failed.');
+    // Firebase LOCAL persistence must be ready before custom-token sign-in.
+    await adminPersistenceReady;
+    const credential = await auth.signInWithCustomToken(j.customToken);
+    if (!credential || !credential.user || !auth.currentUser) {
+      throw new Error('Firebase session create nahi hua. Network check karke dobara login karein.');
     }
 
     signedInPhone=phone;
@@ -563,9 +547,11 @@ async function submitDeviceLock(){
  }catch(e){msg.textContent=e?.message||'Passkey verification fail हो गई।';}
 }
 $('devicePrimaryBtn').addEventListener('click',submitDeviceLock);
-$('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
+$('deviceCancelBtn').addEventListener('click',async()=>{localStorage.removeItem(ADMIN_UNLOCK_KEY);localStorage.removeItem('modeluxeAdminDeviceUnlocked');$('adminDeviceLockModal').classList.add('hidden');$('adminDeviceLockModal').classList.remove('flex');await logout();});
 function startOrders(){if(orderListener)db.ref('orders').off('value',orderListener);initialOrdersLoaded=false;let previous={};window.__ordersSummaryMode='closed';$('ordersList').classList.add('hidden');orderListener=snap=>{const next=snap.val()||{};if(initialOrdersLoaded){const oldIds=new Set(Object.keys(previous)),newIds=new Set(Object.keys(next));for(const id of newIds){if(!oldIds.has(id))addNotification('New order received','Order #'+id+' · '+((next[id]||{}).customerName||'Customer'),'success');else if(JSON.stringify(previous[id])!==JSON.stringify(next[id]))addNotification('Order data updated','Order #'+id+' में बदलाव हुआ।','info');}for(const id of oldIds){if(!newIds.has(id))addNotification('Order removed','Order #'+id+' अब Firebase orders में नहीं है।','error');}}previous=JSON.parse(JSON.stringify(next));ordersData=next;initialOrdersLoaded=true;$('syncMsg').textContent='Firebase se live sync active · Last update '+new Date().toLocaleTimeString();renderOrders();};db.ref('orders').on('value',orderListener,e=>{$('syncMsg').textContent='Firebase read error: '+e.message;addNotification('Firebase read error',e.message||'Orders sync failed.','error');});}
 async function logout(){
+  localStorage.removeItem(ADMIN_UNLOCK_KEY);
+  isAdminDeviceUnlocked = false;
   if(orderListener) db.ref('orders').off('value', orderListener);
   if(productListener) db.ref('sellerProducts').off('value', productListener);
   orderListener = null; 
@@ -1546,7 +1532,7 @@ function renderAreaDeliverySettings(settings={}){
  $('areaWaitSeconds').value=String(settings.localWaitSeconds===15?15:10);
  $('areaPerKmRate').value=Number(settings.perKmRate??5);
  $('allIndiaDelivery').value=String(!!settings.allIndiaEnabled);
- host.innerHTML=AREA_DELIVERY_CATEGORIES.map((name,i)=>{const key='c'+i,matched=Object.keys(rules).find(k=>k.toLowerCase()===name.toLowerCase()),r=matched?rules[matched]:{};return `<div class="rounded-lg border border-white/10 p-3"><label class="small">${name.replace(/</g,'&lt;')}</label><input type="hidden" data-cat-name value="${name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><label class="small mt-2 block">Maximum Road KM</label><input type="number" min="0" step="1" data-cat-km value="${Number(r.maxKm??10)}"><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-allindia style="width:auto" ${r.allIndia===true?'checked':''}> Allow All India</label><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-enabled style="width:auto" ${r.enabled===false?'':'checked'}> Category delivery ON</label></div>`;}).join('');
+ host.innerHTML=AREA_DELIVERY_CATEGORIES.map((name,i)=>{const key='c'+i,matched=Object.keys(rules).find(k=>k.toLowerCase()===name.toLowerCase()),r=matched?rules[matched]:{};return `<div class="rounded-lg border border-white/10 p-3"><label class="small">${name.replace(/</g,'&lt;')}</label><input type="hidden" data-cat-name value="${name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><label class="small mt-2 block">Maximum Road KM</label><input type="number" min="0" step="1" data-cat-km value="${Number(r.maxKm??11)}"><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-allindia style="width:auto" ${r.allIndia===true?'checked':''}> Allow All India</label><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-enabled style="width:auto" ${r.enabled===false?'':'checked'}> Category delivery ON</label></div>`;}).join('');
 }
 window.saveAreaDeliverySettings=async()=>{
  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
