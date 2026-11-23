@@ -380,54 +380,58 @@ let isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
 // Avoid flashing the login screen while Firebase restores the saved session.
 $('loginPanel').classList.add('hidden');
 $('dashboard').classList.add('hidden');
-$('loginMsg').textContent='Admin session restore ho raha hai…';
+$('loginMsg').textContent='Firebase session restore ho raha hai…';
 
-auth.onAuthStateChanged(user=>{
-  // Use the user object supplied by Firebase's auth-state event.
-  // Do not overwrite it with auth.currentUser: during page startup that can
-  // briefly be null while the LOCAL persistence state is being delivered.
-  showActualAdminUid();
-  
-  // अगर Firebase यूज़र साइन-इन नहीं है या एडमिन UID मैच नहीं करती
-  if(!user || user.uid !== 'admin_7818995955'){
-    signedInPhone='';
-    // Preserve the device unlock flag if Firebase is still restoring the session.
-    if (auth.currentUser) isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
-    if(orderListener)db.ref('orders').off('value',orderListener);
-    if(productListener)db.ref('sellerProducts').off('value',productListener);
-    orderListener=null;productListener=null;
-    $('dashboard').classList.add('hidden');
-    $('logoutBtn').classList.add('hidden');
-    $('adminDeviceLockModal').classList.add('hidden');
-    $('adminDeviceLockModal').classList.remove('flex');
+// IMPORTANT: attach the auth listener only AFTER Firebase LOCAL persistence
+// has finished initializing. Otherwise the first null callback can be mistaken
+// for a real logout while Firebase is still restoring the saved user.
+adminPersistenceReady.then(persistenceOk=>{
+  if(!persistenceOk){
     $('loginPanel').classList.remove('hidden');
+    $('dashboard').classList.add('hidden');
+    $('loginMsg').textContent='Firebase session storage initialize nahi hua. Chrome mein site data/cookies allow karke page reload karein.';
     return;
   }
 
-  // अगर Firebase सेशन एक्टिव है और यूज़र एडमिन है
-  signedInPhone=ADMIN_PHONE;
-  
-  // अगर पासकी पहले से वेरीफाइड है या रीफ्रेश के बाद सेशन जीवित है
-  if(isAdminDeviceUnlocked || localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true'){
-    isAdminDeviceUnlocked = true;
-    localStorage.setItem(ADMIN_UNLOCK_KEY, 'true');
-    $('loginPanel').classList.add('hidden');
-    $('logoutBtn').classList.remove('hidden');
-    $('adminDeviceLockModal').classList.add('hidden');
-    $('adminDeviceLockModal').classList.remove('flex');
-    $('dashboard').classList.remove('hidden');
-    startOrders();
-    startProducts();
-    startDeliverySettingsAdminListener();
-    startOwnerManagement();
-    updateUnitChoices();
-    setTimeout(processDeliveryQr,300);
-  } else {
-    // यदि पहली बार लॉगिन हो रहा है और पासकी मांगनी है
-    $('dashboard').classList.add('hidden');
-    $('logoutBtn').classList.add('hidden');
-    $('loginPanel').classList.remove('hidden');
-  }
+  auth.onAuthStateChanged(user=>{
+    showActualAdminUid();
+
+    if(!user || user.uid !== 'admin_7818995955'){
+      signedInPhone='';
+      if(orderListener)db.ref('orders').off('value',orderListener);
+      if(productListener)db.ref('sellerProducts').off('value',productListener);
+      orderListener=null;productListener=null;
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('loginPanel').classList.remove('hidden');
+      $('loginMsg').textContent='Admin session nahi mila. Ek baar OTP se login karke passkey verify karein.';
+      return;
+    }
+
+    signedInPhone=ADMIN_PHONE;
+    if(isAdminDeviceUnlocked || localStorage.getItem(ADMIN_UNLOCK_KEY)==='true'){
+      isAdminDeviceUnlocked=true;
+      localStorage.setItem(ADMIN_UNLOCK_KEY,'true');
+      $('loginPanel').classList.add('hidden');
+      $('logoutBtn').classList.remove('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('dashboard').classList.remove('hidden');
+      startOrders();
+      startProducts();
+      startDeliverySettingsAdminListener();
+      startOwnerManagement();
+      updateUnitChoices();
+      setTimeout(processDeliveryQr,300);
+    }else{
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('loginPanel').classList.remove('hidden');
+      $('loginMsg').textContent='Firebase Admin session mil gaya. Passkey verification karein.';
+    }
+  });
 });
 async function sendOTP(){
   const phone=$('phone').value.trim(),password=$('adminPassword').value;
