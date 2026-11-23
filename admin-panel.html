@@ -882,7 +882,9 @@ function renderAdminReturnRequests(){
    <p class="small">Reason: <b>${esc(r.reasonType||'')}</b> · ${esc(r.reason||'')}</p>
    <p class="small">Requested: ${esc(r.requestedAt||'')}</p>
    ${r.photoUrl?`<a href="${esc(r.photoUrl)}" target="_blank" rel="noopener"><img src="${esc(r.photoUrl)}" alt="Return product photo" style="width:120px;height:120px;object-fit:cover;border-radius:10px;margin-top:8px;border:1px solid #dbe5f1"></a>`:'<p class="small">Photo not attached</p>'}
+   <div class="small mt-2"><b>Pickup:</b> ${esc(r.pickupStatus||'Not started')} · <b>Refund:</b> ${esc(r.refundStatus||'Not initiated')}</div>
    ${status.toLowerCase()==='pending'?`<div class="flex gap-2 mt-3"><button class="btn success" type="button" onclick="setAdminReturnStatus('${esc(id)}','Approved')">Approve Return</button><button class="btn danger" type="button" onclick="setAdminReturnStatus('${esc(id)}','Rejected')">Reject Return</button></div>`:''}
+   ${status.toLowerCase()==='approved' && String(r.pickupStatus||'').toLowerCase()==='product received' && String(r.refundStatus||'').toLowerCase()!=='refund completed'?`<div class="flex gap-2 mt-3"><button class="btn success" type="button" onclick="setAdminReturnStatus('${esc(id)}','Refund Initiated')">Refund Initiated</button><button class="btn primary" type="button" onclick="setAdminReturnStatus('${esc(id)}','Refund Completed')">Refund Completed</button></div>`:''}
   </article>`;
  }).join(''):'<div class="small text-stone-400">Abhi koi Return Request nahi aayi hai.</div>';
 }
@@ -898,30 +900,46 @@ function startAdminReturnRequests(){
 }
 window.setAdminReturnStatus=async function(orderId,status){
  const request=adminReturnRequests[String(orderId)];if(!request)return;
+ const allowed=['Approved','Rejected','Refund Initiated','Refund Completed'];
+ if(!allowed.includes(status))return;
+ if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone)){alert('Admin login required');return;}
  try{
   const stamp=new Date().toISOString();
-  const updated={...request,status,adminUpdatedAt:stamp};
+  const order=ordersData[String(orderId)]||{};
+  const updated={...request,adminUpdatedAt:stamp};
   const updates={};
-  updates['returnRequests/'+orderId]=updated;
-  updates['orders/'+orderId+'/returnRequest']=updated;
-  Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
   if(status==='Approved'){
-    const order=ordersData[String(orderId)]||{};
+    if(String(request.status||'Pending').toLowerCase()!=='pending')throw new Error('This return request is not pending.');
     const pickupAddress=request.pickupAddress||request.shippingAddress||order.shippingAddress||order.address||'';
     const pickupArea=request.deliveryArea||request.area||order.deliveryArea||order.area||'';
     const pickup={type:'returnPickup',orderId:String(orderId),status:'pending',createdAt:stamp,customerName:request.customerName||order.customerName||'Customer',customerPhone:request.customerPhone||order.customerPhone||'',pickupAddress,deliveryArea:pickupArea,itemsSummary:Array.isArray(request.items)?request.items.map(i=>({name:i.name||i.productName||i.title||'Item',qty:i.qty||i.quantity||1})):[],itemCount:Array.isArray(request.items)?request.items.length:1};
+    updated.status='Approved';updated.pickupStatus='Pickup Pending';
     updates['returnPickupQueue/'+orderId]=pickup;
     updates['returnPickupAssignments/'+orderId]={orderId:String(orderId),status:'pending',createdAt:stamp};
-    updated.pickupStatus='Pickup Pending';
-    updates['returnRequests/'+orderId]=updated;
-    updates['orders/'+orderId+'/returnRequest']=updated;
-    Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
   } else if(status==='Rejected'){
+    if(String(request.status||'Pending').toLowerCase()!=='pending')throw new Error('Only pending returns can be rejected.');
+    updated.status='Rejected';
     updates['returnPickupQueue/'+orderId]=null;
+    updates['returnPickupAssignments/'+orderId]=null;
+  } else {
+    if(String(request.status||'').toLowerCase()!=='approved')throw new Error('Return must be approved first.');
+    if(String(request.pickupStatus||'').toLowerCase()!=='product received')throw new Error('Refund can start only after Product Received.');
+    if(status==='Refund Initiated'){
+      if(String(request.refundStatus||'').toLowerCase()==='refund completed')throw new Error('Refund is already completed.');
+      updated.refundStatus='Refund Initiated';
+    } else {
+      if(String(request.refundStatus||'').toLowerCase()!=='refund initiated')throw new Error('First mark Refund Initiated.');
+      updated.refundStatus='Refund Completed';
+      updated.status='Completed';
+    }
+    updated.refundUpdatedAt=stamp;
   }
+  updates['returnRequests/'+orderId]=updated;
+  updates['orders/'+orderId+'/returnRequest']=updated;
+  Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
   await db.ref().update(updates);
-  addNotification('Return Request '+status,'Order #'+orderId+' · '+(status==='Approved'?'Pickup queue mein bhej diya gaya':status),'success');
- }catch(e){addNotification('Return status update failed',e&&e.message||String(e),'error');}
+  addNotification('Return Request '+status,'Order #'+orderId+' · '+status,'success');
+ }catch(e){addNotification('Return status update failed',e&&e.message||String(e),'error');alert('Return update nahi hua: '+(e&&e.message||e));}
 };
 
 function showAdminTab(tab){
