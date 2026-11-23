@@ -1771,4 +1771,95 @@ window.editCourierPartner=async id=>{const p=(await db.ref(COURIER_PARTNERS_PATH
 window.toggleCourierPartner=async(id,active)=>{try{await db.ref(COURIER_PARTNERS_PATH+'/'+id).update({active,updatedAt:new Date().toISOString()});loadCourierPartners();}catch(e){alert('Update fail: '+e.message);}};
 $('courierPartnerForm')?.addEventListener('submit',async e=>{e.preventDefault();if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');const id=$('courierPartnerId').value||db.ref(COURIER_PARTNERS_PATH).push().key;const name=$('courierPartnerName').value.trim(),code=$('courierPartnerCode').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'');const workerUrl=$('courierWorkerUrl').value.trim().replace(/\/+$/,'');if(!/^https:\/\/.+/i.test(workerUrl))return $('courierPartnerMsg').textContent='HTTPS Worker URL required.';try{await db.ref(COURIER_PARTNERS_PATH+'/'+id).update({name,code,workerUrl,active:true,updatedAt:new Date().toISOString(),updatedBy:signedInPhone});$('courierPartnerMsg').textContent='Courier partner saved. Secure Worker adapter deploy karna abhi zaroori hai.';resetCourierPartnerForm();loadCourierPartners();}catch(err){$('courierPartnerMsg').textContent='Save fail: '+err.message;}});
 
-</script></body></html>
+  (function installModeLuxePopup(){
+ if(document.getElementById('mlmPopupStyle')) return;
+
+ const style=document.createElement('style');
+ style.id='mlmPopupStyle';
+ style.textContent=`
+ #mlmPopupOverlay{
+  position:fixed;inset:0;z-index:999999;
+  background:rgba(8,25,50,.58);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+ }
+ #mlmPopupBox{
+  width:min(100%,430px);background:#fff;
+  color:#172033;border:1px solid #dbeafe;
+  border-radius:22px;padding:26px 22px;
+  box-shadow:0 20px 60px rgba(0,35,90,.25);
+  font-family:Arial,sans-serif;
+ }
+ #mlmPopupTitle{
+  color:#075fc4;font-size:22px;font-weight:800;
+  margin:0 0 12px;
+ }
+ #mlmPopupMessage{
+  font-size:16px;line-height:1.55;
+  color:#475569;white-space:pre-line;
+ }
+ #mlmPopupActions{
+  display:flex;justify-content:flex-end;
+  gap:12px;margin-top:25px;
+ }
+ #mlmPopupActions button{
+  border:0;border-radius:11px;padding:12px 22px;
+  font-size:15px;font-weight:700;cursor:pointer;
+ }
+ #mlmPopupCancel{background:#e8f2ff;color:#075fc4}
+ #mlmPopupOK{background:#075fc4;color:#fff}
+ `;
+ document.head.appendChild(style);
+})();
+
+window.mlmPopup=function(message,confirmMode=false,title='ModeLuxe Mart'){
+ return new Promise(resolve=>{
+  document.getElementById('mlmPopupOverlay')?.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='mlmPopupOverlay';
+
+  const box=document.createElement('div');
+  box.id='mlmPopupBox';
+
+  const heading=document.createElement('h3');
+  heading.id='mlmPopupTitle';
+  heading.textContent=title;
+
+  const body=document.createElement('div');
+  body.id='mlmPopupMessage';
+  body.textContent=String(message);
+
+  const actions=document.createElement('div');
+  actions.id='mlmPopupActions';
+
+  function finish(value){
+   overlay.remove();
+   resolve(value);
+  }
+
+  if(confirmMode){
+   const cancel=document.createElement('button');
+   cancel.id='mlmPopupCancel';
+   cancel.textContent='Cancel';
+   cancel.onclick=()=>finish(false);
+   actions.appendChild(cancel);
+  }
+
+  const ok=document.createElement('button');
+  ok.id='mlmPopupOK';
+  ok.textContent=confirmMode?'Confirm':'OK';
+  ok.onclick=()=>finish(true);
+  actions.appendChild(ok);
+
+  box.append(heading,body,actions);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+ });
+};
+
+window.mlmAlert=(message,title='Notice')=>window.mlmPopup(message,false,title);
+window.mlmConfirm=(message,title='Please Confirm')=>window.mlmPopup(message,true,title);
+</script>
+</body>
+</html>
