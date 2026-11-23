@@ -867,7 +867,66 @@ const PRODUCT_UNITS = [
 ];
 
 let adminReturnRequests={};
+
+  async function ensureApprovedReturnPickupQueue(orderId, request) {
+  if (String(request?.status || '').toLowerCase() !== 'approved') return;
+
+  const queueRef = db.ref('returnPickupQueue/' + orderId);
+
+  try {
+    const existing = await queueRef.once('value');
+    if (existing.exists()) return;
+
+    const orderSnap = await db.ref('orders/' + orderId).once('value');
+    const order = orderSnap.val() || {};
+
+    const pickupAddress =
+      request.shippingAddress ||
+      request.pickupAddress ||
+      request.address ||
+      order.shippingAddress ||
+      order.address ||
+      '';
+
+    const queueData = {
+      orderId: String(orderId),
+      type: 'returnPickup',
+      status: 'pending',
+      customerName: request.customerName || order.customerName || 'Customer',
+      customerPhone: request.customerPhone || order.customerPhone || '',
+      pickupAddress: pickupAddress,
+      shippingAddress: pickupAddress,
+      items: request.items || order.items || [],
+      reason: request.reason || '',
+      reasonType: request.reasonType || '',
+      photoUrl: request.photoUrl || '',
+      requestedAt: request.requestedAt || '',
+      createdAt: new Date().toISOString()
+    };
+
+    await queueRef.set(queueData);
+
+    addNotification(
+      'Return Pickup Queue Created',
+      'Order #' + orderId + ' Delivery Panel ke liye ready hai.',
+      'success'
+    );
+  } catch (e) {
+    console.error('Return Pickup Queue creation failed:', e);
+    addNotification(
+      'Return Pickup Queue Failed',
+      e.message || String(e),
+      'error'
+    );
+  }
+}
+  
 function renderAdminReturnRequests(){
+  Object.entries(adminReturnRequests).forEach(([id, request]) => {
+  if (String(request.status || '').toLowerCase() === 'approved') {
+    ensureApprovedReturnPickupQueue(id, request);
+  }
+});
  const host=$('adminReturnRequestsList');if(!host)return;
  const entries=Object.entries(adminReturnRequests||{}).sort((a,b)=>String((b[1]||{}).requestedAt||'').localeCompare(String((a[1]||{}).requestedAt||'')));
  const pending=entries.filter(([id,r])=>String(r.status||'Pending').toLowerCase()==='pending').length;
