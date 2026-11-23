@@ -174,6 +174,7 @@ async function loadDeliveryAccount(user){
    startOrders();startDeliveryWithdrawals();
    // Start assignment listener and register push ONLY after account approval.
    initDeliveryAssignmentsListener(user.uid);
+   initReturnPickupListener(user.uid);
    registerModeLuxePush('delivery', user);
  }catch(e){
    $('login').classList.remove('hidden');$('deliveryAuthForm').classList.remove('hidden');
@@ -547,6 +548,61 @@ function unlockDeliveryNotificationAudio() {
   document.addEventListener(eventName, unlockDeliveryNotificationAudio, { once: true, passive: true });
 });
 
+
+// Approved return requests create a separate pickup queue.
+// Queue records contain limited details; private customer details are read only
+// after a delivery partner successfully claims the pickup.
+let returnPickupListener=null;
+let currentReturnPickupId=null;
+const RETURN_PICKUP_DISMISSED_KEY='modeluxeReturnPickupDismissed';
+function getReturnPickupDismissed(uid){try{return JSON.parse(localStorage.getItem(RETURN_PICKUP_DISMISSED_KEY+'_'+uid)||'[]');}catch{return [];}}
+function saveReturnPickupDismissed(uid,id){const ids=new Set(getReturnPickupDismissed(uid));ids.add(String(id));try{localStorage.setItem(RETURN_PICKUP_DISMISSED_KEY+'_'+uid,JSON.stringify([...ids]));}catch{}}
+function initReturnPickupListener(uid){
+ if(!uid)return;
+ const ref=db.ref('returnPickupQueue');
+ if(returnPickupListener)ref.off('value',returnPickupListener);
+ returnPickupListener=async snap=>{
+  const rows=snap.val()||{},dismissed=new Set(getReturnPickupDismissed(uid));
+  const pending=Object.entries(rows).filter(([id,r])=>r&&String(r.status||'pending').toLowerCase()==='pending'&&!dismissed.has(String(id)));
+  let selected=null;
+  for(const [id,r] of pending){try{const c=await db.ref('returnPickupClaims/'+id).once('value');if(!c.exists()){selected=[id,r];break;}}catch(e){console.warn('Return pickup claim read:',e.message);}}
+  if(selected){showReturnPickupPopup(selected[0],selected[1]);if(lastPopupSoundOrderId!=='return:'+selected[0]){if(playNotificationSound())lastPopupSoundOrderId='return:'+selected[0];}}
+  else{document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;}
+ };
+ ref.on('value',returnPickupListener,error=>{console.error('Return pickup listener:',error);const sync=$('sync');if(sync)sync.textContent='Return pickup queue error: '+error.message;});
+}
+function showReturnPickupPopup(id,r){
+ if(currentReturnPickupId===String(id)&&document.getElementById('returnPickupModal'))return;
+ currentReturnPickupId=String(id);
+ let modal=document.getElementById('returnPickupModal');
+ if(!modal){
+  modal=document.createElement('div');modal.id='returnPickupModal';modal.className='modal';modal.style.zIndex='100000';
+  modal.innerHTML=`<div class="modalbox" role="dialog" aria-modal="true" style="max-width:480px;width:100%;text-align:center"><div style="font-size:38px">↩️</div><h2 style="color:#075fc4;margin:6px 0 10px">Return Pickup Request</h2><p id="returnPickupSummary" style="text-align:left;line-height:1.6;background:#f8fafc;padding:12px;border-radius:10px;white-space:pre-line"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button id="returnPickupLater" class="btn muted" type="button">Later</button><button id="returnPickupAccept" class="btn primary" type="button">Accept Pickup</button></div><p id="returnPickupMsg" class="small" aria-live="polite" style="margin-top:10px"></p></div>`;
+  document.body.appendChild(modal);
+  $('returnPickupLater').onclick=()=>{saveReturnPickupDismissed(signedInPhone,id);modal.remove();currentReturnPickupId=null;lastPopupSoundOrderId='';};
+  $('returnPickupAccept').onclick=()=>acceptReturnPickup(id);
+ }
+ const items=Array.isArray(r.items)?r.items.map(x=>(x.name||x.productName||x.title||'Item')+' × '+(x.qty||x.quantity||1)).join(', '):'Return item';
+ $('returnPickupSummary').textContent=`Order #${id}\nCustomer: ${r.customerName||'Customer'}\nItems: ${items}\nReason: ${r.reasonType||''} · ${r.reason||''}\nArea: ${r.customerArea||'Address will be shown after accepting'}`;
+}
+async function acceptReturnPickup(id){
+ const btn=$('returnPickupAccept'),msg=$('returnPickupMsg');
+ if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Approved delivery login required.');
+ btn.disabled=true;msg.textContent='Pickup claim verify ho raha hai…';
+ try{
+  const claimRef=db.ref('returnPickupClaims/'+id);
+  const result=await claimRef.transaction(current=>{if(current!==null)return;return {orderId:String(id),deliveryUid:signedInPhone,deliveryName:deliveryProfile.name||deliveryProfile.fullName||'',claimedAt:new Date().toISOString(),status:'accepted'};});
+  if(!result.committed){msg.textContent='Ye pickup kisi doosre Delivery Partner ne accept kar liya hai.';setTimeout(()=>{document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;},1600);return;}
+  const snap=await db.ref('returnPickupDetails/'+id).once('value'),detail=snap.val()||{};
+  const address=detail.shippingAddress||detail.address||detail.customerAddress||detail.deliveryAddress||'Address return request mein available nahi hai.';
+  const phone=detail.customerPhone||detail.phone||'Not provided';
+  const items=Array.isArray(detail.items)?detail.items.map(x=>(x.name||x.productName||x.title||'Item')+' × '+(x.qty||x.quantity||1)).join(', '):'Return item';
+  const message=`Order #${id}\nCustomer: ${detail.customerName||'Customer'}\nPhone: ${phone}\nPickup Address: ${address}\nItems: ${items}\nPlease contact the customer to arrange return pickup.`;
+  saveReturnPickupDismissed(signedInPhone,id);document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;lastPopupSoundOrderId='';
+  await showDeliveryDialog({title:'Return Pickup Accepted',message,confirmText:'OK'});
+ }catch(e){msg.textContent='Accept failed: '+(e.message||e);btn.disabled=false;}
+}
+
 // Listen only after the delivery account is approved. Each partner sees a shared
 // pending request, but their own rejectedBy flag hides it only on their account.
 function getQueueDismissedIds(uid) {
@@ -756,7 +812,7 @@ async function confirmQr(value){
  }
 }
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(returnPickupListener)db.ref('returnPickupQueue').off('value',returnPickupListener);returnPickupListener=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script>
 </body>
 </html>
