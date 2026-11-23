@@ -638,8 +638,9 @@ function initReturnPickupListener(deliveryUid) {
     const rows=Object.entries(snap.val()||{});
     const host=document.getElementById('returnPickupAssignedList');if(!host)return;
     host.innerHTML=rows.length?rows.map(([id,a])=>{
+      const status=String(a.status||'Pickup Accepted');
       const next=status==='Pickup Accepted'?'Product Picked Up':status==='Product Picked Up'?'Product Received':'';
-      return `<article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0"><b>Return · Order #${esc(id)}</b><div>Status: <b>${esc(status)}</b></div><div class="small">${status==='Pickup Accepted'?'Next: collect the return item from customer':status==='Product Picked Up'?'Next: hand over the item to the seller/return hub':'Pickup handover stage complete. Refund update Admin karega.'}</div>${next?`<button class="btn primary" style="margin-top:8px" onclick="updateReturnPickup('${esc(id)}','${next}')">Mark ${next}</button>`:''}</article>`;
+      return `<article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0"><b>Order #${esc(id)}</b><div>Status: ${esc(status)}</div>${next?`<button class="btn primary" style="margin-top:8px" onclick="updateReturnPickup('${esc(id)}','${next}')">Mark ${next}</button>`:'<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'}</article>`;
     }).join(''):'<div class="small">Abhi koi accepted return pickup nahi hai.</div>';
   };
   assignedRef.on('value',window.__mlReturnAssignCallback,err=>console.error('Return pickup assignments:',err));
