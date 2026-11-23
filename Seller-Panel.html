@@ -935,6 +935,7 @@ function renderSellerReturnRequests(){
    <p class="muted">Items: ${esc(items)}</p>
    <p class="muted">Reason: <b>${esc(r.reasonType||'')}</b> · ${esc(r.reason||'')}</p>
    <p class="muted">Requested: ${esc(r.requestedAt||'')}</p>
+   <div class="muted" style="margin:8px 0;padding:9px;border-radius:8px;background:var(--soft, #f8fafc)"><b>Pickup / Refund Progress</b><br>Return: ${esc(r.status||'Pending')}<br>Pickup: ${esc(r.pickupStatus||'Not started')}<br>Refund: ${esc(r.refundStatus||'Not initiated')}</div>
    ${r.photoUrl?`<a href="${esc(r.photoUrl)}" target="_blank" rel="noopener"><img src="${esc(r.photoUrl)}" alt="Return product photo" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`:'<p class="muted">Photo not attached</p>'}
   </article>`;
  }).join(''):'<div class="muted">Abhi aapke products ke liye koi Return Request nahi aayi hai.</div>';
