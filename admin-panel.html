@@ -214,7 +214,13 @@ header{color:#111827}
  <div id="withdrawalsList"></div>
 </div>
 </div>
-<div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p></div>
+<div id="commissionTab" class="hidden panel p-4 max-w-2xl"><h2 class="text-xl font-bold gold mb-3">Commission & Delivery Payout</h2><label class="small">Default seller commission (%)</label><input id="defaultCommission" type="number" min="0" max="100" step="0.1" value="10"><label class="small mt-3 block">Delivery boy earning per delivered order (₹)</label><input id="deliveryBoyPayoutAdmin" type="number" min="0" step="1" value="20"><button class="btn primary mt-3" onclick="saveCommissionSettings()">Save Settings</button><p id="commissionMsg" class="small mt-2"></p>
+<hr class="my-5"><h3 class="text-lg font-bold gold mb-2">Area Out Delivery & Incentive Control</h3><p class="small mb-3">Pehle customer ke apne Area ke delivery partners ko order jayega. Accept na hone par selected waiting time ke baad nearby eligible partners ko bhejne ka escalation trigger hoga.</p>
+<label class="small">Local Area Waiting Time</label><select id="areaWaitSeconds"><option value="10">10 seconds</option><option value="15">15 seconds</option></select>
+<label class="small mt-3 block">Extra Incentive (₹ per Road KM)</label><input id="areaPerKmRate" type="number" min="0" step="0.5" value="5">
+<label class="small mt-3 block">All Over India Delivery</label><select id="allIndiaDelivery"><option value="false">OFF</option><option value="true">ON</option></select>
+<div class="mt-4"><h4 class="font-bold mb-2">Category-wise maximum road distance</h4><div id="categoryDeliveryRules" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div></div>
+<button class="btn primary mt-4" type="button" onclick="saveAreaDeliverySettings()">Save Area Delivery Settings</button><p id="areaDeliveryMsg" class="small mt-2" aria-live="polite"></p></div>
 
 <div id="couriersTab" class="hidden panel p-4 max-w-3xl">
 <h2 class="text-xl font-bold gold mb-2">Courier Partner API Integration</h2>
@@ -1108,6 +1114,7 @@ function startOwnerManagement(){
  db.ref('deliveryProfiles').on('value',snap=>{deliveryAppsRawProfiles=snap.val()||{};deliveryAppsCache=mergeDeliveryApplicationSources(deliveryAppsRawApplications,deliveryAppsRawProfiles);updateDeliveryPendingIndicator();if(!$('deliveryStatusPage')?.classList.contains('hidden'))renderDeliveryApplications(deliveryAppStatusFilter);},err=>{deliveryAppsReadErrors.profiles=err&&err.message||String(err);showDeliveryReadError();});
  db.ref('withdrawalRequests').off('value');db.ref('withdrawalRequests').on('value',s=>{withdrawCache=s.val()||{};renderWithdrawals();},e=>addNotification('Withdrawal read error',e&&e.message||'Firebase permission denied at /withdrawalRequests.','error'));
  db.ref('commissionSettings').off('value');db.ref('commissionSettings').on('value',s=>{const v=s.val()||{};$('defaultCommission').value=Number(v.defaultCommission??10);$('deliveryBoyPayoutAdmin').value=Number(v.deliveryBoyPayout??20);},e=>addNotification('Settings read error',e&&e.message||'Firebase permission denied at /commissionSettings.','error'));
+db.ref('deliveryAreaSettings').off('value');db.ref('deliveryAreaSettings').on('value',s=>renderAreaDeliverySettings(s.val()||{}),e=>{if($('areaDeliveryMsg'))$('areaDeliveryMsg').textContent='Area settings read error: '+(e.message||e);});
 }
 // Delivery boy applications use the same two Firebase records written by Delivery-Panel.html.
 let deliveryAppsRawApplications={},deliveryAppsRawProfiles={};
@@ -1532,6 +1539,23 @@ window.reviewWithdrawal=async(type,uid,id,status)=>{
   alert('Withdrawal update fail: '+(e&&e.message||String(e)));
  }
 };
+const AREA_DELIVERY_CATEGORIES=["Men's Wear","Women's Wear","Men Wear","Women Wear","Kids Wear","Kids / Baby Wear","Grocery","Fruits","Vegetables","Fast Food","Drinks","Electronics","Jewellery","Cosmetics","Home & Kitchen","Spices"];
+function renderAreaDeliverySettings(settings={}){
+ const rules=settings.categories||{};
+ const host=$('categoryDeliveryRules');if(!host)return;
+ $('areaWaitSeconds').value=String(settings.localWaitSeconds===15?15:10);
+ $('areaPerKmRate').value=Number(settings.perKmRate??5);
+ $('allIndiaDelivery').value=String(!!settings.allIndiaEnabled);
+ host.innerHTML=AREA_DELIVERY_CATEGORIES.map((name,i)=>{const key='c'+i,matched=Object.keys(rules).find(k=>k.toLowerCase()===name.toLowerCase()),r=matched?rules[matched]:{};return `<div class="rounded-lg border border-white/10 p-3"><label class="small">${name.replace(/</g,'&lt;')}</label><input type="hidden" data-cat-name value="${name.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"><label class="small mt-2 block">Maximum Road KM</label><input type="number" min="0" step="1" data-cat-km value="${Number(r.maxKm??10)}"><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-allindia style="width:auto" ${r.allIndia===true?'checked':''}> Allow All India</label><label class="small mt-2 flex items-center gap-2"><input type="checkbox" data-cat-enabled style="width:auto" ${r.enabled===false?'':'checked'}> Category delivery ON</label></div>`;}).join('');
+}
+window.saveAreaDeliverySettings=async()=>{
+ if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
+ const categories={};document.querySelectorAll('#categoryDeliveryRules>div').forEach(card=>{const name=card.querySelector('[data-cat-name]').value,km=Number(card.querySelector('[data-cat-km]').value);if(!Number.isFinite(km)||km<0)throw Error('Invalid KM for '+name);categories[name]={maxKm:km,allIndia:card.querySelector('[data-cat-allindia]').checked,enabled:card.querySelector('[data-cat-enabled]').checked};});
+ const perKmRate=Number($('areaPerKmRate').value),localWaitSeconds=Number($('areaWaitSeconds').value);if(!Number.isFinite(perKmRate)||perKmRate<0||![10,15].includes(localWaitSeconds))return $('areaDeliveryMsg').textContent='Valid rate aur 10/15 seconds select karein.';
+ const value={perKmRate,localWaitSeconds,allIndiaEnabled:$('allIndiaDelivery').value==='true',categories,updatedAt:new Date().toISOString(),updatedBy:signedInPhone};
+ $('areaDeliveryMsg').textContent='Saving…';try{await db.ref('deliveryAreaSettings').set(value);$('areaDeliveryMsg').textContent='Area delivery settings Firebase mein save ho gayi.';addNotification('Area delivery settings updated','₹'+perKmRate+'/KM · '+localWaitSeconds+' sec wait','success');}catch(e){$('areaDeliveryMsg').textContent='Save error: '+(e.message||e);}
+};
+
 window.saveCommissionSettings=async()=>{
  if(!signedInPhone||!ADMIN_PHONE_ALLOWLIST.includes(signedInPhone))return alert('Admin login required');
  const defaultCommission=Number($('defaultCommission').value),deliveryBoyPayout=Number($('deliveryBoyPayoutAdmin').value);
