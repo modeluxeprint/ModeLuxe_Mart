@@ -290,7 +290,7 @@ async function uploadImageToR2(file){
 
 // Keep the Firebase admin session across refreshes and browser restarts.
 // Do not fire-and-forget this: signInWithCustomToken must wait for LOCAL persistence.
-const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.warn('Auth persistence:',e);return false;});
+const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.error('Admin LOCAL persistence failed:',e);return false;});
 const ADMIN_PHONE='7818995955';
 // ModeLuxe Mart Firebase Cloud Messaging registration (web push).
 const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
@@ -377,65 +377,63 @@ setTimeout(processDeliveryQr,800);
 const ADMIN_UNLOCK_KEY='modeluxeAdminUnlocked';
 let isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
 
-// Keep the OTP login form visible while Firebase restores its saved session.
-// Firebase emits its initial auth-state callback only after its own restore step.
-// Do NOT wait on setPersistence() before attaching this listener: on some mobile
-// browsers that promise can remain pending and leave the whole login area hidden.
+// Avoid flashing the login screen while Firebase restores the saved session.
+$('loginPanel').classList.add('hidden');
 $('dashboard').classList.add('hidden');
-$('adminDeviceLockModal').classList.add('hidden');
-$('adminDeviceLockModal').classList.remove('flex');
-$('loginPanel').classList.remove('hidden');
-$('loginMsg').textContent='Saved Admin session check ho raha hai…';
+$('loginMsg').textContent='Firebase session restore ho raha hai…';
 
-let adminAuthInitialStateHandled=false;
-auth.onAuthStateChanged(user=>{
-  adminAuthInitialStateHandled=true;
-  showActualAdminUid();
-
-  if(!user || user.uid !== 'admin_7818995955'){
-    signedInPhone='';
-    if(orderListener)db.ref('orders').off('value',orderListener);
-    if(productListener)db.ref('sellerProducts').off('value',productListener);
-    orderListener=null;productListener=null;
-    $('dashboard').classList.add('hidden');
-    $('logoutBtn').classList.add('hidden');
-    $('adminDeviceLockModal').classList.add('hidden');
-    $('adminDeviceLockModal').classList.remove('flex');
+// IMPORTANT: attach the auth listener only AFTER Firebase LOCAL persistence
+// has finished initializing. Otherwise the first null callback can be mistaken
+// for a real logout while Firebase is still restoring the saved user.
+adminPersistenceReady.then(persistenceOk=>{
+  if(!persistenceOk){
     $('loginPanel').classList.remove('hidden');
-    $('loginMsg').textContent='Saved Admin session nahi mila. OTP + Password se login karein.';
+    $('dashboard').classList.add('hidden');
+    $('loginMsg').textContent='Firebase session storage initialize nahi hua. Chrome mein site data/cookies allow karke page reload karein.';
     return;
   }
 
-  signedInPhone=ADMIN_PHONE;
+  auth.onAuthStateChanged(user=>{
+    showActualAdminUid();
 
-  // Each page load requires fresh passkey verification; Firebase session remains.
-  isAdminDeviceUnlocked=false;
-  $('dashboard').classList.add('hidden');
-  $('logoutBtn').classList.add('hidden');
-  $('loginPanel').classList.add('hidden');
+    if(!user || user.uid !== 'admin_7818995955'){
+      signedInPhone='';
+      if(orderListener)db.ref('orders').off('value',orderListener);
+      if(productListener)db.ref('sellerProducts').off('value',productListener);
+      orderListener=null;productListener=null;
+      $('dashboard').classList.add('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('adminDeviceLockModal').classList.add('hidden');
+      $('adminDeviceLockModal').classList.remove('flex');
+      $('loginPanel').classList.remove('hidden');
+      $('loginMsg').textContent='Admin session nahi mila. Ek baar OTP se login karke passkey verify karein.';
+      return;
+    }
 
-  if(deviceLockReady()){
-    deviceLockAction='unlock';
-    $('adminDeviceLockIntro').textContent='Refresh ke baad Admin Dashboard kholne ke liye passkey / fingerprint / face unlock karein.';
-    $('devicePrimaryBtn').textContent='Login with Passkey';
-    $('deviceCancelBtn').textContent='Cancel / Logout';
-    $('deviceLockMsg').textContent='Passkey verify karke Admin Dashboard kholiye.';
-    $('adminDeviceLockModal').classList.remove('hidden');
-    $('adminDeviceLockModal').classList.add('flex');
-  }else{
-    $('loginPanel').classList.remove('hidden');
-    $('loginMsg').textContent='Is device par passkey nahi mili. OTP login karke passkey register karein.';
-  }
-});
+    signedInPhone=ADMIN_PHONE;
 
-// If Firebase Auth cannot initialize at all, never leave a blank screen.
-setTimeout(()=>{
-  if(!adminAuthInitialStateHandled){
-    $('loginPanel').classList.remove('hidden');
+    // Every page load requires a fresh passkey assertion. A saved "unlocked"
+    // flag must never bypass the biometric/device-credential prompt after refresh.
+    isAdminDeviceUnlocked=false;
     $('dashboard').classList.add('hidden');
-    $('loginMsg').textContent='Firebase session restore timeout. OTP login try karein; agar issue rahe to browser site data/cookies check karein.';
-  }
-},7000);
+    $('logoutBtn').classList.add('hidden');
+    $('loginPanel').classList.add('hidden');
+
+    if(deviceLockReady()){
+      deviceLockAction='unlock';
+      $('adminDeviceLockIntro').textContent='Refresh ke baad Admin Dashboard kholne ke liye passkey / fingerprint / face unlock karein.';
+      $('devicePrimaryBtn').textContent='Login with Passkey';
+      $('deviceCancelBtn').textContent='Cancel / Logout';
+      $('deviceLockMsg').textContent='Passkey verify karke Admin Dashboard kholiye.';
+      $('adminDeviceLockModal').classList.remove('hidden');
+      $('adminDeviceLockModal').classList.add('flex');
+    }else{
+      // No passkey is registered on this browser/device yet.
+      $('loginPanel').classList.remove('hidden');
+      $('loginMsg').textContent='Is device par passkey nahi mili. OTP login karke passkey register karein.';
+    }
+  });
+});
 async function sendOTP(){
   const phone=$('phone').value.trim(),password=$('adminPassword').value;
   if(phone!==ADMIN_PHONE){setMsg('यह Admin मोबाइल नंबर अधिकृत नहीं है।');addNotification('Login blocked','अनधिकृत Admin मोबाइल नंबर से प्रयास हुआ।','error');return;}
@@ -483,24 +481,10 @@ async function verifyOTP(){
     stage='Firebase custom token login';
     setMsg('चरण 2/2: OTP सही है। Admin Session शुरू हो रहा है…');
 
-    // Do not let a stuck persistence initialization freeze OTP login forever.
-    // Give LOCAL persistence a bounded wait, then attempt Firebase sign-in with
-    // the SDK's current persistence if the browser cannot initialize LOCAL.
-    stage='Firebase LOCAL persistence initialize';
-    const persistenceResult=await Promise.race([
-      adminPersistenceReady,
-      new Promise(resolve=>setTimeout(()=>resolve(false),8000))
-    ]);
-    if(persistenceResult!==true){
-      console.warn('Firebase LOCAL persistence did not confirm within 8 seconds; attempting sign-in with current SDK persistence.');
-    }
-
-    stage='Firebase custom token login';
-    const signInResult=await Promise.race([
-      auth.signInWithCustomToken(j.customToken),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase sign-in 15 seconds se zyada le raha hai. Network / Firebase Auth check karein.')),15000))
-    ]);
-    const credential=signInResult;
+    // Firebase LOCAL persistence must be ready before custom-token sign-in.
+    const persistenceOk = await adminPersistenceReady;
+    if (!persistenceOk) throw new Error('Is browser mein Firebase LOCAL session save nahi ho pa raha. Browser site data / cookies allow karke Chrome mein dobara try karein.');
+    const credential = await auth.signInWithCustomToken(j.customToken);
     if (!credential || !credential.user || !auth.currentUser) {
       throw new Error('Firebase session create nahi hua. Network check karke dobara login karein.');
     }
@@ -915,19 +899,28 @@ function startAdminReturnRequests(){
 window.setAdminReturnStatus=async function(orderId,status){
  const request=adminReturnRequests[String(orderId)];if(!request)return;
  try{
-  const updated={...request,status,adminUpdatedAt:new Date().toISOString()};
-  const updates={};updates['returnRequests/'+orderId]=updated;
+  const stamp=new Date().toISOString();
+  const updated={...request,status,adminUpdatedAt:stamp};
+  const updates={};
+  updates['returnRequests/'+orderId]=updated;
   updates['orders/'+orderId+'/returnRequest']=updated;
   Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
-  if(String(status).toLowerCase()==='approved'){
-   updates['returnPickupQueue/'+orderId]={orderId:String(orderId),status:'pending',createdAt:new Date().toISOString(),customerName:request.customerName||'Customer',items:request.items||[],reasonType:request.reasonType||'',reason:request.reason||'',photoUrl:request.photoUrl||'',requestedAt:request.requestedAt||'',customerArea:request.customerArea||request.area||request.locality||''};
-   updates['returnPickupDetails/'+orderId]={...updated,orderId:String(orderId)};
-  }else{
-   updates['returnPickupQueue/'+orderId]=null;
-   updates['returnPickupDetails/'+orderId]=null;
+  if(status==='Approved'){
+    const order=ordersData[String(orderId)]||{};
+    const pickupAddress=request.pickupAddress||request.shippingAddress||order.shippingAddress||order.address||'';
+    const pickupArea=request.deliveryArea||request.area||order.deliveryArea||order.area||'';
+    const pickup={type:'returnPickup',orderId:String(orderId),status:'pending',createdAt:stamp,customerName:request.customerName||order.customerName||'Customer',customerPhone:request.customerPhone||order.customerPhone||'',pickupAddress,deliveryArea:pickupArea,itemsSummary:Array.isArray(request.items)?request.items.map(i=>({name:i.name||i.productName||i.title||'Item',qty:i.qty||i.quantity||1})):[],itemCount:Array.isArray(request.items)?request.items.length:1};
+    updates['returnPickupQueue/'+orderId]=pickup;
+    updates['returnPickupAssignments/'+orderId]={orderId:String(orderId),status:'pending',createdAt:stamp};
+    updated.pickupStatus='Pickup Pending';
+    updates['returnRequests/'+orderId]=updated;
+    updates['orders/'+orderId+'/returnRequest']=updated;
+    Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
+  } else if(status==='Rejected'){
+    updates['returnPickupQueue/'+orderId]=null;
   }
   await db.ref().update(updates);
-  addNotification('Return Request '+status,'Order #'+orderId+' · '+status,'success');
+  addNotification('Return Request '+status,'Order #'+orderId+' · '+(status==='Approved'?'Pickup queue mein bhej diya gaya':status),'success');
  }catch(e){addNotification('Return status update failed',e&&e.message||String(e),'error');}
 };
 
