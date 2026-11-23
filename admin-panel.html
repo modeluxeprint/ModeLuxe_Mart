@@ -1025,7 +1025,7 @@ window.setAdminReturnStatus=async function(orderId,status){
   } else if(status==='Rejected'){
     updates['returnPickupQueue/'+orderId]=null;
     updates['returnPickupAssignments/'+orderId]=null;
-
+  }
   await db.ref().update(updates);
   addNotification('Return Request '+status,'Order #'+orderId+' · '+(status==='Approved'?'Pickup queue mein bhej diya gaya':status),'success');
  }catch(e){addNotification('Return status update failed',e&&e.message||String(e),'error');}
