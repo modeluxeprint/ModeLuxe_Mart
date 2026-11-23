@@ -608,42 +608,155 @@ function initDeliveryAssignmentsListener(deliveryUid) {
 
 // Return pickup requests use their own queue so normal delivery assignments are never overwritten.
 let returnPickupQueueCallback = null;
+
 function initReturnPickupListener(deliveryUid) {
   if (!deliveryUid) return;
-  const ref = db.ref('returnPickupQueue');
-  if (returnPickupQueueCallback) ref.off('value', returnPickupQueueCallback);
-  returnPickupQueueCallback = async snap => {
-    const entries = Object.entries(snap.val() || {}).filter(([id,q]) => q && String(q.status || 'pending').toLowerCase() === 'pending' && !q.deliveryUid);
-    let selected = null;
-    for (const [id,q] of entries.sort((a,b)=>String(a[1].createdAt||'').localeCompare(String(b[1].createdAt||'')))) {
-      try { const rejected=await db.ref('returnPickupRejections/'+id+'/'+deliveryUid).once('value'); if(rejected.exists()) continue; } catch(e) { console.warn('Return pickup rejection check:',e); }
-      selected=[id,q]; break;
-    }
-    if (selected) {
-      const [id,q]=selected; showIncomingOrderPopup(id,{...q,type:'returnPickup'});
-      if (lastPopupSoundOrderId !== 'return_'+String(id) && playNotificationSound()) lastPopupSoundOrderId='return_'+String(id);
-    }
-  };
-  ref.on('value', returnPickupQueueCallback, err=>console.error('Return pickup queue listener:',err));
-  const dash=document.getElementById('dashboard');
-  if(dash&&!document.getElementById('returnPickupTracker')){
-    const card=document.createElement('section');card.id='returnPickupTracker';card.className='panel';card.style.margin='12px 0';
-    card.innerHTML='<h2 style="margin-top:0">↩ Return Pickups</h2><div id="returnPickupAssignedList" class="small">Return pickup assignments loading…</div>';
-    dash.insertBefore(card,dash.firstChild);
+
+  const dash = document.getElementById('dashboard');
+
+  if (dash && !document.getElementById('returnPickupTracker')) {
+    const card = document.createElement('section');
+    card.id = 'returnPickupTracker';
+    card.className = 'panel';
+    card.style.margin = '12px 0';
+    card.innerHTML =
+      '<h2 style="margin-top:0">↩ Return Pickups</h2>' +
+      '<div id="returnPickupAssignedList" class="small" aria-live="polite">Return pickup assignments loading...</div>';
+    dash.insertBefore(card, dash.firstChild);
   }
-  const assignedRef=db.ref('returnPickupAssignments').orderByChild('deliveryUid').equalTo(deliveryUid);
-  if(window.__mlReturnAssignRef&&window.__mlReturnAssignCallback)window.__mlReturnAssignRef.off('value',window.__mlReturnAssignCallback);
-  window.__mlReturnAssignRef=assignedRef;
-  window.__mlReturnAssignCallback=snap=>{
-    const rows=Object.entries(snap.val()||{});
-    const host=document.getElementById('returnPickupAssignedList');if(!host)return;
-    host.innerHTML=rows.length?rows.map(([id,a])=>{
-      const status=String(a.status||'Pickup Accepted');
-      const next=status==='Pickup Accepted'?'Product Picked Up':status==='Product Picked Up'?'Product Received':'';
-      return `<article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0"><b>Order #${esc(id)}</b><div>Status: ${esc(status)}</div>${next?`<button class="btn primary" style="margin-top:8px" onclick="updateReturnPickup('${esc(id)}','${next}')">Mark ${next}</button>`:'<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'}</article>`;
-    }).join(''):'<div class="small">Abhi koi accepted return pickup nahi hai.</div>';
+
+  const host = document.getElementById('returnPickupAssignedList');
+
+  if (host) {
+    host.textContent = 'Return pickup assignments loading...';
+  }
+
+  // Listen for available return pickup requests.
+  const queueRef = db.ref('returnPickupQueue');
+
+  if (returnPickupQueueCallback) {
+    queueRef.off('value', returnPickupQueueCallback);
+  }
+
+  returnPickupQueueCallback = async snap => {
+    const entries = Object.entries(snap.val() || {}).filter(
+      ([id, q]) =>
+        q &&
+        String(q.status || 'pending').toLowerCase() === 'pending' &&
+        !q.deliveryUid
+    );
+
+    let selected = null;
+
+    for (const [id, q] of entries.sort((a, b) =>
+      String(a[1].createdAt || '').localeCompare(String(b[1].createdAt || ''))
+    )) {
+      try {
+        const rejected = await db
+          .ref('returnPickupRejections/' + id + '/' + deliveryUid)
+          .once('value');
+
+        if (rejected.exists()) continue;
+      } catch (e) {
+        console.warn('Return pickup rejection check:', e);
+      }
+
+      selected = [id, q];
+      break;
+    }
+
+    if (selected) {
+      const [id, q] = selected;
+      showIncomingOrderPopup(id, { ...q, type: 'returnPickup' });
+
+      if (
+        lastPopupSoundOrderId !== 'return_' + String(id) &&
+        playNotificationSound()
+      ) {
+        lastPopupSoundOrderId = 'return_' + String(id);
+      }
+    }
   };
-  assignedRef.on('value',window.__mlReturnAssignCallback,err=>console.error('Return pickup assignments:',err));
+
+  queueRef.on(
+    'value',
+    returnPickupQueueCallback,
+    err => {
+      console.error('Return pickup queue error:', err);
+      if (host) {
+        host.textContent = 'Return pickup queue error: ' + (err.message || err);
+      }
+    }
+  );
+
+  // Listen for return pickups accepted by this delivery partner.
+  const assignedRef = db
+    .ref('returnPickupAssignments')
+    .orderByChild('deliveryUid')
+    .equalTo(deliveryUid);
+
+  if (window.__mlReturnAssignRef && window.__mlReturnAssignCallback) {
+    window.__mlReturnAssignRef.off(
+      'value',
+      window.__mlReturnAssignCallback
+    );
+  }
+
+  window.__mlReturnAssignRef = assignedRef;
+
+  window.__mlReturnAssignCallback = snap => {
+    const rows = Object.entries(snap.val() || {});
+    const listHost = document.getElementById('returnPickupAssignedList');
+
+    if (!listHost) return;
+
+    if (!rows.length) {
+      listHost.innerHTML =
+        '<div class="small">Abhi aapko koi Return Pickup assign nahi hua hai.</div>';
+      return;
+    }
+
+    listHost.innerHTML = rows.map(([id, a]) => {
+      const status = String(a.status || 'Pickup Accepted');
+
+      const next =
+        status === 'Pickup Accepted'
+          ? 'Product Picked Up'
+          : status === 'Product Picked Up'
+            ? 'Product Received'
+            : '';
+
+      return `
+        <article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0">
+          <b>Order #${esc(id)}</b>
+          <div>Status: ${esc(status)}</div>
+          ${next
+            ? `<button class="btn primary" style="margin-top:8px"
+                 onclick="updateReturnPickup('${esc(id)}','${next}')">
+                 Mark ${next}
+               </button>`
+            : '<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'
+          }
+        </article>
+      `;
+    }).join('');
+  };
+
+  assignedRef.on(
+    'value',
+    window.__mlReturnAssignCallback,
+    err => {
+      console.error('Return pickup assignments read error:', err);
+
+      const listHost = document.getElementById('returnPickupAssignedList');
+
+      if (listHost) {
+        listHost.textContent =
+          'Firebase read error: ' + (err.message || err) +
+          ' — returnPickupAssignments Rules aur deliveryUid index check karein.';
+      }
+    }
+  );
 }
 window.updateReturnPickup=async function(orderId,status){
   try{await callDeliveryQueueWorker({action:'updateReturnPickupStatus',orderId,status});alert('Return pickup status updated: '+status);}
