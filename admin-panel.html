@@ -1024,6 +1024,33 @@ window.setAdminReturnStatus=async function(orderId,status){
     Object.keys(request.sellerUids||{}).forEach(uid=>{updates['sellerReturnRequests/'+uid+'/'+orderId]=updated;});
   } else if(status==='Rejected'){
     updates['returnPickupQueue/'+orderId]=null;
+    updates['returnPickupAssignments/'+orderId]=null;
+
+  } else if(status==='Refund Initiated' || status==='Refund Completed'){
+    const pickupStatus = String(request.pickupStatus || '').toLowerCase();
+    const refundStatus = String(request.refundStatus || '').toLowerCase();
+
+    if(pickupStatus !== 'product received'){
+      throw new Error('Refund can start only after Product Received.');
+    }
+
+    if(status === 'Refund Initiated'){
+      updated.refundStatus = 'Refund Initiated';
+    } else {
+      if(refundStatus !== 'refund initiated'){
+        throw new Error('First mark Refund Initiated.');
+      }
+      updated.refundStatus = 'Refund Completed';
+      updated.status = 'Completed';
+      updates['returnPickupAssignments/'+orderId+'/status'] = 'Refund Completed';
+    }
+
+    updated.refundUpdatedAt = stamp;
+    updates['returnRequests/'+orderId] = updated;
+    updates['orders/'+orderId+'/returnRequest'] = updated;
+    Object.keys(request.sellerUids||{}).forEach(uid=>{
+      updates['sellerReturnRequests/'+uid+'/'+orderId] = updated;
+    });
   }
   await db.ref().update(updates);
   addNotification('Return Request '+status,'Order #'+orderId+' · '+(status==='Approved'?'Pickup queue mein bhej diya gaya':status),'success');
