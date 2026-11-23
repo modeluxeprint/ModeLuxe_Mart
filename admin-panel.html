@@ -411,25 +411,26 @@ adminPersistenceReady.then(persistenceOk=>{
     }
 
     signedInPhone=ADMIN_PHONE;
-    if(isAdminDeviceUnlocked || localStorage.getItem(ADMIN_UNLOCK_KEY)==='true'){
-      isAdminDeviceUnlocked=true;
-      localStorage.setItem(ADMIN_UNLOCK_KEY,'true');
-      $('loginPanel').classList.add('hidden');
-      $('logoutBtn').classList.remove('hidden');
-      $('adminDeviceLockModal').classList.add('hidden');
-      $('adminDeviceLockModal').classList.remove('flex');
-      $('dashboard').classList.remove('hidden');
-      startOrders();
-      startProducts();
-      startDeliverySettingsAdminListener();
-      startOwnerManagement();
-      updateUnitChoices();
-      setTimeout(processDeliveryQr,300);
+
+    // Every page load requires a fresh passkey assertion. A saved "unlocked"
+    // flag must never bypass the biometric/device-credential prompt after refresh.
+    isAdminDeviceUnlocked=false;
+    $('dashboard').classList.add('hidden');
+    $('logoutBtn').classList.add('hidden');
+    $('loginPanel').classList.add('hidden');
+
+    if(deviceLockReady()){
+      deviceLockAction='unlock';
+      $('adminDeviceLockIntro').textContent='Refresh ke baad Admin Dashboard kholne ke liye passkey / fingerprint / face unlock karein.';
+      $('devicePrimaryBtn').textContent='Login with Passkey';
+      $('deviceCancelBtn').textContent='Cancel / Logout';
+      $('deviceLockMsg').textContent='Passkey verify karke Admin Dashboard kholiye.';
+      $('adminDeviceLockModal').classList.remove('hidden');
+      $('adminDeviceLockModal').classList.add('flex');
     }else{
-      $('dashboard').classList.add('hidden');
-      $('logoutBtn').classList.add('hidden');
+      // No passkey is registered on this browser/device yet.
       $('loginPanel').classList.remove('hidden');
-      $('loginMsg').textContent='Firebase Admin session mil gaya. Passkey verification karein.';
+      $('loginMsg').textContent='Is device par passkey nahi mili. OTP login karke passkey register karein.';
     }
   });
 });
