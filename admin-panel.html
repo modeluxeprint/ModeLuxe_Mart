@@ -290,7 +290,7 @@ async function uploadImageToR2(file){
 
 // Keep the Firebase admin session across refreshes and browser restarts.
 // Do not fire-and-forget this: signInWithCustomToken must wait for LOCAL persistence.
-const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.warn('Auth persistence:',e);return false;});
+const adminPersistenceReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=>true).catch(e=>{console.error('Admin LOCAL persistence failed:',e);return false;});
 const ADMIN_PHONE='7818995955';
 // ModeLuxe Mart Firebase Cloud Messaging registration (web push).
 const MLM_FCM_VAPID_KEY = "BDZgsxujXpp3DxzknHd1U67faM0yidEBbQe7XvaikNZH75XdzyyX2k_wBiywRja--0-FgEvVLTSzwNSp3fknoQk";
@@ -377,10 +377,15 @@ setTimeout(processDeliveryQr,800);
 const ADMIN_UNLOCK_KEY='modeluxeAdminUnlocked';
 let isAdminDeviceUnlocked = localStorage.getItem(ADMIN_UNLOCK_KEY) === 'true';
 
-auth.onAuthStateChanged(async user=>{
-  await adminPersistenceReady;
-  // Re-read the current user after Firebase has restored LOCAL persistence.
-  user = auth.currentUser;
+// Avoid flashing the login screen while Firebase restores the saved session.
+$('loginPanel').classList.add('hidden');
+$('dashboard').classList.add('hidden');
+$('loginMsg').textContent='Admin session restore ho raha hai…';
+
+auth.onAuthStateChanged(user=>{
+  // Use the user object supplied by Firebase's auth-state event.
+  // Do not overwrite it with auth.currentUser: during page startup that can
+  // briefly be null while the LOCAL persistence state is being delivered.
   showActualAdminUid();
   
   // अगर Firebase यूज़र साइन-इन नहीं है या एडमिन UID मैच नहीं करती
@@ -472,7 +477,8 @@ async function verifyOTP(){
     setMsg('चरण 2/2: OTP सही है। Admin Session शुरू हो रहा है…');
 
     // Firebase LOCAL persistence must be ready before custom-token sign-in.
-    await adminPersistenceReady;
+    const persistenceOk = await adminPersistenceReady;
+    if (!persistenceOk) throw new Error('Is browser mein Firebase LOCAL session save nahi ho pa raha. Browser site data / cookies allow karke Chrome mein dobara try karein.');
     const credential = await auth.signInWithCustomToken(j.customToken);
     if (!credential || !credential.user || !auth.currentUser) {
       throw new Error('Firebase session create nahi hua. Network check karke dobara login karein.');
