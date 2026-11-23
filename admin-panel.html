@@ -483,9 +483,24 @@ async function verifyOTP(){
     stage='Firebase custom token login';
     setMsg('चरण 2/2: OTP सही है। Admin Session शुरू हो रहा है…');
 
-    // Firebase LOCAL persistence must be ready before custom-token sign-in.
-    await adminPersistenceReady;
-    const credential = await auth.signInWithCustomToken(j.customToken);
+    // Do not let a stuck persistence initialization freeze OTP login forever.
+    // Give LOCAL persistence a bounded wait, then attempt Firebase sign-in with
+    // the SDK's current persistence if the browser cannot initialize LOCAL.
+    stage='Firebase LOCAL persistence initialize';
+    const persistenceResult=await Promise.race([
+      adminPersistenceReady,
+      new Promise(resolve=>setTimeout(()=>resolve(false),8000))
+    ]);
+    if(persistenceResult!==true){
+      console.warn('Firebase LOCAL persistence did not confirm within 8 seconds; attempting sign-in with current SDK persistence.');
+    }
+
+    stage='Firebase custom token login';
+    const signInResult=await Promise.race([
+      auth.signInWithCustomToken(j.customToken),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firebase sign-in 15 seconds se zyada le raha hai. Network / Firebase Auth check karein.')),15000))
+    ]);
+    const credential=signInResult;
     if (!credential || !credential.user || !auth.currentUser) {
       throw new Error('Firebase session create nahi hua. Network check karke dobara login karein.');
     }
