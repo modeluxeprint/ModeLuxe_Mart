@@ -1,20 +1,46 @@
-ModeLuxe Return Pickup — Deployment Notes (Hindi)
+ModeLuxe Mart - Return Pickup Update
 
 Files:
-1) Admin-Panel-UPDATED.html — replace existing Admin panel HTML. Login/OTP/Passkey code was not edited.
-2) Delivery-Panel-UPDATED.html — replace existing Delivery panel HTML. Normal delivery claim/status flow retained.
-3) ModeLuxe-Order-Sync-Worker-UPDATED.js — Worker source required by Return Pickup actions. It is included unchanged from the provided worker source because it already contains claimReturnPickup and updateReturnPickupStatus actions. If your deployed Worker already has these exact actions, no Worker deployment is needed.
+1. Admin-Panel-UPDATED.html
+2. Delivery-Panel-UPDATED.html
+3. Seller-Panel-UPDATED.html
+4. ModeLuxe-Order-Sync-Worker-UPDATED.js
 
-Flow implemented in these files:
-- Admin approves a pending return -> creates separate returnPickupQueue and returnPickupAssignments nodes. Normal deliveryQueue is not overwritten.
-- Delivery partner sees a separate Return Pickup popup, can Cancel (per-user rejection) or Accept Pickup. Worker uses a claim record so only the first partner wins.
-- Assigned partner can mark Product Picked Up and Product Received.
-- Admin can mark Refund Initiated and then Refund Completed after Product Received. Status mirrors to returnRequests, orders/{orderId}/returnRequest and sellerReturnRequests/{sellerUid}/{orderId}.
+Important:
+- Admin Login / OTP / Passkey code ko touch nahi kiya gaya.
+- Normal deliveryQueue, deliveryAssignments, deliveryClaims aur normal delivery claim/status logic ko alag rakha gaya hai.
+- Return pickup ke liye alag nodes hain:
+  returnPickupQueue
+  returnPickupAssignments
+  returnPickupClaims
+  returnPickupRejections
+- Admin Return Approve karega to alag returnPickupQueue entry create hogi.
+- Delivery partner Return Pickup accept kar sakta hai; first-claim-wins Worker logic use hota hai.
+- Delivery partner Product Picked Up aur Product Received mark kar sakta hai.
+- Refund Initiated / Refund Completed ka Admin-side action abhi is update mein include nahi hai.
 
-Important setup:
-- Worker URL used by Delivery Panel remains the existing MLM_PUSH_REGISTER_URL. Deploy the included Worker only if your currently deployed Worker does not contain both actions above. Keep existing Worker secrets and ADMIN_UIDS unchanged.
-- Firebase Rules must allow the logged-in Admin to update returnRequests/orders/sellerReturnRequests/returnPickupQueue/returnPickupAssignments, and the assigned delivery partner to read the return queue/own assignment and write their own rejection. Worker writes use service credentials. Do not replace all existing rules blindly; merge narrowly with your current rules.
-- Area-based filtering and automatic nearby-area incentive fan-out are not enabled by these two panel files: the currently provided delivery profile/queue schema does not reliably supply partner area/coordinates.
+Deployment:
+1. Worker JS ko Cloudflare Worker mein existing code ki jagah deploy karein. Existing Worker secrets/vars ko preserve karein; FIREBASE_SERVICE_ACCOUNT_JSON aur ADMIN_UIDS ko remove/change na karein.
+2. HTML files ko apne GitHub Pages repo mein corresponding current files ke naam se replace karein.
+3. Firebase RTDB rules mein delivery partners ko returnPickupQueue read permission aur unke own returnPickupAssignments read permission deni hogi. Worker service account writes server-side karta hai.
 
-GitHub Pages deployment note:
-The supplied Actions log says build passed and deploy was cancelled while GitHub reported the deployment was already finished (HTTP 400). That log does not indicate an HTML syntax failure. After committing the two HTML files, let the current Pages workflow finish; avoid starting/cancelling multiple deployments at once.
+Example rules fragment (existing rules ke andar merge karein; poori rules file replace na karein):
+"returnPickupQueue": {
+  ".read": "auth != null && root.child('deliveryProfiles').child(auth.uid).exists() && (root.child('deliveryProfiles').child(auth.uid).child('applicationStatus').val() === 'approved' || root.child('deliveryProfiles').child(auth.uid).child('status').val() === 'approved' || root.child('deliveryProfiles').child(auth.uid).child('applicationStatus').val() === 'active' || root.child('deliveryProfiles').child(auth.uid).child('status').val() === 'active')",
+  ".write": false
+},
+"returnPickupAssignments": {
+  "$orderId": {
+    ".read": "auth != null && data.child('deliveryUid').val() === auth.uid",
+    ".write": false
+  }
+},
+"returnPickupClaims": { ".read": false, ".write": false },
+"returnPickupRejections": {
+  "$orderId": { "$uid": { ".write": "auth != null && auth.uid === $uid", ".read": "auth != null && auth.uid === $uid" } }
+}
+
+Known limitation:
+- Pickup area is copied from return/order address fields when available, but this version does not yet enforce area-based partner filtering or nearby-area incentive routing. It currently broadcasts pending return pickups to approved delivery accounts that can read the queue.
+- Admin-side Refund Initiated / Refund Completed controls and push-notification fan-out are not yet implemented.
+- Run a test return order before production deployment.
