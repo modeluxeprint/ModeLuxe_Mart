@@ -16,7 +16,7 @@
 .delivery-dialog-ok{background:#075fc4;color:#fff}
 </style></head><body><main>
 <header><div><div class="brand">MODELUXE MART</div><h1 style="margin:4px 0">Delivery Panel</h1><p class="small" style="margin:0">Deliveries · Wallet · Notifications</p></div><div class="head-actions"><div class="notification-box"><button id="bellBtn" class="btn muted" aria-label="Notifications">🔔 <span id="bellBadge">0</span></button><div id="notificationMenu" class="notification-menu hidden"><div class="topline"><b>Notifications</b><button id="clearNotifications" class="btn muted" style="padding:5px 8px">Clear</button></div><div id="notificationList"><p class="small">अभी कोई notification नहीं है।</p></div></div></div><button id="scanBtn" class="btn muted scan-header-btn" type="button">📷 Scan QR</button><button id="logout" class="btn muted hidden">Logout</button><button id="myAccountBtn" class="btn muted hidden" type="button">👤 My Account</button></div></header>
-<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><label class="small" style="display:block;margin-top:10px">Your Area / Locality *</label><input id="deliveryAreaName" maxlength="100" placeholder="e.g. Jawan Sikandarpur"><button id="captureDeliveryLocation" class="btn muted" type="button" style="width:100%;margin-top:8px">📍 Capture Home / Base Location</button><p id="deliveryLocationMsg" class="small" aria-live="polite">Area aur GPS location dono zaroori hain.</p><input id="deliveryBaseLat" type="hidden"><input id="deliveryBaseLng" type="hidden"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p><div id="forgotPasswordWrap" style="margin-top:8px"><button id="forgotPasswordOpen" type="button" class="btn muted" style="width:100%">Forgot Password?</button></div><div id="forgotPasswordPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fafc"><h3 style="margin:0 0 8px;color:#075fc4">Reset Delivery Password</h3><p class="small">Registered email aur mobile number bharein. OTP registered mobile par aayega.</p><label class="small">Registered Email *</label><input id="resetEmail" type="email" autocomplete="email" placeholder="delivery@example.com"><label class="small" style="display:block;margin-top:9px">Registered Mobile Number *</label><input id="resetPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="resetSendOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Send OTP</button><div id="resetOtpStep" class="hidden"><label class="small" style="display:block;margin-top:10px">6 Digit OTP *</label><input id="resetOtp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><button id="resetVerifyOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Verify OTP</button></div><div id="resetPasswordStep" class="hidden"><label class="small" style="display:block;margin-top:10px">New Password *</label><input id="resetNewPassword" type="password" minlength="6" autocomplete="new-password" placeholder="New password (min 6 characters)"><label class="small" style="display:block;margin-top:9px">Confirm New Password *</label><input id="resetConfirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Confirm new password"><button id="resetSavePassword" type="button" class="btn primary" style="width:100%;margin-top:10px">Update Password</button></div><p id="resetMsg" class="small" aria-live="polite"></p><button id="forgotPasswordClose" type="button" class="btn muted" style="width:100%;margin-top:6px">Back to Login</button></div></div></section>
+<section id="login" class="panel" style="max-width:460px;margin:30px auto"><h2 class="blue" style="margin-top:0">Welcome to ModeLuxe Mart Delivery Panel</h2><p class="small">Naye delivery boy apna account banayein. Purane delivery boy email aur password se login karein.</p><div class="grid" style="margin:12px 0"><button id="choiceApplyBtn" class="btn primary" type="button">Create New Account</button><button id="choiceLoginBtn" class="btn muted" type="button">Login</button></div><div id="deliveryAuthForm" class="hidden"><div class="grid"><div id="registerFields" class="hidden" style="grid-column:1/-1"><label class="small">Full Name *</label><input id="deliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="deliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"></div><div style="grid-column:1/-1"><label class="small">Email Address *</label><input id="email" type="email" autocomplete="username" placeholder="delivery@example.com"></div><div style="grid-column:1/-1"><label class="small">Password * (कम-से-कम 6 अक्षर)</label><input id="password" type="password" minlength="6" autocomplete="current-password" placeholder="Password"></div></div><button id="authSubmit" class="btn primary" style="width:100%;margin-top:12px" type="submit">Login</button><p id="loginMsg" class="small" aria-live="polite"></p><div id="forgotPasswordWrap" style="margin-top:8px"><button id="forgotPasswordOpen" type="button" class="btn muted" style="width:100%">Forgot Password?</button></div><div id="forgotPasswordPanel" class="hidden" style="margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:12px;background:#f8fafc"><h3 style="margin:0 0 8px;color:#075fc4">Reset Delivery Password</h3><p class="small">Registered email aur mobile number bharein. OTP registered mobile par aayega.</p><label class="small">Registered Email *</label><input id="resetEmail" type="email" autocomplete="email" placeholder="delivery@example.com"><label class="small" style="display:block;margin-top:9px">Registered Mobile Number *</label><input id="resetPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="resetSendOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Send OTP</button><div id="resetOtpStep" class="hidden"><label class="small" style="display:block;margin-top:10px">6 Digit OTP *</label><input id="resetOtp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><button id="resetVerifyOtp" type="button" class="btn primary" style="width:100%;margin-top:10px">Verify OTP</button></div><div id="resetPasswordStep" class="hidden"><label class="small" style="display:block;margin-top:10px">New Password *</label><input id="resetNewPassword" type="password" minlength="6" autocomplete="new-password" placeholder="New password (min 6 characters)"><label class="small" style="display:block;margin-top:9px">Confirm New Password *</label><input id="resetConfirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Confirm new password"><button id="resetSavePassword" type="button" class="btn primary" style="width:100%;margin-top:10px">Update Password</button></div><p id="resetMsg" class="small" aria-live="polite"></p><button id="forgotPasswordClose" type="button" class="btn muted" style="width:100%;margin-top:6px">Back to Login</button></div></div></section>
 <section id="pendingApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Application Status</h2><p id="applicationStatus" class="small">आपका आवेदन Admin की मंजूरी के लिए Pending है।</p><p id="applicationIdentity" class="small"></p><button id="pendingRefresh" class="btn primary" type="button">Refresh Status</button><button id="syncDeliveryApplication" class="btn muted" type="button" style="margin-left:6px">Sync Application</button><button id="pendingLogout" class="btn muted" type="button">Logout</button><p id="applicationSyncMsg" class="small" aria-live="polite"></p></section>
 <section id="recoverApplication" class="panel hidden" style="max-width:460px;margin:30px auto"><h2 class="blue">Complete Delivery Application</h2><p class="small">इस Login UID पर पुराना Application/Profile record नहीं मिला। इसी पुराने Login को रखते हुए अपना नाम और मोबाइल भरकर आवेदन दोबारा Firebase में सुरक्षित करें।</p><label class="small">Full Name *</label><input id="recoverDeliveryName" maxlength="80" placeholder="Delivery boy name"><label class="small" style="display:block;margin-top:10px">Mobile Number *</label><input id="recoverDeliveryPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><button id="recoverDeliverySubmit" class="btn primary" type="button" style="width:100%;margin-top:12px">Save / Recover Application</button><button id="recoverDeliveryLogout" class="btn muted" type="button" style="margin-top:8px">Logout</button><p id="recoverDeliveryMsg" class="small" aria-live="polite"></p></section>
 <section id="dashboard" class="hidden">
@@ -48,7 +48,7 @@
 <section id="listView" class="hidden"><div class="topline" style="align-items:center;margin-top:16px"><button id="backHome" class="btn muted">← Dashboard</button><h2 id="listTitle" class="blue" style="margin:0">Active deliveries</h2></div><div id="orders"></div></section>
 <section id="detailView" class="hidden"><button id="backList" class="btn muted back-btn">← Orders list</button><div id="orderDetail" class="panel"></div></section>
 </section></main>
-<div id="myAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="myAccountTitle"><div class="modalbox"><div class="topline"><h2 id="myAccountTitle" class="blue" style="margin:0">My Account</h2><button id="myAccountClose" class="btn muted" type="button">Close</button></div><div style="margin-top:14px"><label class="small">Account ID (Firebase UID)</label><input id="accountUid" readonly><label class="small" style="display:block;margin-top:10px">Gmail / Email</label><input id="accountEmail" type="email" autocomplete="email"><label class="small" style="display:block;margin-top:10px">Mobile Number</label><input id="accountPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><label class="small" style="display:block;margin-top:10px">Your Area / Locality</label><input id="accountAreaName" maxlength="100" placeholder="e.g. Jawan Sikandarpur"><input id="accountBaseLat" type="hidden"><input id="accountBaseLng" type="hidden"><button id="captureAccountLocation" class="btn muted" type="button" style="width:100%;margin-top:8px">📍 Update Base Location</button><p id="accountLocationMsg" class="small"></p><label class="small" style="display:block;margin-top:10px">Current Password (account changes verify karne ke liye)</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password"><button id="accountSave" class="btn primary" type="button" style="width:100%;margin-top:14px">Update Account Details</button><p id="accountMsg" class="small" aria-live="polite"></p></div></div></div>
+<div id="myAccountModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="myAccountTitle"><div class="modalbox"><div class="topline"><h2 id="myAccountTitle" class="blue" style="margin:0">My Account</h2><button id="myAccountClose" class="btn muted" type="button">Close</button></div><div style="margin-top:14px"><label class="small">Account ID (Firebase UID)</label><input id="accountUid" readonly><label class="small" style="display:block;margin-top:10px">Gmail / Email</label><input id="accountEmail" type="email" autocomplete="email"><label class="small" style="display:block;margin-top:10px">Mobile Number</label><input id="accountPhone" inputmode="numeric" maxlength="10" placeholder="10 digit mobile number"><label class="small" style="display:block;margin-top:10px">Current Password (account changes verify karne ke liye)</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password"><button id="accountSave" class="btn primary" type="button" style="width:100%;margin-top:14px">Update Account Details</button><p id="accountMsg" class="small" aria-live="polite"></p></div></div></div>
 <div id="scanner" class="modal hidden"><div class="modalbox"><div class="topline"><h2 class="blue" style="margin:0">Scan Delivery QR</h2><button id="closeScanner" class="btn muted">Close</button></div><p class="small">Invoice par bane “Scan to Confirm Delivery” QR ko camera ke andar rakhein.</p><div id="reader"></div><p id="scanMsg" class="small" aria-live="polite">Camera permission ka intezar hai…</p></div></div>
 <div id="deliveryDialogHost" class="hidden" aria-live="assertive"></div>
 <script>
@@ -181,19 +181,16 @@ async function loadDeliveryAccount(user){
    $('loginMsg').textContent='Firebase read error: '+(e.message||e)+' — deliveryApplications aur deliveryProfiles ke apne UID read permissions check karein.';
  }
 }
-function captureDeliveryBaseLocation(latId,lngId,msgId){const msg=$(msgId);if(!navigator.geolocation){msg.textContent='Is device par GPS location available nahi hai.';return;}msg.textContent='GPS location mil rahi hai…';navigator.geolocation.getCurrentPosition(pos=>{ $(latId).value=String(pos.coords.latitude);$(lngId).value=String(pos.coords.longitude);msg.textContent='Location captured successfully.';},err=>{msg.textContent='Location permission dein ya GPS ON karein: '+(err.message||'GPS error');},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});}
-$('captureDeliveryLocation').onclick=()=>captureDeliveryBaseLocation('deliveryBaseLat','deliveryBaseLng','deliveryLocationMsg');
-$('captureAccountLocation').onclick=()=>captureDeliveryBaseLocation('accountBaseLat','accountBaseLng','accountLocationMsg');
 $('authSubmit').onclick=async()=>{
  const email=$('email').value.trim().toLowerCase(),password=$('password').value,btn=$('authSubmit');btn.disabled=true;
  try{
    if(!email||password.length<6)throw Error('Sahi email aur kam-se-kam 6 character password bharein.');
    if(authMode==='register'){
-     const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim(),deliveryArea=$('deliveryAreaName').value.trim(),deliveryLatRaw=$('deliveryBaseLat').value.trim(),deliveryLngRaw=$('deliveryBaseLng').value.trim(),deliveryLat=Number(deliveryLatRaw),deliveryLng=Number(deliveryLngRaw);
-     if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');if(!deliveryArea)throw Error('Apna Area / Locality bharein.');if(!deliveryLatRaw||!deliveryLngRaw||!Number.isFinite(deliveryLat)||!Number.isFinite(deliveryLng))throw Error('Pehle GPS location capture karein.');
+     const name=$('deliveryName').value.trim(),phone=$('deliveryPhone').value.trim();
+     if(!name)throw Error('Apna naam bharein.');if(!/^\d{10}$/.test(phone))throw Error('Sahi 10-digit mobile number bharein.');
      registrationInProgress=true;
      const cred=await auth.createUserWithEmailAndPassword(email,password),now=new Date().toISOString(),uid=cred.user.uid;
-     const record={uid,email,name,deliveryName:name,phone,mobile:phone,deliveryArea,deliveryLat,deliveryLng,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};
+     const record={uid,email,name,deliveryName:name,phone,mobile:phone,accountType:'delivery',applicationStatus:'pending',status:'pending',createdAt:now,submittedAt:now,updatedAt:now};
      // Write each own-UID record separately so Firebase reports the exact denied path.
      try{await db.ref('deliveryApplications/'+uid).set(record);}
      catch(e){throw Error('deliveryApplications/'+uid+' save failed: '+(e.message||e));}
@@ -327,14 +324,14 @@ $('myAccountBtn').onclick=()=>{
  if(!currentDeliveryUser)return;
  $('accountUid').value=currentDeliveryUser.uid||'';
  $('accountEmail').value=currentDeliveryUser.email||deliveryProfile.email||'';
- $('accountPhone').value=String(deliveryProfile.phone||deliveryProfile.mobile||'').replace(/\D/g,'').slice(-10);$('accountAreaName').value=deliveryProfile.deliveryArea||'';$('accountBaseLat').value=deliveryProfile.deliveryLat??'';$('accountBaseLng').value=deliveryProfile.deliveryLng??'';$('accountLocationMsg').textContent=deliveryProfile.deliveryLat!=null?'Saved base location available.':'GPS location not saved.';
+ $('accountPhone').value=String(deliveryProfile.phone||deliveryProfile.mobile||'').replace(/\D/g,'').slice(-10);
  $('accountCurrentPassword').value='';$('accountMsg').textContent='';$('myAccountModal').classList.remove('hidden');
 };
 $('myAccountClose').onclick=()=>$('myAccountModal').classList.add('hidden');
 $('myAccountModal').addEventListener('click',e=>{if(e.target===$('myAccountModal'))$('myAccountModal').classList.add('hidden')});
 $('accountSave').onclick=async()=>{
  const btn=$('accountSave'),user=auth.currentUser;
- const newEmail=$('accountEmail').value.trim().toLowerCase(),newPhone=$('accountPhone').value.trim(),newArea=$('accountAreaName').value.trim(),newLatRaw=$('accountBaseLat').value.trim(),newLngRaw=$('accountBaseLng').value.trim(),newLat=Number(newLatRaw),newLng=Number(newLngRaw),currentPassword=$('accountCurrentPassword').value;
+ const newEmail=$('accountEmail').value.trim().toLowerCase(),newPhone=$('accountPhone').value.trim(),currentPassword=$('accountCurrentPassword').value;
  btn.disabled=true;$('accountMsg').textContent='';
  try{
   if(!user||!currentDeliveryUser)throw Error('Please login again.');
@@ -346,8 +343,7 @@ $('accountSave').onclick=async()=>{
   await user.reauthenticateWithCredential(credential);
   if(newEmail!==oldEmail)await user.updateEmail(newEmail);
   const now=new Date().toISOString();
-  if(!newArea)throw Error('Apna Area / Locality bharein.');if(!newLatRaw||!newLngRaw||!Number.isFinite(newLat)||!Number.isFinite(newLng))throw Error('GPS base location capture karein.');
-  const patch={email:newEmail,phone:newPhone,mobile:newPhone,deliveryArea:newArea,deliveryLat:newLat,deliveryLng:newLng,updatedAt:now};
+  const patch={email:newEmail,phone:newPhone,mobile:newPhone,updatedAt:now};
   try{
    await Promise.all([
     db.ref('deliveryApplications/'+user.uid).update(patch),
@@ -521,10 +517,10 @@ window.clearAllDeliveryNotifications = clearNotifications;
 
 function clearSingleNotification(orderId) { saveClearedOrder(orderId); renderNotifications(); }
 let currentActiveOrderId = null;
+let currentActiveRequestType = "delivery";
 let deliveryQueueCallback = null;
 let deliveryAssignmentsCallback = null;
 let currentQueueOrders = {};
-const areaEscalationTimers = new Map();
 const DELIVERY_QUEUE_REJECTIONS_KEY = 'modeluxeDeliveryQueueDismissed';
 let deliveryAudioContext = null;
 let lastPopupSoundOrderId = '';
@@ -548,61 +544,6 @@ function unlockDeliveryNotificationAudio() {
   document.addEventListener(eventName, unlockDeliveryNotificationAudio, { once: true, passive: true });
 });
 
-
-// Approved return requests create a separate pickup queue.
-// Queue records contain limited details; private customer details are read only
-// after a delivery partner successfully claims the pickup.
-let returnPickupListener=null;
-let currentReturnPickupId=null;
-const RETURN_PICKUP_DISMISSED_KEY='modeluxeReturnPickupDismissed';
-function getReturnPickupDismissed(uid){try{return JSON.parse(localStorage.getItem(RETURN_PICKUP_DISMISSED_KEY+'_'+uid)||'[]');}catch{return [];}}
-function saveReturnPickupDismissed(uid,id){const ids=new Set(getReturnPickupDismissed(uid));ids.add(String(id));try{localStorage.setItem(RETURN_PICKUP_DISMISSED_KEY+'_'+uid,JSON.stringify([...ids]));}catch{}}
-function initReturnPickupListener(uid){
- if(!uid)return;
- const ref=db.ref('returnPickupQueue');
- if(returnPickupListener)ref.off('value',returnPickupListener);
- returnPickupListener=async snap=>{
-  const rows=snap.val()||{},dismissed=new Set(getReturnPickupDismissed(uid));
-  const pending=Object.entries(rows).filter(([id,r])=>r&&String(r.status||'pending').toLowerCase()==='pending'&&!dismissed.has(String(id)));
-  let selected=null;
-  for(const [id,r] of pending){try{const c=await db.ref('returnPickupClaims/'+id).once('value');if(!c.exists()){selected=[id,r];break;}}catch(e){console.warn('Return pickup claim read:',e.message);}}
-  if(selected){showReturnPickupPopup(selected[0],selected[1]);if(lastPopupSoundOrderId!=='return:'+selected[0]){if(playNotificationSound())lastPopupSoundOrderId='return:'+selected[0];}}
-  else{document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;}
- };
- ref.on('value',returnPickupListener,error=>{console.error('Return pickup listener:',error);const sync=$('sync');if(sync)sync.textContent='Return pickup queue error: '+error.message;});
-}
-function showReturnPickupPopup(id,r){
- if(currentReturnPickupId===String(id)&&document.getElementById('returnPickupModal'))return;
- currentReturnPickupId=String(id);
- let modal=document.getElementById('returnPickupModal');
- if(!modal){
-  modal=document.createElement('div');modal.id='returnPickupModal';modal.className='modal';modal.style.zIndex='100000';
-  modal.innerHTML=`<div class="modalbox" role="dialog" aria-modal="true" style="max-width:480px;width:100%;text-align:center"><div style="font-size:38px">↩️</div><h2 style="color:#075fc4;margin:6px 0 10px">Return Pickup Request</h2><p id="returnPickupSummary" style="text-align:left;line-height:1.6;background:#f8fafc;padding:12px;border-radius:10px;white-space:pre-line"></p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button id="returnPickupLater" class="btn muted" type="button">Later</button><button id="returnPickupAccept" class="btn primary" type="button">Accept Pickup</button></div><p id="returnPickupMsg" class="small" aria-live="polite" style="margin-top:10px"></p></div>`;
-  document.body.appendChild(modal);
-  $('returnPickupLater').onclick=()=>{saveReturnPickupDismissed(signedInPhone,id);modal.remove();currentReturnPickupId=null;lastPopupSoundOrderId='';};
-  $('returnPickupAccept').onclick=()=>acceptReturnPickup(id);
- }
- const items=Array.isArray(r.items)?r.items.map(x=>(x.name||x.productName||x.title||'Item')+' × '+(x.qty||x.quantity||1)).join(', '):'Return item';
- $('returnPickupSummary').textContent=`Order #${id}\nCustomer: ${r.customerName||'Customer'}\nItems: ${items}\nReason: ${r.reasonType||''} · ${r.reason||''}\nArea: ${r.customerArea||'Address will be shown after accepting'}`;
-}
-async function acceptReturnPickup(id){
- const btn=$('returnPickupAccept'),msg=$('returnPickupMsg');
- if(!signedInPhone||!auth.currentUser||auth.currentUser.uid!==signedInPhone)return alert('Approved delivery login required.');
- btn.disabled=true;msg.textContent='Pickup claim verify ho raha hai…';
- try{
-  const claimRef=db.ref('returnPickupClaims/'+id);
-  const result=await claimRef.transaction(current=>{if(current!==null)return;return {orderId:String(id),deliveryUid:signedInPhone,deliveryName:deliveryProfile.name||deliveryProfile.fullName||'',claimedAt:new Date().toISOString(),status:'accepted'};});
-  if(!result.committed){msg.textContent='Ye pickup kisi doosre Delivery Partner ne accept kar liya hai.';setTimeout(()=>{document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;},1600);return;}
-  const snap=await db.ref('returnPickupDetails/'+id).once('value'),detail=snap.val()||{};
-  const address=detail.shippingAddress||detail.address||detail.customerAddress||detail.deliveryAddress||'Address return request mein available nahi hai.';
-  const phone=detail.customerPhone||detail.phone||'Not provided';
-  const items=Array.isArray(detail.items)?detail.items.map(x=>(x.name||x.productName||x.title||'Item')+' × '+(x.qty||x.quantity||1)).join(', '):'Return item';
-  const message=`Order #${id}\nCustomer: ${detail.customerName||'Customer'}\nPhone: ${phone}\nPickup Address: ${address}\nItems: ${items}\nPlease contact the customer to arrange return pickup.`;
-  saveReturnPickupDismissed(signedInPhone,id);document.getElementById('returnPickupModal')?.remove();currentReturnPickupId=null;lastPopupSoundOrderId='';
-  await showDeliveryDialog({title:'Return Pickup Accepted',message,confirmText:'OK'});
- }catch(e){msg.textContent='Accept failed: '+(e.message||e);btn.disabled=false;}
-}
-
 // Listen only after the delivery account is approved. Each partner sees a shared
 // pending request, but their own rejectedBy flag hides it only on their account.
 function getQueueDismissedIds(uid) {
@@ -623,43 +564,91 @@ function initDeliveryAssignmentsListener(deliveryUid) {
   if (deliveryQueueCallback) ref.off('value', deliveryQueueCallback);
   deliveryQueueCallback = async snap => {
     currentQueueOrders = snap.val() || {};
-    const myArea=String(deliveryProfile.deliveryArea||'').trim().toLowerCase();
     const dismissed = new Set(getQueueDismissedIds(deliveryUid));
-    const candidates = Object.entries(currentQueueOrders).filter(([id,q])=>{
-      if(!q||String(q.status||'pending').toLowerCase()!=='pending'||q.deliveryUid||dismissed.has(String(id)))return false;
-      if(q.dispatchStage==='local')return !!myArea&&String(q.customerArea||'').trim().toLowerCase()===myArea;
-      if(q.dispatchStage==='nearby')return Array.isArray(q.eligibleDeliveryUids)&&q.eligibleDeliveryUids.includes(deliveryUid);
-      // Legacy queue records remain visible to avoid hiding already-open old jobs.
-      return !q.dispatchStage;
-    });
-    // Any authenticated delivery panel may trigger the server-validated escalation
-    // once the configured local waiting window has elapsed.
-    for(const [id,q] of Object.entries(currentQueueOrders)){
-      if(q&&String(q.status||'pending').toLowerCase()==='pending'&&q.dispatchStage==='local'){
-        const created=Date.parse(q.dispatchStartedAt||q.createdAt||'');
-        const wait=Number(q.localWaitSeconds||15);
-        if(Number.isFinite(created)){
-          const remaining=Math.max(0,wait*1000-(Date.now()-created));
-          if(!areaEscalationTimers.has(String(id))){
-            const timer=setTimeout(()=>{areaEscalationTimers.delete(String(id));callDeliveryQueueWorker({action:'escalateDelivery',orderId:id}).catch(err=>console.warn('Area escalation:',err.message));},remaining);
-            areaEscalationTimers.set(String(id),timer);
-          }
-        }
-      }
-    }
+    const candidates = Object.entries(currentQueueOrders).filter(([id, q]) =>
+      q && String(q.status || 'pending').toLowerCase() === 'pending' &&
+      !q.deliveryUid && !dismissed.has(String(id))
+    );
     if (candidates.length) {
-      candidates.sort((a,b)=>String(a[1].createdAt||'').localeCompare(String(b[1].createdAt||'')));
-      let selected=null;
-      for(const [orderId,queueData] of candidates){
-        try{const rejected=await db.ref('deliveryQueueRejections/'+orderId+'/'+deliveryUid).once('value');if(rejected.exists()){saveQueueDismissedId(deliveryUid,orderId);continue;}}catch(e){console.warn('Queue rejection check:',e.message);}
-        selected=[orderId,queueData];break;
+      candidates.sort((a,b) => String(a[1].createdAt || '').localeCompare(String(b[1].createdAt || '')));
+      let selected = null;
+      for (const [orderId, queueData] of candidates) {
+        try {
+          const rejected = await db.ref('deliveryQueueRejections/' + orderId + '/' + deliveryUid).once('value');
+          if (rejected.exists()) { saveQueueDismissedId(deliveryUid, orderId); continue; }
+        } catch (e) { console.warn('Queue rejection check:', e.message); }
+        selected = [orderId, queueData];
+        break;
       }
-      if(selected){const [orderId,queueData]=selected;showIncomingOrderPopup(orderId,queueData);if(lastPopupSoundOrderId!==String(orderId)){if(playNotificationSound())lastPopupSoundOrderId=String(orderId);}}
-      else{document.getElementById('incomingOrderModal')?.remove();currentActiveOrderId=null;lastPopupSoundOrderId='';}
-    }else{document.getElementById('incomingOrderModal')?.remove();currentActiveOrderId=null;lastPopupSoundOrderId='';}
+      if (selected) {
+        const [orderId, queueData] = selected;
+        showIncomingOrderPopup(orderId, queueData);
+        if (lastPopupSoundOrderId !== String(orderId)) {
+          if (playNotificationSound()) lastPopupSoundOrderId = String(orderId);
+        }
+      } else {
+        const modal = document.getElementById('incomingOrderModal');
+        if (modal) modal.remove();
+        currentActiveOrderId = null;
+        lastPopupSoundOrderId = '';
+      }
+    } else {
+      const modal = document.getElementById('incomingOrderModal');
+      if (modal) modal.remove();
+      currentActiveOrderId = null;
+      lastPopupSoundOrderId = '';
+    }
   };
-  ref.on('value',deliveryQueueCallback,error=>{console.error('Delivery queue listener:',error);const sync=$('sync');if(sync)sync.textContent='Delivery queue error: '+error.message;});
+  ref.on('value', deliveryQueueCallback, error => {
+    console.error('Delivery queue listener:', error);
+    const sync = $('sync');
+    if (sync) sync.textContent = 'Delivery queue error: ' + error.message;
+  });
 }
+
+// Return pickup requests use their own queue so normal delivery assignments are never overwritten.
+let returnPickupQueueCallback = null;
+function initReturnPickupListener(deliveryUid) {
+  if (!deliveryUid) return;
+  const ref = db.ref('returnPickupQueue');
+  if (returnPickupQueueCallback) ref.off('value', returnPickupQueueCallback);
+  returnPickupQueueCallback = async snap => {
+    const entries = Object.entries(snap.val() || {}).filter(([id,q]) => q && String(q.status || 'pending').toLowerCase() === 'pending' && !q.deliveryUid);
+    let selected = null;
+    for (const [id,q] of entries.sort((a,b)=>String(a[1].createdAt||'').localeCompare(String(b[1].createdAt||'')))) {
+      try { const rejected=await db.ref('returnPickupRejections/'+id+'/'+deliveryUid).once('value'); if(rejected.exists()) continue; } catch(e) { console.warn('Return pickup rejection check:',e); }
+      selected=[id,q]; break;
+    }
+    if (selected) {
+      const [id,q]=selected; showIncomingOrderPopup(id,{...q,type:'returnPickup'});
+      if (lastPopupSoundOrderId !== 'return_'+String(id) && playNotificationSound()) lastPopupSoundOrderId='return_'+String(id);
+    }
+  };
+  ref.on('value', returnPickupQueueCallback, err=>console.error('Return pickup queue listener:',err));
+  const dash=document.getElementById('dashboard');
+  if(dash&&!document.getElementById('returnPickupTracker')){
+    const card=document.createElement('section');card.id='returnPickupTracker';card.className='panel';card.style.margin='12px 0';
+    card.innerHTML='<h2 style="margin-top:0">↩ Return Pickups</h2><div id="returnPickupAssignedList" class="small">Return pickup assignments loading…</div>';
+    dash.insertBefore(card,dash.firstChild);
+  }
+  const assignedRef=db.ref('returnPickupAssignments').orderByChild('deliveryUid').equalTo(deliveryUid);
+  if(window.__mlReturnAssignRef&&window.__mlReturnAssignCallback)window.__mlReturnAssignRef.off('value',window.__mlReturnAssignCallback);
+  window.__mlReturnAssignRef=assignedRef;
+  window.__mlReturnAssignCallback=snap=>{
+    const rows=Object.entries(snap.val()||{});
+    const host=document.getElementById('returnPickupAssignedList');if(!host)return;
+    host.innerHTML=rows.length?rows.map(([id,a])=>{
+      const status=String(a.status||'Pickup Accepted');
+      const next=status==='Pickup Accepted'?'Product Picked Up':status==='Product Picked Up'?'Product Received':'';
+      return `<article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0"><b>Order #${esc(id)}</b><div>Status: ${esc(status)}</div>${next?`<button class="btn primary" style="margin-top:8px" onclick="updateReturnPickup('${esc(id)}','${next}')">Mark ${next}</button>`:'<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'}</article>`;
+    }).join(''):'<div class="small">Abhi koi accepted return pickup nahi hai.</div>';
+  };
+  assignedRef.on('value',window.__mlReturnAssignCallback,err=>console.error('Return pickup assignments:',err));
+}
+window.updateReturnPickup=async function(orderId,status){
+  try{await callDeliveryQueueWorker({action:'updateReturnPickupStatus',orderId,status});alert('Return pickup status updated: '+status);}
+  catch(e){alert('Status update nahi hua: '+(e.message||e));}
+};
 
 // Popup uses the panel's own CSS, not Tailwind classes that may not be loaded.
 function showIncomingOrderPopup(orderId, orderDetails) {
@@ -684,13 +673,22 @@ function showIncomingOrderPopup(orderId, orderDetails) {
       </div>`;
     document.body.appendChild(modal);
   }
+  const isReturn = orderDetails.type === 'returnPickup';
+  currentActiveRequestType = isReturn ? 'returnPickup' : 'delivery';
+  document.getElementById('incomingOrderTitle').textContent = isReturn ? '↩ Return Pickup Request' : 'New Delivery Request!';
   document.getElementById('popupOrderId').textContent = 'Order #' + orderId;
   const summary = Array.isArray(orderDetails.itemsSummary) ? orderDetails.itemsSummary.map(x => `${esc(x.name || 'Item')} × ${esc(x.qty || 1)}`).join(', ') : '';
-  document.getElementById('popupOrderDetails').innerHTML = `
+  document.getElementById('popupOrderDetails').innerHTML = isReturn ? `
+    <div><b>Customer:</b> ${esc(orderDetails.customerName || 'Customer')}</div>
+    <div><b>Phone:</b> ${esc(orderDetails.customerPhone || '—')}</div>
+    <div><b>Pickup Address:</b> ${esc(orderDetails.pickupAddress || 'Order address')}</div>
+    <div><b>Area:</b> ${esc(orderDetails.deliveryArea || '—')}</div>
+    <div><b>Items:</b> ${summary || 'Return item'}</div>
+    <div><b>Request:</b> Customer return pickup. Accept karne par pickup aapke account par assign hoga.</div>` : `
     <div><b>Items:</b> ${summary || (Number(orderDetails.itemCount || 0) + ' item(s)')}</div>
-    <div><b>Area:</b> ${esc(orderDetails.customerArea||'—')} · <b>Dispatch:</b> ${orderDetails.dispatchStage==='nearby'?'Nearby Area':'Own Area'}</div>
-    ${orderDetails.dispatchStage==='nearby'?`<div><b>Road Distance:</b> ${Number((orderDetails.routeDistanceByUid||{})[signedInPhone]||0).toFixed(1)} KM · <b>Extra Incentive:</b> ₹${Number((orderDetails.extraIncentiveByUid||{})[signedInPhone]||0).toFixed(2)}</div>`:''}
     <div><b>Request:</b> New delivery available. Accept karne par customer details milengi.</div>`;
+  const actionButton = document.querySelector('#incomingOrderModal button:last-child');
+  if (actionButton) actionButton.textContent = isReturn ? 'Accept Pickup' : 'Accept Order';
 }
 
 function playNotificationSound() {
@@ -738,11 +736,18 @@ async function acceptIncomingOrder() {
  if(!currentActiveOrderId)return;
  const orderId=String(currentActiveOrderId);const btns=document.querySelectorAll('#incomingOrderModal button');btns.forEach(b=>b.disabled=true);
  try{
-  await callDeliveryQueueWorker({action:'claimDelivery',orderId});
-  const snap=await db.ref('deliveryAssignments/'+orderId).once('value');const assignment=snap.val();
-  if(!assignment||String(assignment.deliveryUid||'')!==signedInPhone)throw new Error('Worker ने claim पूरा नहीं किया। कुछ देर बाद फिर कोशिश करें।');
-  saveClearedOrder(orderId);document.getElementById('incomingOrderModal')?.remove();currentActiveOrderId=null;lastPopupSoundOrderId='';
-  alert('Order successfully accepted! Customer details Active Deliveries में दिखेंगी।');
+  const isReturn = currentActiveRequestType === 'returnPickup';
+  if (isReturn) {
+    await callDeliveryQueueWorker({action:'claimReturnPickup',orderId});
+    const snap=await db.ref('returnPickupAssignments/'+orderId).once('value');const assignment=snap.val();
+    if(!assignment||String(assignment.deliveryUid||'')!==signedInPhone)throw new Error('Return pickup claim verify nahi hua.');
+  } else {
+    await callDeliveryQueueWorker({action:'claimDelivery',orderId});
+    const snap=await db.ref('deliveryAssignments/'+orderId).once('value');const assignment=snap.val();
+    if(!assignment||String(assignment.deliveryUid||'')!==signedInPhone)throw new Error('Worker ने claim पूरा नहीं किया। कुछ देर बाद फिर कोशिश करें।');
+  }
+  saveClearedOrder(orderId);document.getElementById('incomingOrderModal')?.remove();currentActiveOrderId=null;lastPopupSoundOrderId='';currentActiveRequestType='delivery';
+  alert(isReturn?'Return pickup successfully accepted!':'Order successfully accepted! Customer details Active Deliveries में दिखेंगी।');
  }catch(err){btns.forEach(b=>b.disabled=false);alert('Order accept नहीं हुआ: '+(err.message||err));}
 }
 
@@ -752,8 +757,12 @@ async function rejectIncomingOrder() {
   const user = auth.currentUser;
   if (!user || user.uid !== signedInPhone) return alert('Approved delivery login required.');
   try {
-    await db.ref('deliveryQueueRejections/' + orderId + '/' + user.uid).set(new Date().toISOString());
-    saveQueueDismissedId(user.uid, orderId);
+    if (currentActiveRequestType === 'returnPickup') {
+      await db.ref('returnPickupRejections/' + orderId + '/' + user.uid).set(new Date().toISOString());
+    } else {
+      await db.ref('deliveryQueueRejections/' + orderId + '/' + user.uid).set(new Date().toISOString());
+      saveQueueDismissedId(user.uid, orderId);
+    }
     saveClearedOrder(orderId);
     document.getElementById('incomingOrderModal')?.remove();
     currentActiveOrderId = null;
@@ -812,7 +821,7 @@ async function confirmQr(value){
  }
 }
 async function closeScanner(){if(scanner){try{if(scanner.isScanning)await scanner.stop()}catch{}try{await scanner.clear()}catch{}scanner=null}$('scanner').classList.add('hidden');scanBusy=false}
-$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(returnPickupListener)db.ref('returnPickupQueue').off('value',returnPickupListener);returnPickupListener=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
+$('scanBtn').onclick=openScanner;$('closeScanner').onclick=closeScanner;$('logout').onclick=async()=>{if(deliveryQueueCallback)db.ref('deliveryQueue').off('value',deliveryQueueCallback);deliveryQueueCallback=null;if(deliveryAssignmentsCallback)db.ref('deliveryAssignments').off('value',deliveryAssignmentsCallback);deliveryAssignmentsCallback=null;if(listener&&assignedOrdersQuery)assignedOrdersQuery.off('value',listener);assignedOrdersQuery=null;if(deliveryWithdrawalListener)db.ref('withdrawalRequests/delivery/'+signedInPhone).off('value',deliveryWithdrawalListener);if(deliverySettingsListener)db.ref('deliverySettings').off('value',deliverySettingsListener);if(deliveryWalletListener)db.ref('deliveryWallets/'+signedInPhone+'/balance').off('value',deliveryWalletListener);if(deliveryCreditsListener)db.ref('deliveryWallets/'+signedInPhone+'/credits').off('value',deliveryCreditsListener);deliveryCreditsData={};deliveryCreditsListener=null;deliveryWithdrawalListener=null;deliverySettingsListener=null;deliveryWalletListener=null;listener=null;try{await auth.signOut()}catch{}signedInPhone='';ordersData={};$('dashboard').classList.add('hidden');setView('home');$('login').classList.remove('hidden');$('logout').classList.add('hidden');$('myAccountBtn').classList.add('hidden');$('myAccountModal').classList.add('hidden');$('otpArea').classList.add('hidden');$('otp').value='';$('password').value='';requestId='';pendingPhone=''};
 </script>
 </body>
 </html>
