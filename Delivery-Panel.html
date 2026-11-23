@@ -705,42 +705,53 @@ function initReturnPickupListener(deliveryUid) {
   window.__mlReturnAssignRef = assignedRef;
 
   window.__mlReturnAssignCallback = snap => {
-    const rows = Object.entries(snap.val() || {});
-    const listHost = document.getElementById('returnPickupAssignedList');
+  const rows = Object.entries(snap.val() || {});
+  const host = document.getElementById('returnPickupAssignedList');
+  if (!host) return;
 
-    if (!listHost) return;
+  const completedRows = rows.filter(([id, a]) =>
+    String(a.status || '').toLowerCase() === 'refund completed'
+  );
 
-    if (!rows.length) {
-      listHost.innerHTML =
-        '<div class="small">No Return Pickup has been assigned to you yet.</div>';
-      return;
-    }
+  const activeRows = rows.filter(([id, a]) =>
+    String(a.status || '').toLowerCase() !== 'refund completed'
+  );
 
-    listHost.innerHTML = rows.map(([id, a]) => {
-      const status = String(a.status || 'Pickup Accepted');
-
-      const next =
-        status === 'Pickup Accepted'
+  const activeHtml = activeRows.length
+    ? activeRows.map(([id, a]) => {
+        const status = String(a.status || 'Pickup Accepted');
+        const next = status === 'Pickup Accepted'
           ? 'Product Picked Up'
           : status === 'Product Picked Up'
             ? 'Product Received'
             : '';
 
-      return `
-        <article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0">
+        return `<article style="border:1px solid #dbe5f1;border-radius:10px;padding:10px;margin:8px 0">
           <b>Order #${esc(id)}</b>
           <div>Status: ${esc(status)}</div>
           ${next
-            ? `<button class="btn primary" style="margin-top:8px"
-                 onclick="updateReturnPickup('${esc(id)}','${next}')">
-                 Mark ${next}
-               </button>`
-            : '<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'
-          }
-        </article>
-      `;
-    }).join('');
-  };
+            ? `<button class="btn primary" style="margin-top:8px" onclick="updateReturnPickup('${esc(id)}','${next}')">Mark ${next}</button>`
+            : '<div class="small">Pickup handover stage complete. Refund update Admin karega.</div>'}
+        </article>`;
+      }).join('')
+    : '<div class="small">Abhi koi active return pickup nahi hai.</div>';
+
+  const completedHtml = completedRows.length
+    ? `<section style="margin-top:18px">
+        <h3 style="color:#15803d;margin-bottom:8px">Completed Returns</h3>
+        ${completedRows.map(([id, a]) => `
+          <article style="border:1px solid #86efac;background:#f0fdf4;border-radius:10px;padding:12px;margin:8px 0">
+            <b>Order #${esc(id)}</b>
+            <div style="color:#15803d;font-weight:800;margin-top:5px">
+              ✓ Refund Completed
+            </div>
+          </article>
+        `).join('')}
+      </section>`
+    : '';
+
+  host.innerHTML = activeHtml + completedHtml;
+};
 
   assignedRef.on(
     'value',
